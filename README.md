@@ -1,6 +1,10 @@
 
 # jltom 
 Jmeter Load Test Online Monitor
+
+Written on python.
+Need SQLAlchemy, Pandas
+Uses C3/D3 graphs 
 # Description
 Online web-application for analyzing JMeter test results and monitoring the current running tests.
 For data storage uses Postgres.
