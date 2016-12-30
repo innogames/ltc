@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Performance Test monitor</title>
+    <link rel="stylesheet" type="text/css" href="/static/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" href="/static/c3.css">
+    <link rel="stylesheet" type="text/css" href="/static/tablesorter/css/theme.green.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/progress-tracker/css/advanced-progress-tracker.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/my.css"/>
+    <link rel="stylesheet" href="/static/selectboxit/css/jquery.selectBoxIt.css" />
+    <script src='/static/jquery-3.1.1.min.js'></script>
+    <script src='/static/jquery-ui.js'></script>
+    <script src='/static/tablesorter/js/jquery.tablesorter.min.js'></script>
+    <script src='/static/tablesorter/js/jquery.tablesorter.widgets.min.js'></script>
+    <script src="/static/progress-tracker/js/advanced-progress-tracker.min.js"></script>
+    <script src="/static/selectboxit/js/jquery.selectBoxIt.min.js"></script>
+    <script src='/static/d3.js'></script>
+    <script src='/static/c3.js'></script>
+    <script src='/static/main_script.js'></script>
+</head>
+<body>
+<div id="tabs">
+    <ul>
+        <li><a href='#overall_tab' style="background-color:#DEB339">OVERALL</a></li>
+        <li><a href='#compare_tab'>COMPARE TEST RESULTS</a></li>
+        <li><a href='#online_tab'>ONLINE TEST MONITORING</a></li>
+        <li><a href='#execute_test_tab'>EXECUTE TEST</a></li>
+    </ul>
+    <div id="overall_tab">
+        %select-choice-project-overall%
+        <div id="ccc"></div>
+    </div>
+    <div id="compare_tab">
+
+
+        %select-choice-project-compare%
+        <div id="placeforlist1"></div>
+        <div id="placeforlist2"></div>
+        <div id="TrackScrollProgress">
+            <div id="placefortable"></div>
+        </div>
+    </div>
+    <div id="online_tab">
+
+    </div>
+    <div id="execute_test_tab">
+    COMING SOOOON
+    </div>
+
+</div>
+
+</body>
+</html>

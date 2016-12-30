@@ -1,0 +1,393 @@
+/*
+//-------------------------------------------------------------------------------------
+// Scroll Progress Tracker Stylesheet
+//-------------------------------------------------------------------------------------
+// Created          2016-08-10
+// Changed          2016-08-17
+// Authors          David Whitworth | David@Whitworth.de
+//-------------------------------------------------------------------------------------
+// Version 1.0
+//-------------------------------------------------------------------------------------
+// 2016-08-10       Created
+// 2016-08-12 DW    styled the trackers' final stops
+// 2016-08-13 DW    added the class for the mobile only option;
+//                  added styles for too long headlines on mobile devices
+// 2016-08-15 DW    changed various style-data;
+//                  added styling for sourcecode blocks
+// 2016-08-16 DW    adjusted styling to better fit the new options horTracker
+//                  and verTracker;
+//                  added styling for the options horPosition and verPosition;
+//                  added the hack font to sourcecode blocks;
+//                  included the "smallDevice" class to bind the responsive webdesign
+//                  to the plugin's "mobileThreshold" setting;
+//                  moved the titles of the vertical tracker closer to the bullets,
+//                  then spaced with padding (this creates seamless links);
+//                  added the "smaller" and "larger" classes to style smaller and
+//                  larger text
+// 2016-08-17 DW    added styles for .bold, .italic and .pullUp
+//-------------------------------------------------------------------------------------
+// Version 1.1
+//-------------------------------------------------------------------------------------
+// 2016-08-17 DW    added the "spt-fixed" class to the horizontal tracker (for use with
+//                  the option horInHeader: false);
+//                  added the "historyVersion" class;
+//                  increased the font-size of h1-headlines
+// 2016-08-19 DW    Added the "fill" class to the trackers and styled them accordingly;
+//                  adjusted the dimensions of .finalStopCircle to make it symmetrical
+// 2016-08-20 DW    Adjusted the max-width of .centerAll to prevent collisions with the
+//                  vertical tracker;
+//                  adjusted the position of the stopd for the horizontal tracker with
+//                  the "fill" style
+// 2016-08-22 DW    changed the names of all classes and ids to prevent possible
+//                  conflicts with other plugins;
+//                  removed all plugin unrelated styles from the stylesheet
+//-------------------------------------------------------------------------------------
+// Version 1.2
+//-------------------------------------------------------------------------------------
+// 2016-08-23 DW    removed the styling of the body tag from the stylesheet;
+//                  adjusted the positioning of the vertical tracker in relataion to
+//                  the mobileThreshold and the viewport width;
+//                  made some necessary adjustments for the trackViewportOnly option;
+//                  added the four default color-settings for horColor/verColor
+// 2016-09-05 DW    fixed the border-radius for the stops
+//-------------------------------------------------------------------------------------
+// Copyright (c) 2016
+//-------------------------------------------------------------------------------------
+*/
+
+@import '_spt-settings.less';
+
+/* GENERAL */
+.spt-centerAll {
+    margin: 0 auto;
+    max-width: 900px;
+}
+.spt-trackThis {
+    hr {
+        margin-top: 0px;
+        border-top: 1px solid fade(@color-foreground, 7%);
+        border-bottom: none;
+    }
+}
+.bold {
+    font-weight: bold;
+}
+.italic {
+    font-style: italic;
+}
+.underline {
+    text-decoration: underline;
+}
+.spt-mobileOnly {
+    display: none !important;
+}
+/* GENERAL end */
+
+/* HORIZONTAL SCROLL PROGRESS TRACKER */
+.spt-horizontalScrollProgress {
+    padding-top: 29px;
+    height: 31px;
+    &.spt-fixed {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        .spt-gradient2Stops (top, to bottom, 0, 0%, 100%, @color-background, fade(@color-background, 0%));
+    }
+    &.spt-bottom {
+        top: auto;
+        bottom: 0;
+        .spt-gradient2Stops (top, to bottom, 0, 0%, 100%, fade(@color-background, 0%), @color-background);
+    }
+    .spt-scrollProgress {
+        display: block;
+        border: none;
+        width: 100%;
+        height: 2px;
+        color: @color-highlight;
+        background-color: fade(@color-foreground, 30%);
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        &::-webkit-progress-bar {
+            background-color: fade(@color-foreground, 30%);
+        }
+        &::-webkit-progress-value {
+            .spt-gradient3Stops (left, to right, 1, 0%, calc(~'100% - 10px'), 100%, darken(@color-highlight, 20%), @color-highlight, @color-foreground);
+        }
+        &::-moz-progress-bar {
+            .spt-gradient3Stops (left, to right, 1, 0%, calc(~'100% - 10px'), 100%, darken(@color-highlight, 20%), @color-highlight, @color-foreground);
+        }
+    }
+    .spt-scrollProgressContainer {
+        display: block;
+        position: relative;
+        width: 100%;
+        height: 2px;
+        color: @color-highlight;
+        background-color: fade(@color-foreground, 30%);
+        overflow: hidden;
+        .spt-scrollProgressBar {
+            display: block;
+            position: absolute;
+            width: 0%;
+            height: inherit;
+            .spt-gradient3Stops (left, to right, 1, 0%, calc(~'100% - 10px'), 100%, darken(@color-highlight, 20%), @color-highlight, @color-foreground);
+        }
+    }
+}
+/* HORIZONTAL SCROLL PROGRESS TRACKER end */
+
+/* VERTICAL SCROLL PROGRESS TRACKER */
+.spt-verticalScrollProgress {
+    display: block;
+    position: fixed;
+    top: 50px;
+    left: 20px;
+    bottom: 50px;
+    width: 180px;
+    &.spt-verRight {
+        right: 20px;
+        left: auto;
+    }
+    &.spt-untitled {
+        width: 20px;
+    }
+    .spt-verticalScrollProgressContainer {
+        display: block;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 2px;
+        background-color: fade(@color-foreground, 30%);
+        overflow: hidden;
+        .spt-verticalScrollProgressBar {
+            position: inherit;
+            width: inherit;
+            height: 0;
+            border-bottom: 3px solid @color-foreground;
+            .spt-gradient2Stops (top, to bottom, 0, 0%, 100%, darken(@color-highlight, 20%), @color-highlight);
+        }
+    }
+}
+/* VERTICAL SCROLL PROGRESS TRACKER end */
+
+/* SCROLL STOPS */
+.spt-scrollStopContainer,
+.spt-vertScrollStopContainer {
+    position: relative;
+    .spt-stopCircle,
+    .spt-finalStopCircle {
+        position: absolute;
+        border: 2px solid fade(@color-foreground, 50%);
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        text-align: center;
+        text-decoration: none;
+        line-height: 16px;
+        color: fade(@color-foreground, 50%);
+        background-color: @color-background;
+        cursor: pointer;
+        &.spt-reached,
+        &.spt-hover {
+            color: @color-foreground;
+            border-color: @color-highlight;
+        }
+    }
+    .spt-finalStopCircle {
+        border-width: 3px;
+        width: 18px;
+        height: 18px;
+        line-height: 18px;
+    }
+}
+.spt-scrollStopContainer {
+    .spt-stopCircle {
+        top: -11px;
+    }
+    .spt-finalStopCircle {
+        top: -13px;
+        right: 0;
+    }
+}
+.spt-vertScrollStopContainer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    .spt-stopCircle {
+        left: -9px;
+    }
+    .spt-finalStopCircle {
+        left: -11px;
+        bottom: -3px;
+    }
+}
+.spt-styleFill {
+    .spt-vertScrollStopContainer {
+        top: 2px;
+        bottom: 20px;
+        .spt-stopCircle,
+        .spt-finalStopCircle {
+            background-color: darken(@color-lightgray, 20%);
+            &.spt-reached,
+            &.spt-hover {
+                background-color: @color-background;
+            }
+        }
+    }
+}
+/* SCROLL STOPS end */
+
+/* SCROLL STOP TITLES */
+.spt-scrollStopTitles,
+.spt-vertScrollStopTitles {
+    display: block;
+    position: absolute;
+    .spt-stopTitle,
+    .spt-finalStopTitle {
+        position: absolute;
+        color: fade(@color-foreground, 50%);
+        cursor: pointer;
+        &.spt-reached,
+        &.spt-hover {
+            color: @color-foreground;
+        }
+        &.spt-ellipsis {
+            max-width: calc(~'100%');
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+    }
+}
+.spt-scrollStopTitles {
+    top: 0;
+    right: 0;
+    left: 0;
+    .spt-stopTitle,
+    .spt-finalStopTitle {
+        &.invisible {
+            display: none;
+        }
+    }
+    .spt-finalStopTitle {
+        right: 0;
+    }
+}
+.spt-vertScrollStopTitles {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 170px;
+    .spt-stopTitle,
+    .spt-finalStopTitle {
+        line-height: 14px;
+        margin-top: 2px;
+        padding-left: 10px;
+    }
+    .spt-finalStopTitle {
+        bottom: 2px;
+    }
+}
+.spt-styleFill {
+    .spt-vertScrollStopTitles {
+        top: 2px;
+        bottom: 20px;
+    }
+}
+/* SCROLL STOP TITLES end */
+
+/* HORIZONTAL STYLES --> */
+.spt-horizontalScrollProgress {
+    &.spt-styleFill {
+        height: 30px;
+        padding: 0;
+        .spt-scrollProgress,
+        .spt-scrollProgressContainer {
+            height: 30px;
+        }
+        .spt-scrollProgress {
+            &::-webkit-progress-value {
+                .spt-gradient2Stops (left, to right, 1, 0%, 100%, darken(@color-highlight, 20%), @color-highlight);
+            }
+            &::-moz-progress-bar {
+                .spt-gradient2Stops (left, to right, 1, 0%, 100%, darken(@color-highlight, 20%), @color-highlight);
+            }
+        }
+        .spt-scrollProgressContainer {
+            .spt-scrollProgressBar {
+                .spt-gradient2Stops (left, to right, 1, 0%, 100%, darken(@color-highlight, 20%), @color-highlight);
+            }
+        }
+        .spt-scrollStopContainer {
+            width: calc(~'100% - 38px');
+            .spt-stopCircle {
+                top: -8px;
+            }
+            .spt-finalStopCircle {
+                top: -10px;
+            }
+        }
+        .spt-scrollStopTitles {
+            .spt-onlyActive {
+                line-height: 28px;
+                color: @color-background;
+            }
+        }
+    }
+}
+/* <-- HORIZONTAL STYLES */
+
+/* VERTICAL STYLES --> */
+.spt-verticalScrollProgress {
+    &.spt-styleFill {
+        .spt-verticalScrollProgressContainer {
+            border: 2px solid fade(@color-foreground, 50%);
+            border-radius: 6px;
+            left: -13px;
+            width: 25px;
+            overflow: hidden;
+            .spt-verticalScrollProgressBar {
+                
+            }
+        }
+        .spt-vertScrollStopContainer {
+            .spt-finalStopCircle {
+                bottom: -18px;
+            }
+        }
+        .spt-vertScrollStopTitles {
+            .spt-finalStopTitle {
+                bottom: -13px;
+            }
+        }
+    }
+}
+/* <-- VERTICAL STYLES */
+
+/* FAKE RESPONSIVE WEB DESIGN --> */
+&.spt-smallDevice {
+    &.spt-horizontalScrollProgress {
+            background-color: fade(@color-background, 95%);
+    }
+    &.spt-desktopOnly {
+        display: none !important;
+    }
+    &.spt-mobileOnly {
+        display: block !important;
+    }
+    &.spt-scrollProgress,
+    &.spt-scrollProgressContainer,
+    &.spt-scrollStopContainer,
+    &.spt-scrollStopTitles {
+        width: calc(~'100% - 32px');
+    }
+    &.spt-scrollStopContainer {
+        .spt-finalStopCircle {
+            right: -6px;
+        }
+    }
+}
+/* <-- FAKE RESPONSIVE WEB DESIGN */

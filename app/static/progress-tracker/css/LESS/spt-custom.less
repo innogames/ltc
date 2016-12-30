@@ -1,0 +1,79 @@
+/* replace '#04e4ff' with your custom color using search and replace */
+@color-custom: #04e4ff;
+.spt-gradient2Stops (@origin: left, @direction: to right, @type: 1, @1stStop: 0%, @2ndStop: 100%, @color1: darken(@color-custom, 20%), @color2: @color-custom) {
+    background: @color1; /* Old browsers */
+    background: -moz-linear-gradient(@origin, @color1 @1stStop, @color2 @2ndStop); /* FF3.6-15 */
+    background: -webkit-linear-gradient(@origin, @color1 @1stStop, @color2 @2ndStop); /* Chrome10-25,Safari5.1-6 */
+    background: linear-gradient(@direction, @color1 @1stStop, @color2 @2ndStop); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='@color1', endColorstr='@color2',GradientType=@type ); /* IE6-8 */
+}
+.spt-gradient3Stops (@origin: left, @direction: to right, @type: 1, @1stStop: 0%, @2ndStop: calc(~'100% - 10px'), @3rdStop: 100%, @color2: darken(@color-custom, 20%), @color1: @color-custom, @color3: #000000) {
+    background: @color1; /* Old browsers */
+    background: -moz-linear-gradient(@origin, @color2 @1stStop, @color1 @2ndStop, @color3 @3rdStop); /* FF3.6-15 */
+    background: -webkit-linear-gradient(@origin, @color2 @1stStop, @color1 @2ndStop, @color3 @3rdStop); /* Chrome10-25,Safari5.1-6 */
+    background: linear-gradient(@direction, @color2 @1stStop, @color1 @2ndStop, @color3 @3rdStop); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='@color2', endColorstr='@color3',GradientType=@type ); /* IE6-8 */
+}
+
+.spt-custom {
+    .spt-scrollStopContainer,
+    .spt-vertScrollStopContainer {
+        .spt-stopCircle,
+        .spt-finalStopCircle {
+            &.spt-reached,
+            &.spt-hover {
+                border-color: @color-custom;
+            }
+        }
+    }
+}
+
+.spt-horizontalScrollProgress {
+    &.spt-custom {
+        .spt-scrollProgress {
+            color: @color-custom;
+            &::-webkit-progress-value {
+                .spt-gradient3Stops ();
+            }
+            &::-moz-progress-bar {
+                .spt-gradient3Stops ();
+            }
+        }
+        .spt-scrollProgressContainer {
+            color: @color-custom;
+            .spt-scrollProgressBar {
+                .spt-gradient3Stops ();
+            }
+        }
+    }
+}
+
+.spt-verticalScrollProgress {
+    &.spt-custom {
+        .spt-verticalScrollProgressContainer {
+            .spt-verticalScrollProgressBar {
+                .spt-gradient2Stops (top, to bottom, 0);
+            }
+        }
+    }
+}
+
+.spt-horizontalScrollProgress {
+    &.spt-styleFill {
+        &.spt-custom {
+            .spt-scrollProgress {
+                &::-webkit-progress-value {
+                    .spt-gradient2Stops ();
+                }
+                &::-moz-progress-bar {
+                    .spt-gradient2Stops ();
+                }
+            }
+            .spt-scrollProgressContainer {
+                .spt-scrollProgressBar {
+                    .spt-gradient2Stops ();
+                }
+            }
+        }
+    }
+}

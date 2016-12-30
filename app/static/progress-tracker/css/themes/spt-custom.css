@@ -1,0 +1,101 @@
+/* replace '#008c9d' (darker gradient color) and '#04e4ff' (main color) with your custom color using search and replace */
+.spt-custom .spt-scrollStopContainer .spt-stopCircle.spt-reached,
+.spt-custom .spt-vertScrollStopContainer .spt-stopCircle.spt-reached,
+.spt-custom .spt-scrollStopContainer .spt-finalStopCircle.spt-reached,
+.spt-custom .spt-vertScrollStopContainer .spt-finalStopCircle.spt-reached,
+.spt-custom .spt-scrollStopContainer .spt-stopCircle.spt-hover,
+.spt-custom .spt-vertScrollStopContainer .spt-stopCircle.spt-hover,
+.spt-custom .spt-scrollStopContainer .spt-finalStopCircle.spt-hover,
+.spt-custom .spt-vertScrollStopContainer .spt-finalStopCircle.spt-hover {
+  border-color: #04e4ff;
+}
+.spt-horizontalScrollProgress.spt-custom .spt-scrollProgress {
+  color: #04e4ff;
+}
+.spt-horizontalScrollProgress.spt-custom .spt-scrollProgress::-webkit-progress-value {
+  background: #04e4ff;
+  /* Old browsers */
+  background: -moz-linear-gradient(left, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(left, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to right, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='@color2', endColorstr='@color3', GradientType=1);
+  /* IE6-8 */
+}
+.spt-horizontalScrollProgress.spt-custom .spt-scrollProgress::-moz-progress-bar {
+  background: #04e4ff;
+  /* Old browsers */
+  background: -moz-linear-gradient(left, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(left, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to right, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='@color2', endColorstr='@color3', GradientType=1);
+  /* IE6-8 */
+}
+.spt-horizontalScrollProgress.spt-custom .spt-scrollProgressContainer {
+  color: #04e4ff;
+}
+.spt-horizontalScrollProgress.spt-custom .spt-scrollProgressContainer .spt-scrollProgressBar {
+  background: #04e4ff;
+  /* Old browsers */
+  background: -moz-linear-gradient(left, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(left, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to right, #008c9d 0%, #04e4ff calc(100% - 10px), #000000 100%);
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='@color2', endColorstr='@color3', GradientType=1);
+  /* IE6-8 */
+}
+.spt-verticalScrollProgress.spt-custom .spt-verticalScrollProgressContainer .spt-verticalScrollProgressBar {
+  background: #008c9d;
+  /* Old browsers */
+  background: -moz-linear-gradient(top, #008c9d 0%, #04e4ff 100%);
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(top, #008c9d 0%, #04e4ff 100%);
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to bottom, #008c9d 0%, #04e4ff 100%);
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='@color1', endColorstr='@color2', GradientType=0);
+  /* IE6-8 */
+}
+.spt-horizontalScrollProgress.spt-styleFill.spt-custom .spt-scrollProgress::-webkit-progress-value {
+  background: #008c9d;
+  /* Old browsers */
+  background: -moz-linear-gradient(left, #008c9d 0%, #04e4ff 100%);
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(left, #008c9d 0%, #04e4ff 100%);
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to right, #008c9d 0%, #04e4ff 100%);
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='@color1', endColorstr='@color2', GradientType=1);
+  /* IE6-8 */
+}
+.spt-horizontalScrollProgress.spt-styleFill.spt-custom .spt-scrollProgress::-moz-progress-bar {
+  background: #008c9d;
+  /* Old browsers */
+  background: -moz-linear-gradient(left, #008c9d 0%, #04e4ff 100%);
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(left, #008c9d 0%, #04e4ff 100%);
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to right, #008c9d 0%, #04e4ff 100%);
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='@color1', endColorstr='@color2', GradientType=1);
+  /* IE6-8 */
+}
+.spt-horizontalScrollProgress.spt-styleFill.spt-custom .spt-scrollProgressContainer .spt-scrollProgressBar {
+  background: #008c9d;
+  /* Old browsers */
+  background: -moz-linear-gradient(left, #008c9d 0%, #04e4ff 100%);
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(left, #008c9d 0%, #04e4ff 100%);
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to right, #008c9d 0%, #04e4ff 100%);
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='@color1', endColorstr='@color2', GradientType=1);
+  /* IE6-8 */
+}

@@ -1,0 +1,38 @@
+ul
+{
+    list-style-type: none;
+}
+
+.superlistnegative ul {
+    list-style: none;
+    padding:0;
+    margin:0;
+}
+
+.superlistnegative li {
+    text-indent: -.7em;
+}
+
+.superlistnegative li:before {
+  content: "- ";
+  color: red;
+    /* use fonts like "arial" or use "sans-serif" to make the dot perfect round */
+  font-family: Arial, sans-serif;
+}
+
+.superlistpositive ul {
+    list-style: none;
+    padding:0;
+    margin:0;
+
+}
+.superlistpositive li {
+    text-indent: -.7em;
+}
+
+.superlistpositive li:before {
+  content: "+ ";
+  color: green;
+    /* use fonts like "arial" or use "sans-serif" to make the dot perfect round */
+  font-family: Arial, sans-serif;
+}

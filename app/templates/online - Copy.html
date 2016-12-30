@@ -1,0 +1,387 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta name="generator" content="HTML Tidy for HTML5 (experimental) for Windows https://github.com/w3c/tidy-html5/tree/c63cc39" />
+
+  <title>TWX Online Test</title>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js">
+</script>
+  <script src="http://code.highcharts.com/highcharts.js">
+</script>
+  <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css" />
+  <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js">
+</script>
+  <script src="../jquery.min.js">
+</script>
+  <script src="../jquery.jqplot.min.js">
+</script>
+  <script src="../plugins/jqplot.json2.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.meterGaugeRenderer.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.canvasTextRenderer.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.dateAxisRenderer.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.canvasAxisLabelRenderer.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.canvasAxisTickRenderer.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.barRenderer.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.categoryAxisRenderer.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.pointLabels.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.pieRenderer.min.js">
+</script>
+  <script type="text/javascript" src="../plugins/jqplot.donutRenderer.min.js">
+</script>
+  <link rel="stylesheet" type="text/css" href="../jquery.jqplot.min.css" />
+  <script type="text/javascript">
+//<![CDATA[
+                    // <!--
+                    $(document).ready(rresize);
+
+                    $(window).resize(function() {
+
+                        clearTimeout(window.timeoutId);
+
+                        window.timeoutId = setTimeout(rresize, 100);
+
+                    });
+
+                    function rresize() {
+
+                        $(".amchartGraph").hide();
+                        $(".amchartGraph").css("width", "100%");
+                        $(".amchartGraph").find("div").css("width", "100%");
+                        $("svg").css("width", "100%");
+                        $(".amchartGraph").show();
+
+                    }
+
+                    function req(url) {
+                        var request;
+                        if (window.XMLHttpRequest) {
+                            // IE7+, Firefox, Chrome, Opera, Safari
+                            request = new XMLHttpRequest();
+                        } else {
+                            // code for IE6, IE5
+                            request = new ActiveXObject('Microsoft.XMLHTTP');
+                        }
+                        // load
+                        request.open('GET', url, false);
+                        request.send();
+
+                        var data = eval('(' + request.responseText + ')');
+                        return data
+                    }
+
+                    var redir_to;
+                    function get_redirect() {
+                        try {
+                            redir_to = req('/redirect.json');
+                            return false;
+                        } catch (e) {
+                            if (redir_to[0]) {
+                                window.location = redir_to[0];
+                            } else {
+                                window.document.title = "Test Complete";
+                            }
+                            return true;
+                        }
+                    }
+
+                    function refresh_numbers() {
+                        data = req('/numbers.json');
+                        $('#instances').text(data['instances']*25);
+                        $('#planned').text(data['planned']);
+                        $('#actual').text(data['actual']);
+                        $('#avg').text(data['avg']);
+                        $('#net').text(data['net']);
+
+                        if (data['net']) {
+                            $('#netCell').css('background-color', "#FF9999");
+                        } else {
+                            $('#netCell').css('background-color', "white");
+                        }
+
+                        if (data['planned'] && data['planned'] != data['actual']) {
+                            $('#actCell').css('background-color', "#FFFF99");
+                        } else {
+                            $('#actCell').css('background-color', "white");
+                        }
+                    }
+                    // -->
+  //]]>
+  </script>
+  <style type="text/css">
+/*<![CDATA[*/
+                    body {
+                        padding: 0px;
+                        margin: 0px;
+                        overflow-x: hidden;
+                    }
+
+                    div.amchartGraph {
+                        margin: 0px;
+                    }
+
+                    table.bigNumbers {
+                        width: 100%;
+                    }
+                    table.bigNumbers th {
+                        background-color: white;
+                        text-align: center;
+                        font-size: 0.8em;
+                        color: gray;
+                        vertical-align: bottom;
+                        font-weight: normal;
+                        width: 20%;
+                    }
+
+                    table.bigNumbers th div {
+                        color: black;
+                        font-weight: bold;
+                        font-size: 3em;
+              /* body {
+    background-image: url('Slide6434764_1024x1024.png');
+    background-repeat: repeat;
+}*/       }
+  /*]]>*/
+  
+
+  </style>
+</head>
+
+<body>
+  <table class="bigNumbers" border=1>
+  <tr>
+      <td colspan="5">
+        <div style="color: gray; text-align: center">
+         Online Performance Test Viewer
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <th>
+        <div style="color: gray;" id="instances">
+          N/A
+        </div>threads/instances
+      </th>
+
+      <th>
+        <div style="color: #990099;" id="planned">
+          N/A
+        </div>planned requests
+      </th>
+
+      <th id="actCell">
+        <div style="color: #3333FF;" id="actual">
+          N/A
+        </div>actual responses
+      </th>
+
+      <th>
+        <div style="color: #009900;" id="avg">
+          N/A
+        </div>avg response time
+      </th>
+
+      <th id="netCell">
+        <div style="color: black;" id="net">
+          N/A
+        </div>NET errors
+      </th>
+    </tr>
+
+    <tr>
+      <td colspan="5">
+        <div id="chartAvg" style="width:100%; height:400px; color:#0000FF;"></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td colspan="5">
+        <table width="100%" cellpadding="0">
+          <tr>
+            <td style="width:50%">
+              <div id="chartQ" style="width:100%; height:250px;"></div>
+            </td>
+
+            <td style="width:50%">
+              <div id="chartErr" style="width:100%; height:250px;"></div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table><script type="text/javascript">
+//<![CDATA[
+
+
+                        var plot1;
+                        var plot2;
+                        var plot3;
+
+                        var content;
+                        function plot_Graphs()
+                        {
+						 var plot1;
+                        var plot2;
+                        var plot3;
+
+                        var content;
+  
+                            $.getJSON("/Avg.json", function(json) {
+                                var line1 = [];
+                                content = (json[1]);
+                                $.each(content, function(index, item) {
+                                var d = new Date(item.timeStamp*1000);
+                                  line1.push([d,item.receive ])
+                                   
+                
+                                });
+                                plot1 = $.jqplot('chartAvg', [line1], {
+                                    title: 'Average response times, ms',
+                                    series: [{renderer: $.jqplot.LineRenderer}],
+                                    axesDefaults: {
+                                        tickRenderer: $.jqplot.CanvasAxisTickRenderer
+                                    },
+                                    axes: {
+                                        xaxis: {
+                                            renderer:$.jqplot.DateAxisRenderer, 
+                                
+                                            tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                                            tickOptions:{formatString:'%H:%M:%S', angle: -30}
+                                        },
+                                        yaxis: {
+                                            tickRenderer:$.jqplot.CanvasAxisTickRenderer,
+                                          //  label: 'ms',
+                                         ///   labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                                          ///  labelOptions: {
+                                          //      fontFamily: 'Georgia, Serif',
+                                          //      fontSize: '12pt'
+                                          //  }
+                                        }
+
+                                    }
+                                });
+								plot1.redraw();
+	
+								
+                            });
+       
+                          
+                            //////////////////////////////////////////////////
+                            $.getJSON("/Q.json", function(json) {
+                                var line1 = [];
+                                var avgQ = 0;
+                                content = (json[1]);
+                                $.each(content, function(index, item) {
+                                    avgQ = avgQ + item.requestCount;
+                                });
+
+                                line1.push([0, avgQ / 7])
+                                plot2 = $.jqplot('chartQ', [line1], {
+                                    title: 'Requests per second (RPS)',
+                                    seriesDefaults: {
+                                        renderer: $.jqplot.MeterGaugeRenderer,
+                                        rendererOptions: {
+                                            min: 100,
+                                            max: 800,
+                                            intervals: [300, 500, 700, 800],
+                                            intervalColors: ['#66cc66', '#93b75f', '#E7E658', '#cc6666'],
+											shadowOffset:2,
+											background: "#efefef",
+                                        }
+                                    }
+                                });
+								plot2.redraw();
+                            });
+                            
+                            
+                            
+                            ////////////////////////
+                            $.getJSON("/HTTP.json", function(json) {
+                                var data = [];
+                                var code2xx=0;
+								var code5xx=0;
+								var code4xx=0;
+								var code3xx=0;
+								var net=0;
+								var nonhttp=0;
+
+                                content = (json[1]);
+                                $.each(content, function(index, item) {
+                                 code2xx = code2xx + item["2xx"];
+								 code5xx=code5xx + item["5xx"];
+								 code4xx=code4xx + item["4xx"];
+								 code3xx=code3xx + item["3xx"];
+								 net=net + item["net"];
+								 nonhttp=nonhttp + item["Non-HTTP"];
+                                });
+								var data = [
+								['2xx', code2xx],['5xx', code5xx], ['4xx', code4xx], 
+								['3xx', code3xx],['net', net], ['Non-HTTP', nonhttp]
+								];
+                         
+                                plot3 = $.jqplot('chartErr', [data], {
+                                    title: 'Response codes',
+                                  seriesDefaults: {
+        // Make this a pie chart.
+        renderer: jQuery.jqplot.PieRenderer, 
+        rendererOptions: {
+          // Put data labels on the pie slices.
+          // By default, labels show the percentage of the slice.
+          showDataLabels: true
+        }
+      }, 
+        legend: { show:true, location: 'e' }  
+                                });
+								plot3.redraw();
+                            });
+                       /*   if(plot1 != null)
+              {
+                   plot1.destroy();
+				   console.log("plot1 destroyed");
+              } 
+			    if(plot2 != null)
+              {
+                   plot2.destroy();
+				   console.log("plot2 destroyed");
+              } 
+			    if(plot3 != null)
+              {
+                   plot3.destroy();
+				   console.log("plot3 destroyed");
+              }*/ 
+                        }
+
+                        function refresh_all(i) {
+
+
+                            try {
+                                refresh_numbers();
+                                plot_Graphs();
+                            } catch (e) {
+                                // drop
+                            }
+
+                            if (!get_redirect()) {
+                                window.setTimeout("refresh_all(1000);", i);
+                            }
+                        }
+
+                        refresh_all(100);
+  //]]>
+  </script><!-- footer -->
+
+  <div style="float: none; clear: both; text-align: center; padding-top: 1em;">
+  </div>
+</body>
+</html>
