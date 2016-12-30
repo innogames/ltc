@@ -25,6 +25,9 @@ Get fancy good-readable aggregate table for the tests:
 Get monitoring data:
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/compare_2.png)
 
+# Online test monitoring
+Provides online test monitoring, reads .csv result files and builds graphs online without Graphite,plugins,etc.
+
 # Start
 
 nohup /usr/bin/python start.py > log.txt 2>&1 &
