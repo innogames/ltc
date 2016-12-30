@@ -9,4 +9,5 @@ Designed for integration with Jenkins. In post-job script need to include script
 
 # Overall test history data
 Graph with history of tests 
+
 ![alt tag]https://github.com/v0devil/jltom/pics/overall.png)
