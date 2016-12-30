@@ -1,6 +1,6 @@
-#jmeter #report #monitoring #graphs
-# jltom 
 
+# jltom 
+Jmeter Load Test Online Monitor
 # DESCRIPTION
 Online web-application for analyzing JMeter test results and monitoring the current running tests.
 For data storage uses Postgres.
