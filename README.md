@@ -1,7 +1,7 @@
 
 # jltom 
 Jmeter Load Test Online Monitor
-# DESCRIPTION
+# Description
 Online web-application for analyzing JMeter test results and monitoring the current running tests.
 For data storage uses Postgres.
 
@@ -19,4 +19,7 @@ Get fancy good-readable aggregate table for the tests:
 Get monitoring data:
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/compare_2.png)
 
+# Start
+
+nohup /usr/bin/python start.py > log.txt 2>&1 &
 
