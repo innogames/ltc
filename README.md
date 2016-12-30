@@ -11,3 +11,12 @@ Designed for integration with Jenkins. In post-job script need to include script
 Graph with tests history
 
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/overall.png)
+
+# Test results
+Get fancy good-readable aggregate table for the tests:
+![alt tag](https://github.com/v0devil/jltom/blob/master/pics/compare_1.png)
+
+Get monitoring data:
+![alt tag](https://github.com/v0devil/jltom/blob/master/pics/compare_2.png)
+
+
