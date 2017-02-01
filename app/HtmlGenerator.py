@@ -1,8 +1,9 @@
 import sys
 import os
+import logging
 from DataGenerator import DataGenerator
 from DataBaseAdapter import DataBaseAdapter
-
+log = logging.getLogger(__name__)
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -20,6 +21,12 @@ class HtmlGenerator:
     def get_html_list_label(self,text):
         return '<option disabled selected>'+text+'</option>'
 
+    def get_html_list_options(self,reader):
+        options = ""
+        for row in reader:
+            options += '<option value="'+str(row[0])+'">'+str(row[0])+'</option>'
+        return options
+
     def get_html_in_div_id(self, id, data):
         data_in_tab = "<div id="+id+">"+data+"</div>"
         return data_in_tab
@@ -27,14 +34,27 @@ class HtmlGenerator:
     def get_html_button(self, label,id,color):
         return '<button class="ui-button ui-widget ui-corner-all" style="background-color:'+ color +'" id="'+id+'">' + label + '</button>'
 
+    def get_html_errors_percent(self, test_id):
+        percent = int(self.data_generator.get_errors_percent_for_test_id(test_id))
+        html_code = ""
+        print percent;
+        if percent <= 2:
+            html_code += '<span style="color:green">' + str(percent) + ' %' + '</span>'
+        elif percent > 2:
+            print percent;
+            html_code += '<span style="color:red">' + str(percent) + ' %' + '</span>'
+        return html_code
+
     def get_html_aggregate_table_for_test_id(self, test_id):
         reader = self.database_adapter.get_aggregate_data_for_test_id(test_id)
+        html_code = ""
         test_display_name = self.data_generator.resultset_to_csv(self.database_adapter.get_test_name_for_test_id(test_id));
-
+        html_code += "<h4><span>Test name: "+test_display_name + '</span><br/>'+'<span>Error percent: </span>'\
+                     +self.get_html_errors_percent(test_id)+'<br/></h4>'
         rownum = 0
         num = 0
         uniqueURL = []
-        html_code = ""
+
         html_code += '<hr />'
         html_code += '<h3>Aggregate table</h3>'
         html_code += '<table id="AggregateTable' + str(test_id) + '" class="tablesorter">'
@@ -59,11 +79,16 @@ class HtmlGenerator:
                 check_col = 0
                 for column in row:
                     c_value = 0
+                    if column == None:
+                        column = 0
                     if check_col > 0:
                         try:
+                            log.debug(row)
+                            log.debug(column)
+
                             c_value = float(column)
                         except ValueError, e:
-                            print "error", e, column
+                            log.error("error" + e + column)
                             c_value = 0
 
                         row_value[check_col] = c_value
@@ -94,7 +119,7 @@ class HtmlGenerator:
                         else:
                             html_code += '<td style="background-color:#66FF33">' + s + str(column) + d + '</td>'
 
-                    elif (check_col == 9) and num == 0:  # errors for the current release
+                    elif (check_col == 10) and num == 0:  # errors for the current release
                         if c_value > 10:
                             html_code += '<td style="background-color:#FF9999">' + str(column) + '</td>'
                         else:
@@ -122,7 +147,6 @@ class HtmlGenerator:
 
     def get_html_template(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        print dir_path
         self.page_template = open(os.path.join(dir_path,'templates','main.html'), 'r').read()
         self.page_template = self.page_template.replace('%select-choice-project-overall%', self.get_html_project_list('select-choice-project-overall'))
         self.page_template = self.page_template.replace('%select-choice-project-compare%', self.get_html_project_list('select-choice-project-compare'))
@@ -149,9 +173,65 @@ class HtmlGenerator:
         html_code += self.get_html_select_list("select-choice-runningtests", "Running tests", options)
         return html_code
 
+    def get_running_test_data(self, runningtest_id, data):
+        return self.data_generator.get_running_test_data(runningtest_id, data)
+
+    def get_csv_rtot_for_test_id(self, test_id):
+        return self.data_generator.get_csv_rtot_for_test_id(test_id)
+
+    def get_csv_rtot_for_url(self, test_id, url):
+        return self.data_generator.get_csv_rtot_for_url(test_id, url)
+
+    def get_csv_errors_for_url(self, test_id, url):
+        return self.data_generator.get_csv_errors_for_url(test_id, url)
+
+    def get_last_test_id_for_project_name(self, project_name):
+        return self.data_generator.get_last_test_id_for_project_name(project_name)
+
+    def get_test_id_for_project_name_and_build_number(self, project_name, build_number):
+        return self.data_generator.get_test_id_for_project_name_and_build_number( project_name, build_number)
+
+    def get_max_test_id_for_project_name(self, project_name):
+        return self.data_generator.get_max_test_id_for_project_name(project_name)
+
+    def get_min_test_id_for_project_name(self, project_name):
+        return self.data_generator.get_min_test_id_for_project_name( project_name)
+
+    def get_csv_compare_rtot(self, test_id_1, test_id_2):
+        return self.data_generator.get_csv_compare_rtot(test_id_1, test_id_2)
+
+    def get_csv_monitoring_data(self, test_id, server_name, metric):
+        return self.data_generator.get_csv_monitoring_data(test_id, server_name, metric)
+
+    def get_metric_max_value(self, test_id, server_name, metric):
+        return self.data_generator.get_metric_max_value(test_id, server_name, metric)
+
+    def get_metric_compare_data_for_test_ids(self, test_id_1, test_id_2, server_1, server_2, metric):
+        return self.data_generator.get_metric_compare_data_for_test_ids(test_id_1, test_id_2, server_1, server_2, metric)
+
+    def get_rps_for_test_id(self,test_id):
+        return self.data_generator.get_rps_for_test_id(test_id)
+
+    def get_csv_overall_compare_data(self, project_name):
+        return self.data_generator.get_csv_overall_compare_data(project_name)
+
+    def get_csv_bounded_overall_compare_data(self, project_name, test_id_min, test_id_max):
+        return self.data_generator.get_csv_bounded_overall_compare_data(project_name, test_id_min, test_id_max)
+
+    def get_csv_response_times_percentage_compare_table(self,test_id_1,test_id_2, mode):
+        return self.data_generator.get_csv_response_times_percentage_compare_table(test_id_1,test_id_2, mode)
+
+    def get_csv_cpu_load_compare_table(self,test_id_1,test_id_2):
+        return self.data_generator.get_csv_cpu_load_compare_table(test_id_1,test_id_2)
+
     def get_html_online_page(self):
         html_code = ""
         html_code += self.get_html_running_tests_list()
+        html_code += self.get_html_in_div_id("online_tab_body","")
+
+        return html_code
+    def get_html_online_page_body(self):
+        html_code = ""
         html_code += '<hr/>'
         html_code += '<div id="tabs_online_data">'
         html_code += '''<ul>
@@ -160,12 +240,28 @@ class HtmlGenerator:
         </ul>'''
         # GRAPHS_TAB
         html_code += self.get_html_in_div_id("online_graphs_tab",
-                                         self.get_html_in_div_id("online_graph","")+
-                                         self.get_html_in_div_id("online_errors_rate_graph",""));
+                                             self.get_html_in_div_id("online_graph","")+
+                                             "<table>"+
+                                             "<tr>" +
+                                             "<th>Successful requests (%)</th>" +
+                                             "<th>Requests/s</th>" +
+                                             "<th>Response codes</th>" +
+                                             "</tr>" +
+                                             "<tr>" +
+                                             "<td>" +
+                                             self.get_html_in_div_id("online_successful_requests_percentage_graph","")+
+                                             "</td>" +
+                                             "<td>" +
+                                             self.get_html_in_div_id("online_rps_graph","") +
+                                             "</td>" +
+                                             "<td>" +
+                                             self.get_html_in_div_id("online_response_codes_graph","") +
+                                             "</td>" +
+                                             "</tr>" +
+                                             "</table>"    );
         html_code += self.get_html_in_div_id("online_tables_tab",self.get_html_in_div_id("online_aggregate_table",""));
         html_code += "</div>"
-        return html_code
-
+        return html_code;
     def get_html_project_list(self, selectlist_name):
         reader = self.database_adapter.get_project_list()
         options = ""
@@ -183,12 +279,33 @@ class HtmlGenerator:
         html_code += '''<ul>
         <li><a href='#highlights_tab'>Highlights</a></li>
         <li><a href='#comparison_tables_tab'>Comparison tables</a></li>
+        <li><a href='#comparison_graphs_tab'>Comparison graphs</a></li>
         </ul>
         '''
         html_code += self.get_html_in_div_id("highlights_tab", self.get_html_compare_tests_highlights(test_id_1, test_id_2))
         html_code += self.get_html_in_div_id("comparison_tables_tab",self.get_html_compare_tests_comparison_tables_tab(test_id_1,test_id_2))
+        html_code += self.get_html_in_div_id("comparison_graphs_tab",self.get_html_compare_tests_comparison_graphs_tab(test_id_1,test_id_2))
         html_code += '</div>'
         return html_code;
+
+    def get_html_compare_tests_comparison_graphs_tab(self,test_id_1,test_id_2):
+        html_code = '<hr/>'
+        html_code += self.get_html_select_list("select-server-test-1", "Select server from 1st test",
+                                                          self.get_html_list_options
+                                                          (self.database_adapter.get_servers_from_test_id(test_id_1)))
+        html_code += self.get_html_select_list("select-server-test-2", "Select server from 2st test",
+                                               self.get_html_list_options
+                                               (self.database_adapter.get_servers_from_test_id(test_id_2)))
+        metrics = self.database_adapter.get_monitoring_metrics()
+        options = ""
+        for metric in metrics:
+            options += '<option value="'+str(metric)+'">'+str(metric)+'</option>'
+        html_code += self.get_html_select_list("select-monitoring-compare-metric", "Select metric",
+                                               options)
+
+        html_code += "<hr/>"
+        html_code += self.get_html_in_div_id("compare_monitoring_data_graph","");
+        return html_code
 
     def get_html_compare_tests_comparison_tables_tab(self,test_id_1,test_id_2):
         html_code = '<hr/>'
@@ -290,16 +407,23 @@ class HtmlGenerator:
         #RTOT DATA TAB
         html_code += self.get_html_in_div_id("rtot_graphs_tab",self.get_html_in_div_id("placeforgraph",self.get_html_in_div_id("placeforgraph","")))
         #MONITORING DATA TAB
-        reader = self.database_adapter.get_servers_from_test_id(test_id)
-        #reader = self.database_adapter.getProjectsList()
+        monitoring_graphs_tab = self.get_html_select_list("select-server-0", "Select server",
+                                                          self.get_html_list_options
+                                                          (self.database_adapter.get_servers_from_test_id(test_id)))
+
+        metrics = self.database_adapter.get_monitoring_metrics()
         options = ""
-        for row in reader:
-            options += '<option value="'+str(row[0])+'">'+str(row[0])+'</option>'
-        monitoring_graphs_tab = self.get_html_select_list("select-server-0", "Select server", options)
+        for metric in metrics:
+            options += '<option value="'+str(metric)+'">'+str(metric)+'</option>'
+        monitoring_graphs_tab += self.get_html_select_list("select-monitoring-metric", "Select metric",
+                                                           options)
+        monitoring_graphs_tab += "<hr/>"
         monitoring_graphs_tab += self.get_html_in_div_id("placeformonitoringgraph","")
         html_code += self.get_html_in_div_id("monitoring_graphs_tab",monitoring_graphs_tab)
         html_code += '</div>'
         return html_code
+
+
 
     def get_html_page_for_url(self, test_id, url):
         html_code = ""
@@ -343,6 +467,7 @@ class HtmlGenerator:
                               },
                      bindto: '#rtotgraph'
                  });
+
         errors_graph = c3.generate({
                      data: {
                          url: "/geturldata/?action=get_errors&test_id=%test_id%&URL=%url%",
