@@ -1,0 +1,357 @@
+var selected_project = "";
+var selected_server_for_monitoring_data,
+selected_monitoring_metric = "";
+var test_id_1, test_id_2;
+var num_of_tests_to_compare, top_requests = 0;
+var running_test_id = 0;
+
+ var getUrlParameter = function getUrlParameter(sParam) {
+     var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+         sURLVariables = sPageURL.split('&'),
+         sParameterName,
+         i;
+
+     for (i = 0; i < sURLVariables.length; i++) {
+         sParameterName = sURLVariables[i].split('=');
+
+         if (sParameterName[0] === sParam) {
+             return sParameterName[1] === undefined ? true : sParameterName[1];
+         }
+     }
+ };
+
+
+ function popitup(url) {
+    newwindow=window.open(url,'{{title}}','height=400,width=650');
+    if (window.focus) {newwindow.focus()}
+    return false;
+}
+
+function httpGet(theUrl) {
+      var xmlHttp = new XMLHttpRequest();
+      xmlHttp.open("GET", theUrl, false); // false for synchronous request
+      xmlHttp.send(null);
+      return xmlHttp.responseText;
+}
+
+function updateSelectList(id, url, label, text_tag, value_tag) {
+ $.getJSON(url, function(json){
+               //json = JSON.parse(json_string);
+               $(id).empty();
+               $(id).append($('<option disabled selected>').text(label).attr('value', label));
+               $.each(json, function(i, obj){
+                       $(id).append($('<option>').text(obj[text_tag]).attr('value', obj[value_tag]));
+               });
+               $(id).selectpicker('refresh');
+});
+}
+
+
+ function updateElements() {
+
+ $("#main_tabs").tabs();
+ $("#analyzer_tabs").tabs();
+ $(".selectpicker").selectpicker();
+
+ $.ajax({
+                          url: "/analyzer/dashboard",
+                          type: "get",
+                          success: function(response) {
+                            $("#dashboard_page").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+
+ $.ajax({
+                          url: "/controller/",
+                          type: "get",
+                          success: function(response) {
+                            $("#controller_page").html(response);
+
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+
+ $('#select_project_menu').on('change', function(){
+                selected_project = $(this).find("option:selected").val();
+                $.ajax({
+                         url: "/analyzer/history",
+                         type: "get",
+                         success: function(response) {
+                           $("#history_project_page").html(response);
+                         },
+                         error: function(xhr) {
+                           //Do Something to handle error
+                         }
+                       });
+
+                   $.ajax({
+                            url: "/analyzer/analyze",
+                            type: "get",
+                            success: function(response) {
+                              $("#analyze_page").html(response);
+                              console.log(response);
+
+                            },
+                            error: function(xhr) {
+                              //Do Something to handle error
+                            }
+                   });
+  $(window).trigger('resize');
+ });
+
+ $('#select_running_test').on('change', function(){
+                running_test_id = $(this).find("option:selected").val();
+                $.ajax({
+                         url: "/online/"+running_test_id+"/online_page/",
+                         type: "get",
+                         success: function(response) {
+                           update_data = httpGet('/online/' + running_test_id + '/update/');
+                           console.log(update_data);
+                           $("#online_page").html(response);
+                         },
+                         error: function(xhr) {
+                           //Do Something to handle error
+                         }
+                       });
+  $(window).trigger('resize');
+ });
+
+ updateSelectList('#select_project_menu', "/analyzer/projects_list", "Select project", "project_name", "id");
+ updateSelectList('#select_running_test', "/online/tests_list", "Select running test", "result_file_dist", "id");
+
+ handleIncomingAction();
+ };
+
+
+
+$(document).ready(function() {
+      updateElements();
+      updateTables();
+
+});
+
+function updateTables() {
+var tables = document.getElementsByTagName("table");
+     for (var i = 0; i < tables.length; i++) {
+         var el = tables[i];
+         if (el.id) {
+         console.log("update table style:" + el.id);
+             $('#' + el.id).tablesorter({
+                 theme: 'bootstrap',
+                 widthFixed: true,
+                 showProcessing: true,
+                 headerTemplate: '{content} {icon}', // Add icon for various themes
+
+                 widgets: ['zebra', 'stickyHeaders', 'filter'],
+
+                 widgetOptions: {
+
+                     // extra class name added to the sticky header row
+                     stickyHeaders: '',
+                     // number or jquery selector targeting the position:fixed element
+                     stickyHeaders_offset: 0,
+                     // added to table ID, if it exists
+                     stickyHeaders_cloneId: '-sticky',
+                     // trigger "resize" event on headers
+                     stickyHeaders_addResizeEvent: true,
+                     // if false and a caption exist, it won't be included in the sticky header
+                     stickyHeaders_includeCaption: true,
+                     // The zIndex of the stickyHeaders, allows the user to adjust this to their needs
+                     stickyHeaders_zIndex: 2,
+                     // jQuery selector or object to attach sticky header to
+                     stickyHeaders_attachTo: null,
+                     // jQuery selector or object to monitor horizontal scroll position (defaults: xScroll > attachTo > window)
+                     stickyHeaders_xScroll: null,
+                     // jQuery selector or object to monitor vertical scroll position (defaults: yScroll > attachTo > window)
+                     stickyHeaders_yScroll: null,
+
+                     // scroll table top into view after filtering
+                     stickyHeaders_filteredToTop: true
+
+                     // *** REMOVED jQuery UI theme due to adding an accordion on this demo page ***
+                     // adding zebra striping, using content and default styles - the ui css removes the background from default
+                     // even and odd class names included for this demo to allow switching themes
+                     // , zebra   : ["ui-widget-content even", "ui-state-default odd"]
+                     // use uitheme widget to apply defauly jquery ui (jui) class names
+                     // see the uitheme demo for more details on how to change the class names
+                     // , uitheme : 'jui'
+                 }
+             });
+
+             /*if (el.id.indexOf("Table") !== -1) {
+                 $('#' + el.id).tablesorter({
+                         headers: {
+                             2: {
+                                 sorter: 'responsetimes'
+                             },
+                             4: {
+                                 sorter: 'responsetimes'
+                             }
+                         }
+                     }
+
+                 );
+             } else {
+                 $('#' + el.id).tablesorter();
+             }*/
+         }
+     }
+}
+
+var draw_monitoring_graph = function draw_monitoring_graph(test_id, server, metric) {
+     var unit = "";
+     var max_y = 0;
+     var json = JSON.parse(httpGet('/analyzer/test/' +
+     test_id + '/' + server + '/'+ metric + '/max_value/'))
+     var max_metric_value = json.max_value;
+     if (metric.indexOf("CPU") > -1) {
+         unit = " %";
+         max_y = Math.round(max_metric_value);
+     } else if (metric.indexOf("Memory") > -1) {
+         max_y = Math.round(max_metric_value + max_metric_value * 0.1);
+         unit = " Mb";
+     } else {
+         max_y = Math.round(max_metric_value + max_metric_value * 0.1);
+     }
+     json = JSON.parse(httpGet('/analyzer/test/' + test_id + '/' + server + '/RPS/max_value/'))
+     var max_rps_value = json['max_value'];
+     max_y2 = Math.round(max_rps_value);
+     max_y2 = max_y2*1.2;
+     monitoring_graph = c3.generate({
+         data: {
+             url: '/analyzer/test/' + test_id +
+                  '/'+server+'/'+metric + '/get',
+             mimeType: 'json',
+             type: 'line',
+             keys: {
+                  x: 'timestamp',
+                  value: [metric,'rps'],
+             },
+             xFormat: '%H:%M:%S',
+             axes: {
+                                                  rps: 'y2'
+                                              },
+         },
+         axis: {
+             x: {
+                 type: 'timeseries',
+                 tick: {
+                     format: '%H:%M:%S'
+                 }
+             },
+             y: {
+                 max: max_y,
+                 min: 0,
+                 padding: {
+                     top: 0,
+                     bottom: 0
+                 },
+                 label: metric + " (" + unit + ")",
+             },
+             y2: {
+                 min: 0,
+                 show: true,
+                 max: max_y2,
+                 padding: {
+                 top: 0,
+                 bottom: 0
+                 },
+                 label: 'Requests/s',
+                 }
+
+         },
+         title: {
+             text: metric + ' on ' + server
+         },
+         bindto: '#test_monitoring_graph'
+     });
+     /* setTimeout(function() {
+      monitoring_graph.load({
+                          url: '?action=get_test_data&sub_action=get_rps&test_id=' + test_id,
+                          type: 'line',
+                      });
+      }, 500);*/
+ }
+
+ function testReport(test_id) {
+             var index = $('#main_tabs a[href="#analyzer"]').parent().index();
+             $('#main_tabs').tabs("option", "active", index);
+             var index = $('#analyzer_tabs a[href="#analyze"]').parent().index();
+             $('#analyzer_tabs').tabs("option", "active", index);
+    		 console.log("[handleIncomingAction]test_id_1:" + test_id);
+             var test_2 = JSON.parse(httpGet('/analyzer/test/'+ test_id +'/prev_test_id/'));
+             test_id_2 = test_2[0].id
+             $.ajax({
+                           url: '/analyzer/test/' + test_id + "/report/",
+                           type: "get",
+                           success: function(response) {
+                             $("#test_results").html(response);
+                           },
+                           error: function(xhr) {
+                             //Do Something to handle error
+                           }
+               });
+             console.log("[handleIncomingAction]test_id_2:" + test_id_2);
+             $.ajax({
+                      url: '/analyzer/test/' + test_id + '/' + test_id_2 + "/compare_report/",
+                      type: "get",
+                      success: function(response) {
+                             $("#test_compare_results").html(response);
+                      },
+                           error: function(xhr) {
+                           }
+             });
+}
+
+//TO SUPPORT OLD REQUESTS
+var handleIncomingAction = function handleIncomingAction(){
+     action = getUrlParameter('action');
+     if (action == 'getbuilddata') {
+         var project_name = getUrlParameter('project_name');
+		 var projects_list = JSON.parse(httpGet('/analyzer/projects_list'));
+		 $.each(projects_list, function(i, obj){
+			 console.log(obj);
+             if(obj['project_name']==project_name)
+             {
+             selected_project = obj['id']
+             }
+             });
+			 
+         var build_number = getUrlParameter('build_number');
+         console.log("selected_project_id:"+selected_project)
+         $('#select_project_menu').selectpicker('val', selected_project);
+         $('#select_project_menu').trigger('onchange');
+         $.ajax({
+                       url: "/analyzer/history",
+                       type: "get",
+                       success: function(response) {
+                         $("#history_project_page").html(response);
+                       },
+                       error: function(xhr) {
+                         //Do Something to handle error
+                       }
+                     });
+
+                 $.ajax({
+                          url: "/analyzer/analyze",
+                          type: "get",
+                          success: function(response) {
+                            $("#analyze_page").html(response);
+
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                 });
+         var test = JSON.parse(httpGet('/analyzer/project/' + selected_project + '/'+ build_number +'/test_info/'));
+         test_id_1 = test[0].id;
+         testReport(test_id_1);
+     }
+ };

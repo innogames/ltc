@@ -1,0 +1,49 @@
+
+<select name="select_test_1" id="select_test_1" class="selectpicker">
+</select>
+<button id="get_last_test_report_button" class="btn btn-success">Get report for the last test</button>
+<div id="test_results"></div>
+
+<script>
+$('#select_test_1').selectpicker();
+updateSelectList('#select_test_1', '/analyzer/project/' + selected_project + "/tests_list/", "Select test", "display_name", "id");
+
+$('#select_test_1').on('change', function(){
+     test_id_1 = $(this).find("option:selected").val();
+     console.log("Select test:" + test_id_1);
+     $.ajax({
+              url: '/analyzer/test/' + test_id_1 + "/report/",
+              type: "get",
+              success: function(response) {
+                $("#test_results").html(response);
+              },
+              error: function(xhr) {
+                //Do Something to handle error
+              }
+     });
+
+     var test_2 = JSON.parse(httpGet('/analyzer/test/'+ test_id_1 +'/prev_test_id/'));
+     test_id_2 = test_2[0].id
+     $('#select_test_2').val(test_id_2);
+     $.ajax({
+                  url: '/analyzer/test/' + test_id_1 + '/' + test_id_2 + "/compare_report/",
+                  type: "get",
+                  success: function(response) {
+                         $("#test_compare_results").html(response);
+                  },
+                       error: function(xhr) {
+                         //Do Something to handle error
+                       }
+     });
+ });
+
+ $('#get_last_test_report_button').click(function () {
+  var last_test = JSON.parse(httpGet('/analyzer/project/' + selected_project + '/last_test/'));
+  test_id_1 = last_test[0].id;
+  $('#select_test_1').val(test_id_1);
+  $('#select_test_1').change();
+  $('#select_test_1').selectpicker('refresh');
+});
+
+
+</script>

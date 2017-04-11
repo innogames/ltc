@@ -1,0 +1,8 @@
+django_debug_toolbar==1.7
+Django==1.10.5
+matplotlib==1.4.3
+numpy==1.10.0
+pandas==0.17.0
+psutil==5.2.1
+matplotlib==1.4.3
+SQLAlchemy==1.1.3

@@ -1,0 +1,154 @@
+ul
+{
+    list-style-type: none;
+}
+
+.superlistnegative ul {
+    list-style: none;
+    padding:0;
+    margin:0;
+}
+
+.superlistnegative li {
+    text-indent: -.7em;
+}
+
+.superlistnegative li:before {
+  content: "- ";
+  color: red;
+    /* use fonts like "arial" or use "sans-serif" to make the dot perfect round */
+  font-family: Arial, sans-serif;
+}
+
+.superlistpositive ul {
+    list-style: none;
+    padding:0;
+    margin:0;
+
+}
+.superlistpositive li {
+    text-indent: -.7em;
+}
+
+.superlistpositive li:before {
+  content: "+ ";
+  color: green;
+    /* use fonts like "arial" or use "sans-serif" to make the dot perfect round */
+  font-family: Arial, sans-serif;
+}
+
+.ui-selectmenu-menu li a {
+background: transparent;
+    border: none;
+    border-bottom: 1px solid #c0c0c0;
+    -moz-border-radius: 0px;
+    -webkit-border-radius: 0px;
+    border-radius: 0px;
+}
+
+/* стиль палок */
+hr {
+    margin-bottom: 5px;
+    margin-top: 5px;
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+}
+
+
+#main_tabs > .ui-tabs-panel {
+	padding: 0em;
+}
+#analyzer_tabs {
+	position: relative;
+	padding-left: 1.5em;
+	background: transparent;
+    border: none;
+}
+#analyzer_tabs .ui-tabs-nav {
+    margin-left:1px;
+    left:0px;
+    position: absolute;
+    width: 100vh;
+    transform: translate(-100%,0%) rotate(-90deg);
+    transform-origin: 100% 0%;
+}
+#analyzer_tabs .ui-tabs-nav li {
+	float: right;
+}
+#analyzer_tabs .ui-tabs-nav li.ui-tabs-selected,
+#analyzer_tabs .ui-tabs-nav li.ui-state-active {
+	border-right: 1px solid transparent;
+}
+#analyzer_tabs .ui-tabs-nav li a {
+	float: right;
+	width: 100%;
+	text-align: right;
+}
+#analyzer_tabs > div {
+	height:100vh;
+	overflow: auto;
+}
+#analyzer_tabs .ui-tabs-panel {
+    left: 0px;
+}
+#analyzer_tabs .ui-tabs-panel {
+    padding-top: 0px;
+    height:100vh;
+}
+
+#analyzer_tabs .ui-tabs-panel .ui-corner-bottom .ui-widget-content {
+    padding-top: 0px;
+}
+#analyzer_tabs .ui-tabs-nav .ui-state-default a {
+    color: #c0c0c0;
+}
+#analyzer_tabs .ui-tabs-nav .ui-state-active a {
+    color: #459e00;
+}
+#analyzer_tabs .ui-tabs-nav .ui-state-active {
+    background: transparent url(images/uiTabsArrow.png) no-repeat bottom center;
+    border: none;
+
+}
+
+#analyzer_tabs .ui-tabs-nav .ui-state-default {
+    background: transparent;
+    border: none;
+}
+
+#analyzer_tabs .ui-widget-header {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #c0c0c0;
+    -moz-border-radius: 0px;
+    -webkit-border-radius: 0px;
+    border-radius: 0px;
+}
+
+/* табы от тест резальтов */
+#tabs_test_results .ui-tabs-nav {
+    margin-left:1px;
+    left:0px;
+    position: absolute;
+    width: 100vh;
+    transform: translate(-100%,0%) rotate(-90deg);
+    transform-origin: 100% 0%;
+}
+#tabs_test_results .ui-tabs-panel.ui-corner-bottom.ui-widget-content {
+    padding-left: 40px;
+    padding-right: 0px;
+}
+
+/* графики */
+.c3-region.regionX {
+  fill: #808080;
+}
+
+.c3-region.highRT {
+  fill: red;
+}
+
+.page-header {
+    margin-top: 5px;
+}

@@ -1,0 +1,444 @@
+<hr/>
+<span>Test name:
+    {{test_description.display_name}}
+</span>
+
+<article id="tabs_test_results" class="tabs">
+    <ul>
+        <li><a href='#overview_tab'>Overview</a></li>
+        <li><a href='#aggregate_table_tab'>Aggregate table</a></li>
+        <li><a href='#rtot_graphs_tab'>Response times graphs</a></li>
+        <li><a href='#monitoring_graphs_tab'>Monitoring graphs</a></li>
+    </ul>
+    <div id="overview_tab">
+        <div class="panel panel-default">
+            <div class="panel-heading">Report for test: {{test_description.display_name}}</div>
+            <div class="panel-body">
+                <h3 class="page-header">Requests statistic <small>for the current test</small></h3>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="panel panel-default">
+                            <div class="panel-body">
+                                <div class="row">
+                                    <div class="col-xs-6">
+
+                                        <div id="errors_graph"></div>
+
+                                    </div>
+                                    <div class="col-xs-6">
+                                        <div class="panel panel-danger">
+                                            <div class="panel-heading">Top failed actions</div>
+                                            <div class="panel-body">
+                                                <div id="top_errors_list"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="panel panel-default">
+                            <div class="panel-body">
+                                <select name="top_actions_select" id="top_actions_select" class="selectpicker">
+                                    <option selected value=5>5</option>
+                                    <option value=10>10</option>
+                                    <option value=20>20</option>
+                                    <option value=9999>All</option>
+                                </select>
+                                <div id="top_avg_graph"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <h3 class="page-header">Comparison of average response times and CPU utilization (%) <small>with a previous tests</small></h3>
+                <select name="number_of_tests" id="number_of_tests" class="selectpicker">
+                    <option selected value=1>1 (the last one)</option>
+                    <option value=5>5</option>
+                    <option value=10>10</option>
+                    <option value=9999>All</option>
+                </select>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="panel panel-default">
+                            <div class="panel-body">
+                                <div id="compare_avg_graph"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="panel panel-default">
+                            <div class="panel-body">
+                                <div id="compare_cpu_graph"></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <h3 class="page-header">Compare report <small>against one of the tests</small></h3>
+                <select name="select_test_2" id="select_test_2" class="selectpicker">
+                </select>
+                <button id="get_previous_test_button" class="btn btn-success">Previous</button>
+                <div id="test_compare_results"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="aggregate_table_tab">
+        <div class="panel panel-default">
+            <div class="panel-heading">Detailed aggregated table for test: {{test_description.display_name}}</div>
+            <div class="panel-body">
+                <table id="aggregate_table" class="tablesorter">
+                    <thead>
+                    <tr>
+                        {% for key in aggregate_table.0 %}
+                            {% if key != "action_id" %}
+                                <th> {{ key }} </th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    </thead>
+                    {% for row in aggregate_table %}
+                    <tr>
+                        {% for k, v in row.items %}
+                            {% if k == "url" %}
+                            <td><b><a href='/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report' onclick="return popitup('/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report')">{{ v }}</a></b></td>
+                            {% else %}
+                                {% if k == "errors" %}
+
+                                    {% if v > 10 %}
+                                        <td style="background-color:red"> {{ v }} %</td>
+                                    {% else %}
+										                                    {% if v == None %}
+                                        <td style="background-color:red"> {{ 100 }} %</td>
+                                    
+									{% else %}
+                                        <td> {{ v }} %</td>
+										{% endif %}
+                                    {% endif %}
+                                {% elif k == "action_id" %}
+                                {% else %}
+                                <td> {{ v }} </td>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="rtot_graphs_tab">
+        <h3 class="page-header">Response times <small>during the test</small></h3>
+        <div class="row">
+            <div id="test_rtot_graph"></div>
+        </div>
+    </div>
+
+    <div id="monitoring_graphs_tab">
+        <h3 class="page-header">Monitoring data <small>server`s metrics during the test</small></h3>
+        <select name="select_server_1" id="select_server_1" class="selectpicker">
+        </select>
+        <select name="select_monitoring_metric_1" id="select_monitoring_metric_1" class="selectpicker">
+        </select>
+        <div id="test_monitoring_graph"></div>
+    </div>
+</article>
+
+<script>
+    num_of_tests_to_compare = 5;
+    top_actions = 5;
+    $("#tabs_test_results").tabs();
+    $("#number_of_tests").selectpicker('val', num_of_tests_to_compare);
+    $("#top_actions_select").selectpicker('val', top_actions);
+    update_compare_graphs(num_of_tests_to_compare);
+    draw_top_avg_graph(top_actions);
+    updateTables();
+    updateSelectList('#select_server_1', '/analyzer/test/' + test_id_1 + '/servers/', "Select server", "server_name", "id");
+    updateSelectList('#select_test_2', '/analyzer/project/' + selected_project + "/tests_list/", "Select 2nd test", "display_name", "id");
+
+    var test_rtot_graph = c3.generate({
+        data: {
+            url: '/analyzer/test/' + test_id_1 + '/rtot/',
+            mimeType: 'json',
+            type: 'line',
+            keys: {
+                x: 'timestamp',
+                value: ['average', 'median', 'rps'],
+            },
+            xFormat: '%H:%M:%S',
+            axes: {
+                rps: 'y2'
+            },
+        },
+        zoom: {
+            enabled: true
+        },
+        axis: {
+            x: {
+                type: 'timeseries',
+                tick: {
+                    format: '%H:%M:%S'
+                }
+            },
+            y: {
+                padding: {
+                    top: 0,
+                    bottom: 0
+                },
+                label: 'response times (ms)',
+            },
+            y2: {
+                min: 0,
+                show: true,
+                padding: {
+                    top: 0,
+                    bottom: 0
+                },
+                label: 'Requests/s',
+            }
+
+        },
+        bindto: '#test_rtot_graph'
+    });
+
+    function update_compare_graphs(num_of_tests_to_compare) {
+        var test = JSON.parse(httpGet('/analyzer/project/' + test_id_1 + '/test_info/'));
+        compare_avg_graph = c3.generate({
+            data: {
+                url: '/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_avg',
+                mimeType: 'json',
+                keys: {
+                    x: 'display_name',
+                    value: ['average', 'median'],
+                },
+                type: 'bar',
+
+            },
+            axis: {
+                x: {
+                    type: 'category',
+                },
+                y: {
+                    padding: {
+                        top: 0,
+                        bottom: 0
+                    },
+                    label: 'ms',
+                    min: 0,
+                }
+            },
+            grid: {
+                x: {
+                    lines: [{
+                        value: test[0].display_name,
+                        text: 'Current test',
+                        position: 'end'
+                    }]
+                }
+            },
+            regions: [{
+                axis: 'x',
+                start: 0.5,
+                class: 'regionX'
+            }, ],
+            title: {
+                text: 'Comparison of average and median response times'
+            },
+            bindto: '#compare_avg_graph'
+        });
+
+        json_compare_cpu = JSON.parse(httpGet('/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_cpu'));
+        var arr = [];
+        console.log(json_compare_cpu);
+        var graph_values = []; //values for the graph
+
+        for (var test_name in json_compare_cpu) {
+            for (server_name in json_compare_cpu[test_name]) {
+                if ($.inArray(server_name, graph_values) < 0) {
+                    graph_values.push(server_name);
+                }
+            }
+            json_compare_cpu[test_name].display_name = test_name;
+            arr.push(json_compare_cpu[test_name]);
+        }
+
+        var new_json = JSON.stringify(arr);
+        new_json = JSON.parse(new_json);
+        var compare_cpu_graph = c3.generate({
+            data: {
+                json: new_json,
+                keys: {
+                    x: 'display_name',
+                    value: graph_values
+                },
+                type: 'bar',
+
+            },
+            axis: {
+                x: {
+                    type: 'category'
+                },
+                y: {
+                    padding: {
+                        top: 0,
+                        bottom: 0
+                    },
+                    label: '%',
+                    max: 100,
+                    min: 0,
+                }
+            },
+
+            grid: {
+                x: {
+                    lines: [{
+                        value: test[0].display_name,
+                        text: 'Current test',
+                        position: 'end'
+                    }]
+                }
+            },
+            //regions: [
+            //{axis: 'x', start: 0,  class: 'regionX'},
+            //],
+            title: {
+                text: 'Comparison of average CPU load (%)'
+            },
+            bindto: '#compare_cpu_graph'
+        });
+
+
+        var errors_graph = c3.generate({
+            data: {
+                url: '/analyzer/test/' + test_id_1 + '/errors',
+                mimeType: 'json',
+                type: 'donut',
+                keys: {
+                    value: ['fail_%', 'success_%']
+                },
+                colors: {
+                    'success_%': '#A1DF6F',
+                    'fail_%': '#DF6F80'
+                },
+                onclick: function(d, i) {
+                    //console.log("onclick", d, i);
+                },
+                onmouseover: function(d, i) {
+                    //console.log("onmouseover", d, i);
+                },
+                onmouseout: function(d, i) {
+                    //console.log("onmouseout", d, i);
+                }
+            },
+
+            donut: {
+                title: "Successful requests (%)"
+            },
+            bindto: '#errors_graph'
+        });
+
+        $.getJSON('/analyzer/test/' + test_id_1 + '/top_errors/',
+            function(json) {
+                $("#top_errors_list").empty();
+                $.each(json, function(i, obj) {
+                    url = '/analyzer/test/' + test_id_1 + '/' + obj.action_id + '/action_report';
+					//cuz in database 100% is null >_<
+					var actionErrors = (obj.errors == null)?100:obj.errors;
+                    $("#top_errors_list").append('<ul class="list-group"><li class="list-group-item"><span class="badge alert-danger">' + actionErrors + ' %</span><div style="word-wrap:break-word;"><b><a href="/analyzer/test/' + test_id_1 + '/' + obj.action_id + '/action_report" onclick="return popitup("/analyzer/test/' + test_id_1 + "/" + obj.action_id + '/action_report")">' + obj.url + '</a></b></div></li></ul>');
+                });
+
+            });
+
+    }
+
+
+
+    function draw_top_avg_graph(top_N) {
+        top_avg_graph = c3.generate({
+            data: {
+                url: '/analyzer/test/' + test_id_1 + '/' + top_N + '/top_avg',
+                mimeType: 'json',
+                keys: {
+                    x: 'url',
+                    value: ['average']
+                },
+                type: 'bar',
+
+            },
+            axis: {
+                x: {
+                    type: 'category'
+                },
+                y: {
+                    padding: {
+                        top: 0,
+                        bottom: 0
+                    },
+                    label: 'ms',
+                    min: 0,
+                }
+            },
+            title: {
+                text: 'Top ' + top_N + ' slowest actions'
+            },
+            regions: [{
+                axis: 'y',
+                start: 200,
+                class: 'highRT'
+            }, ],
+            bindto: '#top_avg_graph'
+        });
+    }
+
+
+
+    $('#select_server_1').on('change', function() {
+        var server_id = $(this).find("option:selected").val();
+        selected_server_for_monitoring_data = server_id;
+        updateSelectList('#select_monitoring_metric_1', '/analyzer/test/' + test_id_1 + '/' + server_id + '/monitoring_metrics/', "Select metric", "metric", "metric");
+        //console.log("Selected server_name:" + server_name);
+        if (selected_monitoring_metric == "") selected_monitoring_metric = "CPU_all";
+        draw_monitoring_graph(test_id_1, selected_server_for_monitoring_data, selected_monitoring_metric);
+    });
+
+    $('#select_monitoring_metric_1').on('change', function() {
+        var monitoring_metric = $(this).find("option:selected").val();
+        selected_monitoring_metric = monitoring_metric;
+        //console.log("Selected monitoring_metric:" + monitoring_metric);
+        draw_monitoring_graph(test_id_1, selected_server_for_monitoring_data, selected_monitoring_metric);
+    });
+    $('#number_of_tests').on('change', function() {
+        num_of_tests_to_compare = $(this).find("option:selected").val();
+        //console.log("num_of_tests_to_compare:" + num_of_tests_to_compare);
+        update_compare_graphs(num_of_tests_to_compare);
+    });
+    $('#top_actions_select').on('change', function() {
+        top_actions = $(this).find("option:selected").val();
+        draw_top_avg_graph(top_actions);
+    });
+
+    $('#select_test_2').on('change', function() {
+        test_id_2 = $(this).find("option:selected").val();
+        console.log("Select test 2:" + test_id_2);
+        $.ajax({
+            url: '/analyzer/test/' + test_id_1 + '/' + test_id_2 + "/compare_report/",
+            type: "get",
+            success: function(response) {
+                $("#test_compare_results").html(response);
+            },
+            error: function(xhr) {
+                //Do Something to handle error
+            }
+        });
+        $('#get_previous_test_button').click(function() {
+            var test_2 = JSON.parse(httpGet('/analyzer/test/' + test_id_1 + '/prev_test_id/'));
+            test_id_2 = test_2[0].id
+
+            $('#select_test_2').val(test_id_2);
+            $('#select_test_2').change();
+            $('#select_test_2').selectpicker('refresh');
+        });
+    });
+</script>

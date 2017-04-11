@@ -1,0 +1,237 @@
+<hr/>
+<article id="controller_tabs" class="tabs">
+    <ul>
+        <li><a href='#start_test_tab'>Start test</a></li>
+        <li><a href='#proxy_tab'>Proxies</a></li>
+    </ul>
+    <div id="start_test_tab">
+        <div class="row">
+        <div class="col-xs-6">
+<div class="panel panel-primary">
+    <div class="panel-heading">Last tests:</div>
+    <div class="panel-body">
+        {% if projects_list %}
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Project</th>
+                <th>Run test</th>
+            </tr>
+            </thead>
+            {% for row in projects_list %}
+            <tr>
+
+                <td>
+                    {{ row.project_name }}
+                </td>
+                <td>
+                    <button id="schedule_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-success schedule_btn">Schedule test</button>
+                </td>
+
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <b>No data</b>
+        {% endif %}
+
+    </div>
+    </div>
+    </div>
+        <div class="col-xs-6">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Running tests:</div>
+                <div class="panel-body">
+                    {% if running_tests_list %}
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Test ID</th>
+                            <th>Control</th>
+                        </tr>
+                        </thead>
+                        {% for row in running_tests_list %}
+                        <tr>
+                            <td>
+                                {{ row.project__project_name }}
+                            </td>
+                            <td>
+                                {{ row.id }}
+                            </td>
+                            <td>
+                                <button id="stop_test_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-danger stop_test_btn">Stop test</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </table>
+                        {% else %}
+                        <b>There are no any running tests</b>
+                        {% endif %}
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+    <div id="proxy_tab">
+        {% if proxies_list %}
+        {% for proxy in proxies_list %}
+        <hr/>
+                <div class="form-group">
+                    <label for="port_{{ proxy.id }}">Port:</label>
+                    <input type="text" class="form-control" id="port_{{ proxy.id }}" value="{{ proxy.port }}">
+                </div>
+                <div class="form-group">
+                        <label for="destination_{{ proxy.id }}">destination:</label>
+                        <input type="text" class="form-control" id="destination_{{ proxy.id }}" value="{{ proxy.destination }}">
+                </div>
+                <div class="form-group">
+                <label for="delay_{{ proxy.id }}">delay:</label>
+                <input type="text" class="form-control" id="delay_{{ proxy.id }}" value="{{ proxy.delay }}">
+                </div>
+                    {% if proxy.started == False %}
+                    <span class="badge alert-danger">Stopped</span>
+                    <button id="start_proxy_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-success start_proxy_btn">Start proxy</button>
+                    {% else %}
+                    <span class="badge alert-success">Started</span>
+                    <button id="stop_proxy_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-danger stop_proxy_btn">Stop proxy</button>
+                    {% endif %}
+                    <button id="set_delay_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-info set_delay_btn">Change delay</button>
+                    <div id="status_{{ proxy.id }}"></div>
+        {% endfor %}
+        {% else %}
+        <b>No any proxies</b>
+        {% endif %}
+        <hr/>
+        <div id="new_proxy"></div>
+        <button id="new_proxy_button" value="" class="btn btn-primary">Create new proxy</button>
+
+    </div>
+<script>
+        $("#controller_tabs").tabs();
+        function refreshController()
+        {
+        $.ajax({
+                          url: "/controller/",
+                          type: "get",
+                          success: function(response) {
+                            $("#controller_page").html(response);
+                            var index = $('#controller_tabs a[href="#proxy_tab"]').parent().index();
+                            $('#controller_tabs').tabs("option", "active", index);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+        }
+        $('#new_proxy_button').click(function() {
+                 $.ajax({
+                          url: "/controller/proxy/new_proxy/",
+                          type: "get",
+                          success: function(response) {
+                            $("#new_proxy").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+        $('.schedule_btn').click(function() {
+        var project_id = $(this).val();
+        console.log('run_test_button');
+        console.log(project_id);
+
+                 $.ajax({
+                          url: "/controller/project/"+project_id+"/configure_test",
+                          type: "get",
+                          success: function(response) {
+                            $("#controller_page").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+        $('.stop_test_btn').click(function() {
+        var test_id = $(this).val();
+                 $.ajax({
+                          url: "/controller/running_test/"+test_id+"/stop_test",
+                          type: "get",
+                          success: function(response) {
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+                  $.ajax({
+                          url: "/controller",
+                          success: function(response) {
+                            $("#controller_page").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+        $('.set_delay_btn').click(function() {
+        var proxy_id = $(this).val();
+        console.log(proxy_id);
+                 $.ajax({
+                          url: "/controller/proxy/"+proxy_id+"/set_delay/",
+                          type: "post",
+                          data: {
+                          delay: $('#delay_'+proxy_id).val(),
+                          csrfmiddlewaretoken: '{{ csrf_token }}'
+                          },
+                          success: function(response) {
+                            refreshController();
+                            $("#status_"+proxy_id).html(response);
+
+                           },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+        $('.start_proxy_btn').click(function() {
+        var proxy_id = $(this).val();
+        console.log(proxy_id);
+                 $.ajax({
+                          url: "/controller/proxy/"+proxy_id+"/start/",
+                          type: "post",
+                          data: {
+                          port: $('#port_'+proxy_id).val(),
+                          destination: $('#destination_'+proxy_id).val(),
+                          delay: $('#delay_'+proxy_id).val(),
+                          csrfmiddlewaretoken: '{{ csrf_token }}'
+                          },
+                          success: function(response) {
+                            refreshController();
+                            $("#status_"+proxy_id).html(response);
+                           },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
+         $('.stop_proxy_btn').click(function() {
+        var proxy_id = $(this).val();
+        console.log(proxy_id);
+                 $.ajax({
+                          url: "/controller/proxy/"+proxy_id+"/stop/",
+                          type: "get",
+                          success: function(response) {
+                            refreshController();
+                            $("#status_"+proxy_id).html(response);
+
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
+</script>

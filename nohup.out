@@ -1,0 +1,155 @@
+Unhandled exception in thread started by <function wrapper at 0x2b89410>
+Performing system checks...
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python2.7/dist-packages/django/utils/autoreload.py", line 226, in wrapper
+    fn(*args, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/django/core/management/commands/runserver.py", line 121, in inner_run
+    self.check(display_num_errors=True)
+  File "/usr/local/lib/python2.7/dist-packages/django/core/management/base.py", line 374, in check
+    include_deployment_checks=include_deployment_checks,
+  File "/usr/local/lib/python2.7/dist-packages/django/core/management/base.py", line 361, in _run_checks
+    return checks.run_checks(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/django/core/checks/registry.py", line 81, in run_checks
+    new_errors = check(app_configs=app_configs)
+  File "/usr/local/lib/python2.7/dist-packages/django/core/checks/urls.py", line 14, in check_url_config
+    return check_resolver(resolver)
+  File "/usr/local/lib/python2.7/dist-packages/django/core/checks/urls.py", line 24, in check_resolver
+    for pattern in resolver.url_patterns:
+  File "/usr/local/lib/python2.7/dist-packages/django/utils/functional.py", line 35, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "/usr/local/lib/python2.7/dist-packages/django/urls/resolvers.py", line 313, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+  File "/usr/local/lib/python2.7/dist-packages/django/utils/functional.py", line 35, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "/usr/local/lib/python2.7/dist-packages/django/urls/resolvers.py", line 306, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "/usr/lib/python2.7/importlib/__init__.py", line 37, in import_module
+    __import__(name)
+  File "/home/jltom_new/jltom/urls.py", line 24, in <module>
+    url(r'^analyzer/', include('analyzer.urls')),
+  File "/usr/local/lib/python2.7/dist-packages/django/conf/urls/__init__.py", line 50, in include
+    urlconf_module = import_module(urlconf_module)
+  File "/usr/lib/python2.7/importlib/__init__.py", line 37, in import_module
+    __import__(name)
+  File "/home/jltom_new/analyzer/urls.py", line 2, in <module>
+    from . import views
+  File "/home/jltom_new/analyzer/views.py", line 8, in <module>
+    from DataBaseAdapter import DataBaseAdapter
+  File "/home/jltom_new/analyzer/DataBaseAdapter.py", line 529
+    .where(tests.c.id = aggregate.c.test_id) \
+SyntaxError: keyword can't be an expression
+[01/Mar/2017 16:30:40] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 1340
+[01/Mar/2017 16:31:02] "GET / HTTP/1.0" 200 2084
+[01/Mar/2017 16:31:02] "GET /static/css/my.css HTTP/1.0" 304 0
+[01/Mar/2017 16:31:02] "GET /static/js/main_script.js HTTP/1.0" 304 0
+[01/Mar/2017 16:31:02] "GET /analyzer/projects_list HTTP/1.0" 200 277
+[01/Mar/2017 16:31:04] "GET /analyzer/history HTTP/1.0" 200 885
+[01/Mar/2017 16:31:04] "GET /analyzer/analyze HTTP/1.0" 200 1198
+[01/Mar/2017 16:31:04] "GET /analyzer/project/FoE/project_history/ HTTP/1.0" 200 1316
+[01/Mar/2017 16:31:04] "GET /analyzer/project/FoE/project_history/ HTTP/1.0" 200 1316
+[01/Mar/2017 16:31:04] "GET /analyzer/project/FoE/tests_list/ HTTP/1.0" 200 661
+[01/Mar/2017 16:31:07] "GET /analyzer/project/FoE/last_test/ HTTP/1.0" 200 160
+[01/Mar/2017 16:31:07] "GET /analyzer/test/406/report/ HTTP/1.0" 200 65695
+[01/Mar/2017 16:31:07] "GET /analyzer/monitoring_metrics/ HTTP/1.0" 200 334
+[01/Mar/2017 16:31:07] "GET /analyzer/test/406/servers/ HTTP/1.0" 200 121
+[01/Mar/2017 16:31:07] "GET /analyzer/project/FoE/tests_list/ HTTP/1.0" 200 661
+[01/Mar/2017 16:31:07] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 1340
+[01/Mar/2017 16:31:07] "GET /analyzer/test/406/errors/ HTTP/1.0" 200 33
+[01/Mar/2017 16:31:07] "GET /analyzer/test/406/5/top_avg/ HTTP/1.0" 200 239
+[01/Mar/2017 16:31:07] "GET /analyzer/test/406/rtot/ HTTP/1.0" 200 96313
+[01/Mar/2017 16:31:11] "GET /analyzer/test/406/5/compare_cpu/ HTTP/1.0" 200 526
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 13 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+Run 'python manage.py migrate' to apply them.
+March 01, 2017 - 16:30:23
+Django version 1.10.6, using settings 'jltom.settings'
+Starting development server at http://127.0.0.1:8888/
+Quit the server with CONTROL-C.
+[01/Mar/2017 16:31:39] "GET / HTTP/1.0" 200 2084
+[01/Mar/2017 16:31:40] "GET /analyzer/projects_list HTTP/1.0" 200 277
+[01/Mar/2017 16:31:44] "GET /analyzer/history HTTP/1.0" 200 885
+[01/Mar/2017 16:31:44] "GET /analyzer/analyze HTTP/1.0" 200 1198
+[01/Mar/2017 16:31:44] "GET /analyzer/project/FoE/project_history/ HTTP/1.0" 200 1316
+[01/Mar/2017 16:31:44] "GET /analyzer/project/FoE/project_history/ HTTP/1.0" 200 1316
+[01/Mar/2017 16:31:44] "GET /analyzer/project/FoE/tests_list/ HTTP/1.0" 200 661
+[01/Mar/2017 16:31:46] "GET /analyzer/project/FoE/last_test/ HTTP/1.0" 200 160
+[01/Mar/2017 16:31:46] "GET /analyzer/test/406/report/ HTTP/1.0" 200 65695
+[01/Mar/2017 16:31:46] "GET /analyzer/monitoring_metrics/ HTTP/1.0" 200 334
+[01/Mar/2017 16:31:46] "GET /analyzer/test/406/servers/ HTTP/1.0" 200 121
+[01/Mar/2017 16:31:46] "GET /analyzer/project/FoE/tests_list/ HTTP/1.0" 200 661
+[01/Mar/2017 16:31:46] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:31:46] "GET /analyzer/test/406/errors/ HTTP/1.0" 200 33
+[01/Mar/2017 16:31:46] "GET /analyzer/test/406/5/top_avg/ HTTP/1.0" 200 239
+[01/Mar/2017 16:31:46] "GET /analyzer/test/406/rtot/ HTTP/1.0" 200 96313
+[01/Mar/2017 16:31:50] "GET /analyzer/test/406/5/compare_cpu/ HTTP/1.0" 200 526
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 13 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+Run 'python manage.py migrate' to apply them.
+March 01, 2017 - 16:31:36
+Django version 1.10.6, using settings 'jltom.settings'
+Starting development server at http://127.0.0.1:8888/
+Quit the server with CONTROL-C.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 13 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+Run 'python manage.py migrate' to apply them.
+March 01, 2017 - 16:33:00
+Django version 1.10.6, using settings 'jltom.settings'
+Starting development server at http://127.0.0.1:8888/
+Quit the server with CONTROL-C.
+[01/Mar/2017 16:36:28] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:32] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:33] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:34] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:38] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:39] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:40] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:40] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:40] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:40] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:41] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 13 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+Run 'python manage.py migrate' to apply them.
+March 01, 2017 - 16:36:23
+Django version 1.10.6, using settings 'jltom.settings'
+Starting development server at http://127.0.0.1:8888/
+Quit the server with CONTROL-C.
+[01/Mar/2017 16:36:44] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:46] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:47] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+[01/Mar/2017 16:36:47] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 13 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+Run 'python manage.py migrate' to apply them.
+March 01, 2017 - 16:36:44
+Django version 1.10.6, using settings 'jltom.settings'
+Starting development server at http://127.0.0.1:8888/
+Quit the server with CONTROL-C.
+[01/Mar/2017 16:36:56] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 510
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 13 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+Run 'python manage.py migrate' to apply them.
+March 01, 2017 - 16:36:55
+Django version 1.10.6, using settings 'jltom.settings'
+Starting development server at http://127.0.0.1:8888/
+Quit the server with CONTROL-C.
+[01/Mar/2017 16:37:09] "GET /analyzer/test/406/5/compare_avg/ HTTP/1.0" 200 566

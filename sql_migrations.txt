@@ -1,0 +1,50 @@
+
+--1. Server
+INSERT INTO jltom.server (server_name)
+SELECT DISTINCT server_name FROM tests_monitoring_data;
+
+--2. Project
+INSERT INTO jltom.project (project_name)
+SELECT DISTINCT project FROM tests;
+
+--3. Action
+insert into jltom.action (url, project_id)
+select distinct tud."URL", p.id from tests_url_data tud, jltom.project p, tests t WHERE tud.test_id = t.id
+AND t.project = p.project_name;
+
+
+
+--4 Test
+
+INSERT INTO jltom.test (id, path, display_name, start_time, build_number, project_id)
+                 SELECT t. id, t.path, t.display_name, t.start_time, 0, p.id
+                 FROM tests t, jltom.project p WHERE p.project_name = t.project;
+
+
+--5 Aggregate
+
+INSERT INTO jltom.aggregate (test_id, action_id, average, median, "percentile_75",  "percentile_90", "percentile_99", maximum, minimum, count, errors, weight)
+SELECT test_id, ac.id, average, median, "75_percentile",  "90_percentile", "99_percentile", maximum, minimum, count, errors, weight
+FROM aggregate, jltom.action ac, tests t, jltom.project p WHERE ac.url = aggregate."URL" and aggregate.test_id = t.id and t.project = p.project_name and ac.project_id = p.id;
+
+
+--6 server_monitoring_data
+Insert into jltom.server_monitoring_data (test_id, server_id, data)
+select  t.test_id, s.id , row_to_json(t)
+    from (
+      select * from tests_monitoring_data
+    ) t , jltom.server s where s.server_name = t.server_name;
+
+--7. test_data
+Insert into jltom.test_data(test_id, data)
+select  t.test_id, row_to_json(t)
+    from (
+      select * from tests_overall_data
+    ) t;
+
+--8 test_action_data
+Insert into jltom.test_action_data(test_id, action_id, data)
+select  t.test_id, a.id, row_to_json(t)
+    from (
+      select "URL" url, timestamp, avg, median, count, errors, test_id from tests_url_data
+    ) t, jltom.action a, tests tt, jltom.project p WHERE a.url = t.url and t.test_id = tt.id and tt.project = p.project_Name and a.project_id = p.id;

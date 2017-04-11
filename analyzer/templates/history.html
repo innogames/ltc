@@ -1,0 +1,53 @@
+
+<div class="row">
+    <div class="panel panel-primary" style="margin-left: 15px;">
+             <div class="panel-heading">Average/Median response times through all tests</div>
+             <div class="panel-body">
+            <div id="overall_project_graph"></div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+var response = httpGet('/analyzer/project/' + selected_project + '/project_history/');
+console.log(response);
+jsonr = JSON.parse(response);
+//console.log(jsonr);
+var test = JSON.parse(httpGet('/analyzer/project/'+ selected_project + '/last_test/'));
+overall_graph = c3.generate({
+                    data: {
+                        url:  '/analyzer/project/' + selected_project + '/project_history/',
+                        mimeType: 'json',
+                        keys: {
+                        x: 'test_name',
+                        value: ['Average', 'Median'],
+                        },
+                        type: 'bar',
+
+                    },
+                    axis: {
+                        x: {
+                            type: 'category',
+                        },
+                        y: {
+                padding: {
+                    top: 0,
+                    bottom: 0
+                },
+                label: 'response times (ms)',
+            },
+                    },
+                    grid: {
+                x: {
+                    lines: [{
+                        value: test[0].display_name,
+                        text: 'Current test',
+                        position: 'end'
+                    }]
+                }
+            },
+                    bindto: '#overall_project_graph'
+                });
+
+</script>

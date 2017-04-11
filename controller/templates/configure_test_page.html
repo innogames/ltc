@@ -1,0 +1,94 @@
+<hr/>
+
+<div class="row">
+<div class="col-xs-6">
+    <div class="panel panel-primary">
+        <div class="panel-heading">Configure test:</div>
+        <div class="panel-body">
+<h2>{{ project.project_name }}</h2>
+    <form>
+        {% for v in jmeter_parameters %}
+        <div class="form-group">
+            <label for="{{ v.p_name }}">{{ v.p_name }}</label>
+            <input type="text" class="form-control jmeter_params" id="{{ v.p_name }}" value="{{ v.value }}">
+        </div>
+        {% endfor %}
+        <div class="form-group">
+            <label for="jmeter_destination">JMeter destination</label>
+            <input type="text" class="form-control" id="jmeter_destination" value="{{ project.jmeter_destination }}">
+        </div>
+        <div class="form-group">
+            <label for="test_plan_destination">JMeter destination</label>
+            <input type="text" class="form-control" id="test_plan_destination" value="{{ project.test_plan_destination }}">
+        </div>
+    </form>
+    <button id="start_test_button" value="{{ project.id }}" class="btn btn-success btn-small active">Start test</button>
+    <button id="configure_test_return_button" class="btn btn-danger btn-small active"><i class="icon-white icon-chevron-left"></i> Return</button>
+        </div>
+    </div>
+</div>
+</div>
+<script>
+        function getJMeterParams() {
+        jsonObj = [];
+        $('input[class="form-control jmeter_params"]').each(function() {
+        console.log("HUI");
+        var p_name = $(this).attr("id");
+        var p_value = $(this).val();
+
+        item = {}
+        item ["p_name"] = p_name;
+        item ["value"] = p_value;
+        item ["comment"] = "";
+        jsonObj.push(item);
+        });
+        jsonString = JSON.stringify(jsonObj);
+        console.log(jsonString);
+        return jsonString;
+        }
+
+        $('#configure_test_return_button').click(function() {
+                  $.ajax({
+                          url: "/controller",
+                          success: function(response) {
+                            $("#controller_page").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
+        $('#start_test_button').click(function() {
+        var project_id = $(this).val();
+        console.log("Start test for project_id:"+project_id);
+                 $.ajax({
+                          url: "/controller/project/"+project_id+"/start_test/",
+                          type: "post",
+                          data: {
+                          jmeter_parameters: getJMeterParams(),
+                          jmeter_destination: $('#jmeter_destination').val(),
+                          test_plan_destination: $('#test_plan_destination').val(),
+                          csrfmiddlewaretoken: '{{ csrf_token }}'
+                          },
+                          success: function(response) {
+
+                           },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+                 $.ajax({
+                          url: "/controller",
+                          success: function(response) {
+                            $("#controller_page").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
+
+</script>
