@@ -1,0 +1,65 @@
+<div class="row">
+    <div class="col-md-4">
+<div class="form-group">
+    <label for="jri_address_new">Address:</label>
+    <input type="text" class="form-control" id="jri_address_new" value="127.0.0.1">
+</div>
+</div>
+<div class="col-md-4">
+<label for="jri_count_new">Count:</label>
+<div class="input-group spinner">
+    <input type="text" class="form-control" id="jri_count_new" value="1" min="1">
+    <div class="input-group-btn-vertical">
+        <button class="btn btn-default" type="button"><i class="fa fa-caret-up"></i></button>
+        <button class="btn btn-default" type="button"><i class="fa fa-caret-down"></i></button>
+    </div>
+</div>
+</div>
+</div>
+<button id="add_jri_button" value="{{ project_id }}" class="btn btn-primary">Add JRI</button>
+<hr/>
+<div id="new_jri"></div>
+<script>
+
+        $('#add_jri_button').click(function() {
+         var project_id = $(this).val();
+                         $.ajax({
+                          url: "/controller/project/"+project_id+"/new_jri/add/",
+                          type: "post",
+                          data: {
+                          address: $('#jri_address_new').val(),
+                          count: $('#jri_count_new').val(),
+                          csrfmiddlewaretoken: '{{ csrf_token }}'
+                          },
+                          success: function(response) {
+                           $('#add_jri_button').hide();
+                           getJRIs();
+                           },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+       $(function(){
+
+    $('.spinner .btn:first-of-type').on('click', function() {
+      var btn = $(this);
+      var input = btn.closest('.spinner').find('input');
+      if (input.attr('max') == undefined || parseInt(input.val()) < parseInt(input.attr('max'))) {
+        input.val(parseInt(input.val(), 10) + 1);
+      } else {
+        btn.next("disabled", true);
+      }
+    });
+    $('.spinner .btn:last-of-type').on('click', function() {
+      var btn = $(this);
+      var input = btn.closest('.spinner').find('input');
+      if (input.attr('min') == undefined || parseInt(input.val()) > parseInt(input.attr('min'))) {
+        input.val(parseInt(input.val(), 10) - 1);
+      } else {
+        btn.prev("disabled", true);
+      }
+    });
+
+})
+</script>

@@ -37,11 +37,21 @@ def to_pivot(data, a, b, c):
     return df_pivot
 
 
+def configure_page(request, project_id):
+    project = Project.objects.get(id=project_id)
+    tests_list = Test.objects.filter(project_id=project_id).values().order_by('-start_time')
+    return render(request, 'overall_configure_page.html',
+                  {'tests_list': tests_list,
+                   'project': project})
+
 
 def projects_list(request):
-    #project_list = Project.objects.values('project_name')
-    project_list = Project.objects.values()
-    return JsonResponse(list(project_list),
+    project_list = []
+    projects_all = list(Project.objects.values())
+    for project in projects_all:
+        if project['show']:
+            project_list.append(project)
+    return JsonResponse(project_list,
                         safe=False)
 
 
@@ -60,11 +70,11 @@ def last_test(request, project_id):
 
 def project_history(request, project_id):
     a = Aggregate.objects.annotate(test_name=F('test__display_name'))\
-        .filter(test__project__id=project_id)\
+        .filter(test__project__id=project_id, test__show=True)\
         .values('test_name')\
         .annotate(Average=Avg('average')) \
         .annotate(Median=Avg('median')) \
-        .order_by('-test__start_time')
+        .order_by('test__start_time')
     return JsonResponse(list(a), safe=False)
 
 
@@ -157,6 +167,25 @@ def test_servers(request, test_id):
 
     return JsonResponse(list(servers_list), safe=False)
 
+def test_change(request, test_id):
+    test = Test.objects.get(id=test_id)
+    response = []
+    if request.method == 'POST':
+        if 'show' in request.POST:
+            show = request.POST.get('show', '')
+            display_name = request.POST.get('display_name', '')
+            print show
+            print display_name
+            test.show = True if show == 'true' else False
+            test.display_name = display_name
+            test.save()
+        else:
+            display_name = request.POST.get('display_name', '')
+            print display_name
+            test.display_name = display_name
+            test.save()
+        response = [{"message": "Test data was changed"}]
+    return JsonResponse(response, safe=False)
 
 def compare_tests_cpu(request, test_id, num_of_tests):
     project = Test.objects.filter(id=test_id).values('project_id')
@@ -364,8 +393,11 @@ def dashboard(request):
         r = Test.objects.filter(project_id=i['project_id'],start_time=i['latest_time']).\
             values('project__project_name','display_name','id','project_id')
         last_tests.append(list(r)[0])
+
+    projects_list = list(Project.objects.values())
     return render(request, 'dashboard.html',
-                  {'last_tests': last_tests})
+                  {'last_tests': last_tests,
+                   'projects_list': projects_list})
 
 
 class Analyze(TemplateView):

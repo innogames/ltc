@@ -1,0 +1,130 @@
+<head>
+    <meta charset="UTF-8">
+    <title>URL report</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/jquery-ui.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap-select.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/c3.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/theme.bootstrap_2.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/my.css' %}" />
+</head>
+
+<body>
+<div class="panel panel-primary">
+    <div class="panel-heading">Change test data</div>
+    <div class="panel-body">
+        <table class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th>Test ID</th>
+                <th>Jenkins build#</th>
+                <th>Test name</th>
+                <th>Show ?</th>
+            </tr>
+            </thead>
+            {% for test in tests_list %}
+            <tr>
+                <td>
+                    {{ test.id }}
+                </td>
+                <td>
+                    {{ test.build_number }}
+                </td>
+                <td>
+                    <label class="pull-left">
+                        {% if test.display_name != "" %}
+                        {{ test.display_name }}
+                        {% else %}
+                        Empty
+                        {% endif %}
+                    </label>
+                    <input id={{ test.id }} class="clickedit" type="text" />
+                    <div class="clearfix"></div>
+                </td>
+                <td>
+                    <input id="show_{{ test.id }}" type="checkbox" value="{{ test.id }}" name="show_{{ test.id }}" {% if test.show %}checked{% endif %}>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+</body>
+<script src="{% static 'js/jquery-3.1.1.min.js' %}"></script>
+<script src="{% static 'js/jquery-ui.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script>
+    var edit_test_id = 0;
+    $("input[type=checkbox]").on("change", function() {
+        show = this.checked;
+        edit_test_id = this.value;
+        new_display_name =  $('#display_name_' + edit_test_id).text();
+        $.ajax({
+            url: "/analyzer/test/" + edit_test_id + "/change/",
+            type: "post",
+            data: {
+                display_name: new_display_name,
+                show: show,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+
+            },
+            error: function(xhr) {
+                //Do Something to handle error
+            }
+        });
+    });
+
+
+function beginEdit(e)
+{
+    console.log('beginEdit');
+}
+
+function endEdit(e) {
+    var input = $(e.target),
+        label = input && input.prev();
+    label.text(input.val() === '' ? 'Empty' : input.val());
+    var new_display_name = input.val();
+    edit_test_id = input.attr('id');
+    console.log('new_display_name:'+new_display_name);
+    console.log('edit_test_id:'+edit_test_id);
+    $.ajax({
+            url: "/analyzer/test/" + edit_test_id + "/change/",
+            type: "post",
+            data: {
+                display_name: new_display_name,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                    input.hide();
+                    label.show();
+            },
+            error: function(xhr) {
+                //Do Something to handle error
+            }
+        });
+
+}
+
+$('.clickedit').hide()
+.focusout(endEdit)
+.keyup(function (e) {
+    if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
+        endEdit(e);
+        return false;
+    } else {
+        return true;
+    }
+}).focus(beginEdit)
+.prev().click(function () {
+    console.log('click');
+    console.log($(this));
+    $(this).hide();
+    $(this).next().show().focus();
+});
+
+</script>

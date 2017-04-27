@@ -9,9 +9,15 @@ from django.contrib import admin
 class Project(models.Model):
     project_name = models.CharField(max_length=100)
     jmeter_parameters = JSONField(null=True, blank=True)
+    script_parameters = JSONField(null=True, blank=True)
     jmeter_destination = models.CharField(max_length=200, null=True, blank=True)
     test_plan_destination = models.CharField(max_length=200, null=True, blank=True)
     jvm_args = models.TextField(null=True, blank=True)
+    jmeter_remote_instances =  JSONField(null=True, blank=True)
+    script_pre = models.TextField(null=True, blank=True)
+    script_post = models.TextField(null=True, blank=True)
+    show = models.BooleanField(default=True)
+
     class Meta:
         db_table = 'project'
 
@@ -25,9 +31,13 @@ class Test(models.Model):
     display_name = models.CharField(max_length=100)
     start_time = models.BigIntegerField(db_index=True)
     build_number = models.IntegerField(default=0)
+    show = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'test'
+
+    def __str__(self):
+        return self.display_name
 
 
 class TestData(models.Model):

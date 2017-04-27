@@ -24,3 +24,22 @@ class TestRunning(models.Model):
 
 	class Meta:
 		db_table = 'test_running'
+
+
+class LoadGeneratorServer(models.Model):
+	address = models.CharField(max_length=200, default = "")
+
+	class Meta:
+		db_table = 'load_generator_server'
+
+
+class JMeterTestPlanParameter(models.Model):
+	p_name = models.CharField(max_length=200, default = "")
+	class Meta:
+		db_table = 'jmeter_parameter'
+
+
+class ScriptParameter(models.Model):
+	p_name = models.CharField(max_length=200, default = "")
+	class Meta:
+		db_table = 'script_parameter'

@@ -1,34 +1,130 @@
 <hr/>
-
+<h3>Configure test: {{ project.project_name }}</h3>
+<hr/>
 <div class="row">
-<div class="col-xs-6">
+<div class="col-xs-3">
     <div class="panel panel-primary">
-        <div class="panel-heading">Configure test:</div>
+        <div class="panel-heading">JMeter test-plan parameters:</div>
         <div class="panel-body">
-<h2>{{ project.project_name }}</h2>
-    <form>
-        {% for v in jmeter_parameters %}
-        <div class="form-group">
-            <label for="{{ v.p_name }}">{{ v.p_name }}</label>
-            <input type="text" class="form-control jmeter_params" id="{{ v.p_name }}" value="{{ v.value }}">
-        </div>
-        {% endfor %}
-        <div class="form-group">
-            <label for="jmeter_destination">JMeter destination</label>
-            <input type="text" class="form-control" id="jmeter_destination" value="{{ project.jmeter_destination }}">
-        </div>
-        <div class="form-group">
-            <label for="test_plan_destination">JMeter destination</label>
-            <input type="text" class="form-control" id="test_plan_destination" value="{{ project.test_plan_destination }}">
-        </div>
-    </form>
-    <button id="start_test_button" value="{{ project.id }}" class="btn btn-success btn-small active">Start test</button>
-    <button id="configure_test_return_button" class="btn btn-danger btn-small active"><i class="icon-white icon-chevron-left"></i> Return</button>
+        <div id="jmeter_params"></div>
+        <div id="new_jmeter_param"></div>
+        <button id="add_jmeter_param_btn" value="{{ project.id }}" type="button" class="btn btn-default btn-lg">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+        </button>
         </div>
     </div>
 </div>
+    <div class="col-xs-5">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Configure test:</div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <label for="jmeter_destination">JMeter destination</label>
+                    <input type="text" class="form-control" id="jmeter_destination" value="{{ project.jmeter_destination }}">
+                </div>
+                <div class="form-group">
+                    <label for="test_plan_destination">Test-plan destination</label>
+                    <input type="text" class="form-control" id="test_plan_destination" value="{{ project.test_plan_destination }}">
+                </div>
+                <hr/>
+                <button id="start_test_button" value="{{ project.id }}" class="btn btn-success btn-small active">Start test</button>
+                <button id="configure_test_return_button" class="btn btn-danger btn-small active"><i class="icon-white icon-chevron-left"></i> Return</button>
+
+            </div>
+        </div>
+    </div>
+    <div class="col-xs-4">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Remote Jmeter Instances</div>
+            <div class="panel-body">
+                <div id="jris"></div>
+                <div id="new_jri"></div>
+                <button id="add_jri_btn" value="{{ project.id }}" type="button" class="btn btn-default btn-lg">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+                </button>
+            </div>
+        </div>
+        <div class="panel panel-primary">
+            <div class="panel-heading">Additional scripts</div>
+            <div class="panel-body">
+        <label for="script_pre_configure">Execute pre-test script:</label>
+        <div class="text-right">
+            <button id="script_pre_configure" value="{{ project.id }}" class="btn btn-default btn-small" onclick="return popitup('/controller/project/{{ project.id }}/script_pre_configure/')">Configure</button>
+        </div>
+        <hr/>
+
+        <label for="script_post_configure">Execute post-test script:</label>
+        <div class="text-right">
+            <button id="script_post_configure" value="{{ project.id }}" class="btn btn-default btn-small" onclick="return popitup('/controller/project/{{ project.id }}/script_post_configure/')">Configure</button>
+            </div>
+             <hr/>
+                <h4>Script variables</h4>
+                <div id="script_params"></div>
+                <div id="new_script_param"></div>
+                <button id="add_script_param_btn" value="{{ project.id }}" type="button" class="btn btn-default btn-lg">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+                </button>
+
+            </div>
+        </div>
+    </div>
 </div>
 <script>
+        function getJRIs()
+        {
+
+        $.ajax({
+                          url: "/controller/project/{{ project.id }}/jri/list/",
+                          type: "get",
+                          success: function(response) {
+                            $("#jris").empty();
+                            $("#new_jri").empty();
+                            $("#jris").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+
+        }
+
+        function getJMeterParamsHTML()
+        {
+        $.ajax({
+                          url: "/controller/project/{{ project.id }}/jmeter_params/list/",
+                          type: "get",
+                          success: function(response) {
+                            $("#jmeter_params").empty();
+                            $("#new_jmeter_param").empty();
+                            $("#jmeter_params").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+
+        }
+
+        function getScriptParamsHTML()
+        {
+        $.ajax({
+                          url: "/controller/project/{{ project.id }}/script_params/list/",
+                          type: "get",
+                          success: function(response) {
+                            $("#script_params").empty();
+                            $("#new_script_param").empty();
+                            $("#script_params").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+
+        }
+
         function getJMeterParams() {
         jsonObj = [];
         $('input[class="form-control jmeter_params"]').each(function() {
@@ -46,6 +142,51 @@
         console.log(jsonString);
         return jsonString;
         }
+
+        getJRIs();
+        getJMeterParamsHTML();
+        getScriptParamsHTML();
+
+        $('#add_jri_btn').click(function() {
+                 $.ajax({
+                          url: "/controller/project/{{ project.id }}/new_jri/",
+                          type: "get",
+                          success: function(response) {
+                            $("#new_jri").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
+        $('#add_jmeter_param_btn').click(function() {
+                 $.ajax({
+                          url: "/controller/project/{{ project.id }}/new_jmeter_param/",
+                          type: "get",
+                          success: function(response) {
+                            $("#new_jmeter_param").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
+
+        $('#add_script_param_btn').click(function() {
+                 $.ajax({
+                          url: "/controller/project/{{ project.id }}/new_script_param/",
+                          type: "get",
+                          success: function(response) {
+                            $("#new_script_param").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
 
         $('#configure_test_return_button').click(function() {
                   $.ajax({

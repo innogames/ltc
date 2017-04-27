@@ -1,0 +1,47 @@
+{% if jris %}
+{% for jri in jris %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+        <p>  {{ jri.address }} </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="input-group spinner">
+            <span class="input-group-addon">#</span>
+            <input type="text" class="form-control" id="jri_count_jri_address_{{ jri.id }}" value="{{ jri.count }}" min="1">
+            <div class="input-group-btn-vertical">
+                <button class="btn btn-default" type="button"><i class="fa fa-caret-up"></i></button>
+                <button class="btn btn-default" type="button"><i class="fa fa-caret-down"></i></button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <button id="del_jri_btn_{{ jri.id }}" value="{{ jri.id }}" type="button" class="btn btn-xs icon-button del_jri_btn">
+            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+        </button>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+
+<script>
+
+ $('.del_jri_btn').click(function() {
+         var jri_id = $(this).val();
+                         $.ajax({
+                          url: "/controller/project/{{ project.id }}/jri/"+jri_id+"/delete/",
+                          ttype: "get",
+                          success: function(response) {
+                          getJRIs();
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+});
+
+
+
+</script>
