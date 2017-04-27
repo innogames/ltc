@@ -1,7 +1,7 @@
 # Description
-Jmeter Load Test Online Monitor
+JMeter Control center.
 
-Online web-application for analyzing JMeter test results and monitoring the running tests.
+Online web-application for CI Load testing with JMeter, future replacement for Jenkins + Plugins + Jmeter combination. Now it is possible to  analyze JMeter test results and monitoring the running tests which were started in console mode (incl. distribution testing).
 Designed for integration with Jenkins. In post-job script need to include script datagenerator_linux.py which will populate database with all necessary data.
 
 
