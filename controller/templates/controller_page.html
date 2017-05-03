@@ -30,6 +30,16 @@
 
             </tr>
             {% endfor %}
+            <tr>
+                <td>
+                    {{ row.project_name }}
+                </td>
+                <td>
+                    <button id="create_project_btn" value="" type="button" class="btn btn-default btn-lg">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Create project
+                    </button>
+                </td>
+            </tr>
         </table>
         {% else %}
         <b>No data</b>
@@ -155,6 +165,20 @@
                           }
                         });
         });
+        $('#create_project_btn').click(function() {
+        console.log('create_project_btn');
+                 $.ajax({
+                          url: "/controller/new_project/",
+                          type: "get",
+                          success: function(response) {
+                            $("#controller_page").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
         $('.stop_test_btn').click(function() {
         var test_id = $(this).val();
                  $.ajax({

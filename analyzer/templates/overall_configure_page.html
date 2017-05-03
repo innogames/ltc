@@ -18,8 +18,8 @@
             <thead>
             <tr>
                 <th>Test ID</th>
-                <th>Jenkins build#</th>
-                <th>Test name</th>
+                <th>Jenkins build #</th>
+                <th>Test name (click to edit)</th>
                 <th>Show ?</th>
             </tr>
             </thead>
@@ -32,13 +32,7 @@
                     {{ test.build_number }}
                 </td>
                 <td>
-                    <label class="pull-left">
-                        {% if test.display_name != "" %}
-                        {{ test.display_name }}
-                        {% else %}
-                        Empty
-                        {% endif %}
-                    </label>
+                    <label class="editable_label pull-left">{% if test.display_name != "" %}{{ test.display_name }}{% else %}Empty{% endif %}</label>
                     <input id={{ test.id }} class="clickedit" type="text" />
                     <div class="clearfix"></div>
                 </td>
@@ -82,6 +76,8 @@
 function beginEdit(e)
 {
     console.log('beginEdit');
+    var input = $(e.target);
+    input.val(input.prev().text());
 }
 
 function endEdit(e) {

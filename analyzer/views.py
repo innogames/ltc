@@ -376,15 +376,25 @@ def tests_compare_report(request, test_id_1, test_id_2):
     reasonable_abs_diff = 5 #ms
     negatives = []
     positives = []
+    absense = []
     for row in data:
             if row.avg_diff_percent > reasonable_percent:
                 negatives.append(row)
             elif row.avg_diff_percent < -reasonable_percent:
                 positives.append(row)
-
+    test_1_actions = list(Aggregate.objects. \
+        annotate(url=F('action__url'))\
+        .filter(test_id=test_id_1).values('url'))
+    test_2_actions = list(Aggregate.objects. \
+        annotate(url=F('action__url')) \
+        .filter(test_id=test_id_2).values('url'))
+    for url in test_2_actions:
+        if url not in test_1_actions:
+            absense.append(url)
     return render(request, 'compare_report.html',
                   {'negatives': negatives,
-                   'positives': positives})
+                   'positives': positives,
+                   'absense': absense})
 
 def dashboard(request):
     last_tests = []

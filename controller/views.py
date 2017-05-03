@@ -319,15 +319,19 @@ def add_script_param(request, project_id):
     return JsonResponse(response, safe=False)
 
 def script_header(project_id):
-	project = Project.objects.values().get(id=project_id)
-	script_params = project['script_parameters']
-	script_header = "#!/bin/bash\n"
-	for script_param in script_params:
-		script_header += "{0}={1}\n".format(
+    script_header = "#!/bin/bash\n"
+    project = Project.objects.values().get(id=project_id)
+    script_params = project['script_parameters']
+    if script_params is None:
+        script_params = []
+
+    script_params_string = ""
+    for script_param in script_params:
+        script_params_string += "{0}={1}\n".format(
 		script_param.get('p_name'),
-		script_param.get('value'),
-	)
-	return script_header
+		script_param.get('value'))
+    script_header += script_params_string
+    return script_header
 
 def script_pre_configure(request, project_id):
     project = Project.objects.values().get(id=project_id)
@@ -456,6 +460,39 @@ def configure_test(request, project_id):
         'project': project,
         'jmeter_parameters': jmeter_parameters,
     })
+
+
+def create_project_page(request):
+    new_project = Project()
+    new_project.save()
+    return render(request, 'create_project_page.html',
+           {
+               'project': new_project,
+           })
+
+
+def create_project(request, project_id):
+    project = Project.objects.get(id=project_id)
+    response = []
+    if request.method == 'POST':
+        project_name = request.POST.get('project_name', '')
+        jmeter_destination = request.POST.get('jmeter_destination', '')
+        test_plan_destination = request.POST.get('test_plan_destination', '')
+        project.jmeter_destination = jmeter_destination
+        project.test_plan_destination = test_plan_destination
+        project.project_name = project_name
+        project.save()
+    return JsonResponse(response, safe=False)
+
+
+def delete_project(request, project_id):
+    project = Project.objects.get(id=project_id)
+    project.delete()
+    response = [{
+        "message": "project was deleted",
+        "test_id": project_id
+    }]
+    return JsonResponse(response, safe=False)
 
 
 def jmeter_params_list(request, project_id):

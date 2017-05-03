@@ -23,6 +23,17 @@
                 </ul>
             </div>
         </div>
+        <div class="panel panel-danger">
+            <div class="panel-heading">Additional:</div>
+            <div class="panel-body">
+                <ul>
+                    {% if absense %} {% for row in absense %}
+                    <li><b color="red">! Action {{ row.url }} was not executed during the last test</b> </li>
+                    {% endfor %} {% else %}
+                    <b>No any additional info</b> {% endif %}
+                </ul>
+            </div>
+        </div>
     </div>
     <div class="col-xs-6">
         <div class="panel panel-default">

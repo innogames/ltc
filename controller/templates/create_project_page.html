@@ -19,6 +19,10 @@
             <div class="panel-heading">Configure test:</div>
             <div class="panel-body">
                 <div class="form-group">
+                    <label for="jmeter_destination">Project name: </label>
+                    <input type="text" class="form-control" id="project_name" value="{{ project.project_name }}">
+                </div>
+                <div class="form-group">
                     <label for="jmeter_destination">JMeter destination</label>
                     <input type="text" class="form-control" id="jmeter_destination" value="{{ project.jmeter_destination }}">
                 </div>
@@ -27,8 +31,8 @@
                     <input type="text" class="form-control" id="test_plan_destination" value="{{ project.test_plan_destination }}">
                 </div>
                 <hr/>
-                <button id="start_test_button" value="{{ project.id }}" class="btn btn-success btn-small">Start test</button>
-                <button id="configure_test_return_button" class="btn btn-danger btn-small"><i class="icon-white icon-chevron-left"></i> Return</button>
+                <button id="save_project_btn" value="{{ project.id }}" class="btn btn-success btn-small">Save project</button>
+                <button id="return_button" value="{{ project.id }}" class="btn btn-danger btn-small"><i class="icon-white icon-chevron-left"></i> Return</button>
 
             </div>
         </div>
@@ -188,7 +192,17 @@
         });
 
 
-        $('#configure_test_return_button').click(function() {
+        $('#return_button').click(function() {
+        var project_id = $(this).val();
+             $.ajax({
+                          url: "/controller/project/"+project_id+"/delete/",
+                          success: function(response) {
+                            $("#controller_page").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
                   $.ajax({
                           url: "/controller",
                           success: function(response) {
@@ -200,27 +214,19 @@
                         });
         });
 
-        $('#start_test_button').click(function() {
+        $('#save_project_btn').click(function() {
         var project_id = $(this).val();
-        console.log("Start test for project_id:"+project_id);
                  $.ajax({
-                          url: "/controller/project/"+project_id+"/start_test/",
+                          url: "/controller/new_project/"+project_id+"/create/",
                           type: "post",
                           data: {
-                          jmeter_parameters: getJMeterParams(),
+                          project_name: $('#project_name').val(),
                           jmeter_destination: $('#jmeter_destination').val(),
                           test_plan_destination: $('#test_plan_destination').val(),
                           csrfmiddlewaretoken: '{{ csrf_token }}'
                           },
                           success: function(response) {
-
-                           },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-
-                 $.ajax({
+                            $.ajax({
                           url: "/controller",
                           success: function(response) {
                             $("#controller_page").html(response);
@@ -229,6 +235,12 @@
                             //Do Something to handle error
                           }
                         });
+                           },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
         });
 
 

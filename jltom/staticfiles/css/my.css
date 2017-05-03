@@ -205,8 +205,7 @@ hr {
     background: transparent;
 }
 
-label:hover {
+.editable_label:hover {
     background: #f2f5ff;
     border-radius:5px;
-    padding:2px 4px;
 }
