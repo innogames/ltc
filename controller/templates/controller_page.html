@@ -25,9 +25,8 @@
                     {{ row.project_name }}
                 </td>
                 <td>
-                    <button id="schedule_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-success schedule_btn">Schedule test</button>
+                    <button id="schedule_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-success schedule_btn btn-xs">Schedule test</button>
                 </td>
-
             </tr>
             {% endfor %}
             <tr>
@@ -44,7 +43,6 @@
         {% else %}
         <b>No data</b>
         {% endif %}
-
     </div>
     </div>
     </div>
@@ -60,6 +58,8 @@
                         <tr>
                             <th>Project</th>
                             <th>Test ID</th>
+                            <th>Log</th>
+                            <th>JMeter remote instances</th>
                             <th>Control</th>
                         </tr>
                         </thead>
@@ -72,7 +72,13 @@
                                 {{ row.id }}
                             </td>
                             <td>
-                                <button id="stop_test_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-danger stop_test_btn">Stop test</button>
+                                <button id="show_log_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-primary  btn-xs show_log_btn">Show log</button>
+                            </td>
+                            <td>
+                                <button id="show_jris_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-primary btn-xs show_jris_btn">Show JRIs</button>
+                            </td>
+                            <td>
+                                <button id="stop_test_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-danger  btn-xs stop_test_btn">Stop test</button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -185,13 +191,7 @@
                           url: "/controller/running_test/"+test_id+"/stop_test",
                           type: "get",
                           success: function(response) {
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-
-                  $.ajax({
+                          $.ajax({
                           url: "/controller",
                           success: function(response) {
                             $("#controller_page").html(response);
@@ -200,6 +200,13 @@
                             //Do Something to handle error
                           }
                         });
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+
+
         });
         $('.set_delay_btn').click(function() {
         var proxy_id = $(this).val();

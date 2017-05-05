@@ -207,7 +207,6 @@
                           url: "/controller/project/"+project_id+"/start_test/",
                           type: "post",
                           data: {
-                          jmeter_parameters: getJMeterParams(),
                           jmeter_destination: $('#jmeter_destination').val(),
                           test_plan_destination: $('#test_plan_destination').val(),
                           csrfmiddlewaretoken: '{{ csrf_token }}'

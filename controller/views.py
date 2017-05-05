@@ -11,6 +11,9 @@ if _platform == "linux" or _platform == "linux2":
     import resource
 
 import signal
+import paramiko
+import tempfile
+
 from analyzer.models import Project
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -516,6 +519,7 @@ def script_params_list(request, project_id):
 
 
 def start_test(request, project_id):
+    response = []
     project = Project.objects.get(id=project_id)
     pid = 0
     start_time = 0
@@ -523,15 +527,123 @@ def start_test(request, project_id):
     display_name = ""
     test_id = 0
     if request.method == 'POST':
-        jmeter_parameters = request.POST.get('jmeter_parameters', '{}')
+        running_test_dir = '/tmp/' + project.project_name + "/"
+        if not os.path.exists(running_test_dir):
+            os.mkdir( running_test_dir, 0755 )
+        if not os.path.exists(running_test_dir + 'testplan/'):
+            os.mkdir( running_test_dir + 'testplan/', 0755 )
+        if not os.path.exists(running_test_dir + 'results/'):
+            os.mkdir( running_test_dir + 'results/', 0755 )
+        if not os.path.exists(running_test_dir + 'logs/'):
+            os.mkdir( running_test_dir + 'logs/', 0755 )
+        JVM_ARGS = "-server -Xms6g -Xmx6g -XX:+UseCMSInitiatingOccupancyOnly " \
+                   "-XX:CMSInitiatingOccupancyFraction=70 -XX:+ScavengeBeforeFullGC " \
+                   "-XX:+CMSScavengeBeforeRemark -XX:+UseConcMarkSweepGC " \
+                   "-XX:+CMSParallelRemarkEnabled"
+        test_plan_params_flag = ""
+        test_plan_params_str = ""
+        jris_str = "-R"
+        jris = json.loads(
+            json.dumps(
+                project.jmeter_remote_instances, indent=4, sort_keys=True))
+        if jris is None:
+            # If not remote
+            test_plan_params_flag = " -J"
+        else:
+            # If remote
+            test_plan_params_flag = " -G"
+
+        jmeter_params = json.loads(
+            json.dumps(project.jmeter_parameters, indent=4, sort_keys=True))
+        test_plan_params_arg = []
+        test_plan_params_str = ""
+        for jmeter_param in jmeter_params:
+            test_plan_params_arg.append(
+                                  test_plan_params_flag + \
+                                  jmeter_param.get('p_name') + \
+                                  '=' + \
+                                  jmeter_param.get('value'))
+            test_plan_params_str += test_plan_params_flag + \
+                                  jmeter_param.get('p_name') + \
+                                  '=' + \
+                                  jmeter_param.get('value')
+
+
         jmeter_destination = request.POST.get('jmeter_destination', '')
         test_plan_destination = request.POST.get('test_plan_destination', '{}')
+
         project.jmeter_destination = jmeter_destination
-        project.jmeter_parameters = json.loads(jmeter_parameters)
         project.test_plan_destination = test_plan_destination
         project.save()
-        java_exec = "C:\\Program Files\\Java\\jdk1.8.0_60\\bin\\java.exe"
-        jmeter_path = project.jmeter_destination + "\ApacheJMeter.jar"
+
+        '''From Yandex.Tank plugin'''
+        with open(test_plan_destination, 'r') as src_jmx:
+            source_lines = src_jmx.readlines()
+        try:
+            closing = source_lines.pop(-1)
+            closing = source_lines.pop(-1) + closing
+            closing = source_lines.pop(-1) + closing
+        except Exception, exc:
+            raise RuntimeError("Failed to find the end of JMX XML: %s" % exc)
+
+        fd, fname = tempfile.mkstemp('.jmx','new_', running_test_dir + 'testplan/')
+        os.close(fd)
+        os.chmod(fname, 0644)
+        result_file_path = 'results.csv'
+        # Destination of test plan
+        test_plan_destination = fname
+        file_handle = open(test_plan_destination, "wb")
+        file_handle.write(''.join(source_lines))
+        file_handle.write(
+            ''.join(
+            jmeter_simple_writer(result_file_path)
+        ))
+        file_handle.write(closing)
+        file_handle.close()
+        #project.jmeter_parameters = json.loads(jmeter_parameters)
+        test_log_dir = running_test_dir + '/logs/'
+
+        java_exec = "java"
+        jmeter_path = project.jmeter_destination + "/bin/ApacheJMeter.jar"
+        running_test_jris = []
+        for jri in jris:
+            hostname = jri.get('address')
+            count = int(jri.get('count'))
+            print "Try to connect via SSH to {0} {1} times". \
+                format(hostname, str(count))
+            for i in range(1,count+1):
+                port = 10000+i
+                jris_str += '{0}:{1},'.format(hostname,str(port))
+                print "{0} time". \
+                    format(i)
+                ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(hostname,  key_filename=ssh_key)
+                print 'Executing SSH commands:'
+                cmds = ['cd {0}/bin/'.format(project.jmeter_destination),
+                        'DIRNAME=`dirname -- $0`']
+
+                stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
+                run_jmeter_server_cmd = 'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "$@" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -Jpoll={4} > /dev/null 2>&1 '.\
+                    format(JVM_ARGS, project.jmeter_destination, hostname, str(port), str(i))
+                print run_jmeter_server_cmd
+                print stdout.readlines()
+                print stderr.readlines()
+                command = 'echo $$; exec '+ run_jmeter_server_cmd
+                stdin, stdout, stderr = ssh.exec_command(command)
+                pid = int(stdout.readline())
+                print stdout.readlines()
+                print stderr.readlines()
+                print "pid"
+                running_test_jris.append({'hostname':hostname,'pid':pid})
+                print pid
+                print 'End of SSH-commands execution'
+                ssh.close()
+
+        jris_str = jris_str.rstrip(',')
+        running_test_log_file_destination\
+            = test_log_dir + "running_test_"+str(project.project_name) + ".log"
 
         args = [
             java_exec,
@@ -541,10 +653,15 @@ def start_test(request, project_id):
             "-t",
             project.test_plan_destination,
             '-j',
-            "C:\work\jltommeter.log",
-            '-Jjmeter.save.saveservice.default_delimiter=,',
+            running_test_log_file_destination,
+            jris_str.strip(),
+            test_plan_params_str.strip(),
+            '-Jjmeter.save.saveservice.default_delimiter=,'
         ]
-        jmeter_process = subprocess.Popen(args, executable=java_exec)
+        jmeter_process = subprocess.Popen(args,
+                                          executable=java_exec,
+                                          stdout=subprocess.PIPE
+                                          )
         pid = jmeter_process.pid
         start_time = int(time.time())
         t = TestRunning(
@@ -552,7 +669,10 @@ def start_test(request, project_id):
             start_time=start_time,
             result_file_path=result_file_path,
             display_name=display_name,
-            project_id=project_id)
+            log_file_dest=running_test_log_file_destination,
+            project_id=project_id,
+            jmeter_remote_instances=running_test_jris
+        )
         t.save()
         test_id = t.id
 
@@ -568,6 +688,18 @@ def start_test(request, project_id):
 
 def stop_test(request, running_test_id):
     running_test = TestRunning.objects.get(id=running_test_id)
+    jris = json.loads(
+        json.dumps(
+            running_test.jmeter_remote_instances, indent=4, sort_keys=True))
+    for jri in jris:
+        hostname = jri.get('hostname')
+        pid = int(jri.get('pid'))
+        ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname,  key_filename=ssh_key)
+        cmds = ['kill -9 {0}'.format(str(pid))]
+        stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
     response = []
     try:
         proxy_process = psutil.Process(running_test.pid)
@@ -585,3 +717,44 @@ def stop_test(request, running_test_id):
         }]
         running_test.delete()
     return JsonResponse(response, safe=False)
+
+def jmeter_simple_writer(filename):
+    template = \
+    """
+    <ResultCollector guiclass="SimpleDataWriter" testclass="ResultCollector" testname="results writer"
+                 enabled="true">
+    <boolProp name="ResultCollector.error_logging">false</boolProp>
+    <objProp>
+        <name>saveConfig</name>
+        <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>false</message>
+            <threadName>false</threadName>
+            <dataType>false</dataType>
+            <encoding>false</encoding>
+            <assertions>false</assertions>
+            <subresults>false</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <threadCounts>true</threadCounts>
+        </value>
+    </objProp>
+    <stringProp name="filename">{0}</stringProp>
+    <stringProp name="TestPlan.comments">Added automatically</stringProp>
+    </ResultCollector>
+    <hashTree/>
+    """.format(filename)
+    return template
