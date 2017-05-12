@@ -24,7 +24,7 @@ class TestRunning(models.Model):
 	start_time = models.BigIntegerField()
 	pid = models.IntegerField(default=0)
 	jmeter_remote_instances = JSONField(null=True, blank=True)
-
+	workspace = models.CharField(max_length=200, default = "")
 	class Meta:
 		db_table = 'test_running'
 

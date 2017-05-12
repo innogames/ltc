@@ -5,15 +5,16 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import TemplateView
 
+
 from models import RunningTest, RunningTestsList
 from django.shortcuts import render
 
 MONITORING_DIR = ""
 # Create your views here.
 if _platform == "linux" or _platform == "linux2":
-    MONITORING_DIR = "/var/lib/jenkins/jobs/"
+    MONITORING_DIRS = ["/var/lib/jenkins/jobs/", "/tmp/jltom/"]
 elif _platform == "win32":
-    MONITORING_DIR = "C:\work\monitoring"
+    MONITORING_DIRS = ["C:\work\monitoring"]
 
 rtl = RunningTestsList()
 
@@ -21,21 +22,22 @@ def tests_list(request):
     index = 0
     data = []
     running_tests_list = rtl.runningTestsList;
-    for root, dirs, files in os.walk(MONITORING_DIR):
-        if "workspace" in root:
-            for f in fnmatch.filter(files, '*.jtl'):
-                if os.stat(os.path.join(root, f)).st_size>0:
-                    index += 1
-                    if not any(os.path.join(root, f) in sublist
-                               for sublist in running_tests_list):
-                        if len(running_tests_list)>0:
-                            # get the index of last element ^___^ and + 1
-                            index = running_tests_list[-1][0] + 1
-                        else:
-                            index = 1
-                        running_test = RunningTest(root, f)
-                        running_tests_list.append([index,os.path.join(root, f),
-                                                   running_test])
+    for MONITORING_DIR in MONITORING_DIRS:
+        for root, dirs, files in os.walk(MONITORING_DIR):
+            if "workspace" in root or "results" in root:
+                for f in fnmatch.filter(files, '*.jtl'):
+                    if os.stat(os.path.join(root, f)).st_size>0:
+                        index += 1
+                        if not any(os.path.join(root, f) in sublist
+                                   for sublist in running_tests_list):
+                            if len(running_tests_list)>0:
+                                # get the index of last element ^___^ and + 1
+                                index = running_tests_list[-1][0] + 1
+                            else:
+                                index = 1
+                            running_test = RunningTest(root, f)
+                            running_tests_list.append([index,os.path.join(root, f),
+                                                       running_test])
                         # delete old tests from list
     for running_test in running_tests_list:
         jmeter_results_file =  running_test[2].get_jmeter_results_file()

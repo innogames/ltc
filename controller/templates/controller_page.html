@@ -59,7 +59,7 @@
                             <th>Project</th>
                             <th>Test ID</th>
                             <th>Log</th>
-                            <th>JMeter remote instances</th>
+                            <th>Remote instances</th>
                             <th>Control</th>
                         </tr>
                         </thead>
@@ -72,7 +72,7 @@
                                 {{ row.id }}
                             </td>
                             <td>
-                                <button id="show_log_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-primary  btn-xs show_log_btn">Show log</button>
+                                <button id="show_log_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-primary  btn-xs show_log_btn" onclick="return popitup('/controller/running_test/{{ row.id }}/show_log/')">Show log</button>
                             </td>
                             <td>
                                 <button id="show_jris_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-primary btn-xs show_jris_btn">Show JRIs</button>
