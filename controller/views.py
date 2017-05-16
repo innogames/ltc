@@ -14,6 +14,8 @@ import select
 
 import shutil
 
+from datagenerator import generate_data
+
 if _platform == "linux" or _platform == "linux2":
     import resource
 
@@ -574,7 +576,7 @@ def start_test(request, project_id):
         os.mkdir(running_test_logs_dir, 0777)
         os.mkdir(running_test_results_dir, 0777)
 
-        JVM_ARGS = "-server -Xms6g -Xmx6g -XX:+UseCMSInitiatingOccupancyOnly " \
+        JVM_ARGS = "-server -Xms2g -Xmx2g -XX:+UseCMSInitiatingOccupancyOnly " \
                    "-XX:CMSInitiatingOccupancyFraction=70 -XX:+ScavengeBeforeFullGC " \
                    "-XX:+CMSScavengeBeforeRemark -XX:+UseConcMarkSweepGC " \
                    "-XX:+CMSParallelRemarkEnabled"
@@ -611,6 +613,7 @@ def start_test(request, project_id):
 
         jmeter_destination = request.POST.get('jmeter_destination', '')
         test_plan_destination = request.POST.get('test_plan_destination', '{}')
+        display_name = request.POST.get('test_display_name', '{}')
 
         project.jmeter_destination = jmeter_destination
         project.test_plan_destination = test_plan_destination
@@ -642,40 +645,45 @@ def start_test(request, project_id):
         file_handle.write(closing)
         file_handle.close()
         #project.jmeter_parameters = json.loads(jmeter_parameters)
-        java_exec = "java"
+        java_exec = ""
+        if _platform == "linux" or _platform == "linux2":
+            java_exec = "java"
+        else:
+            java_exec = "C:\\Program Files\\Java\\jdk1.8.0_60\\bin\\java.exe"
         jmeter_path = project.jmeter_destination + "/bin/ApacheJMeter.jar"
         running_test_jris = []
-        for jri in jris:
-            hostname = jri.get('address')
-            count = int(jri.get('count'))
-            print "Try to connect via SSH to {0} {1} times". \
-                format(hostname, str(count))
-            for i in range(1,count+1):
-                port = 10000+i
-                jris_str += '{0}:{1},'.format(hostname,str(port))
-                print "{0} time". \
-                    format(i)
-                ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(hostname,  key_filename=ssh_key)
-                print 'Executing SSH commands:'
-                cmds = ['cd {0}/bin/'.format(project.jmeter_destination),
-                        'DIRNAME=`dirname -- $0`']
+        if jris is not None:
+            for jri in jris:
+                hostname = jri.get('address')
+                count = int(jri.get('count'))
+                print "Try to connect via SSH to {0} {1} times". \
+                    format(hostname, str(count))
+                for i in range(1,count+1):
+                    port = 10000+i
+                    jris_str += '{0}:{1},'.format(hostname,str(port))
+                    print "{0} time". \
+                        format(i)
+                    ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
+                    ssh = paramiko.SSHClient()
+                    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    ssh.connect(hostname,  key_filename=ssh_key)
+                    print 'Executing SSH commands:'
+                    cmds = ['cd {0}/bin/'.format(project.jmeter_destination),
+                            'DIRNAME=`dirname -- $0`']
 
-                stdin, stdout, stderr  =  ssh.exec_command(' ; '.join(cmds))
-                output = stdout.read()
-                text_file = open(running_test_log_file_destination, "w")
-                text_file.write(output)
-                text_file.close()
-                run_jmeter_server_cmd = 'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "$@" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -Jpoll={4} > /dev/null 2>&1 '.\
-                    format(JVM_ARGS, project.jmeter_destination, hostname, str(port), str(i))
-                command = 'echo $$; exec '+ run_jmeter_server_cmd
-                stdin, stdout, stderr = ssh.exec_command(command)
-                pid = int(stdout.readline())
-                running_test_jris.append({'hostname':hostname,'pid':pid})
-                logger.info("Started remote Jmeter instance, pid: " + str(pid))
-                ssh.close()
+                    stdin, stdout, stderr  =  ssh.exec_command(' ; '.join(cmds))
+                    output = stdout.read()
+                    text_file = open(running_test_log_file_destination, "w")
+                    text_file.write(output)
+                    text_file.close()
+                    run_jmeter_server_cmd = 'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "$@" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -Jpoll={4} > /dev/null 2>&1 '.\
+                        format(JVM_ARGS, project.jmeter_destination, hostname, str(port), str(i))
+                    command = 'echo $$; exec '+ run_jmeter_server_cmd
+                    stdin, stdout, stderr = ssh.exec_command(command)
+                    pid = int(stdout.readline())
+                    running_test_jris.append({'hostname':hostname,'pid':pid})
+                    logger.info("Started remote Jmeter instance, pid: " + str(pid))
+                    ssh.close()
 
         jris_str = jris_str.rstrip(',')
 
@@ -696,21 +704,27 @@ def start_test(request, project_id):
         #pre-test script execution:
         header = script_header(project_id)
         body = project.script_pre
-        script = header+body
-        with open(script_pre_log_file_destination, 'w') as f:
-            rc = call(script, shell=True, stdout=f)
-        jmeter_process = subprocess.Popen(args,
-                                          executable=java_exec,
-                                          stdout=subprocess.PIPE,
-                                          preexec_fn=os.setsid,
-                                          close_fds=True
-                                          )
+        if body is not None:
+            script = header+body
+            with open(script_pre_log_file_destination, 'w') as f:
+                rc = call(script, shell=True, stdout=f)
+        if _platform == "linux" or _platform == "linux2":
+            jmeter_process = subprocess.Popen(args,
+                                              executable=java_exec,
+                                              stdout=subprocess.PIPE,
+                                              preexec_fn=os.setsid,
+                                              close_fds=True
+                                              )
+        else:
+            jmeter_process = subprocess.Popen(args,
+                                              executable=java_exec,
+                                              )
         pid = jmeter_process.pid
         start_time = int(time.time())
         t = TestRunning(
             pid=pid,
             start_time=start_time,
-            result_file_path=result_file_destination,
+            result_file_dest=result_file_destination,
             display_name=display_name,
             log_file_dest=running_test_log_file_destination,
             project_id=project_id,
@@ -738,16 +752,18 @@ def stop_test(request, running_test_id):
     jris = json.loads(
         json.dumps(
             running_test.jmeter_remote_instances, indent=4, sort_keys=True))
-    for jri in jris:
-        hostname = jri.get('hostname')
-        pid = int(jri.get('pid'))
-        ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname,  key_filename=ssh_key)
-        cmds = ['kill -9 {0}'.format(str(pid))]
-        stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
+    if jris is not None:
+        for jri in jris:
+            hostname = jri.get('hostname')
+            pid = int(jri.get('pid'))
+            ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(hostname,  key_filename=ssh_key)
+            cmds = ['kill -9 {0}'.format(str(pid))]
+            stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
     response = []
+    generate_data(running_test.id)
     try:
         proxy_process = psutil.Process(running_test.pid)
         proxy_process.terminate()

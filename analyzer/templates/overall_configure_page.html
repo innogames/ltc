@@ -54,12 +54,10 @@
     $("input[type=checkbox]").on("change", function() {
         show = this.checked;
         edit_test_id = this.value;
-        new_display_name =  $('#display_name_' + edit_test_id).text();
         $.ajax({
             url: "/analyzer/test/" + edit_test_id + "/change/",
             type: "post",
             data: {
-                display_name: new_display_name,
                 show: show,
                 csrfmiddlewaretoken: '{{ csrf_token }}'
             },

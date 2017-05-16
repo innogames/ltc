@@ -19,6 +19,10 @@
             <div class="panel-heading">Configure test:</div>
             <div class="panel-body">
                 <div class="form-group">
+                    <label for="test_display_name">Test name:</label>
+                    <input type="text" class="form-control" id="test_display_name" value="{{ project.project_name }}">
+                </div>
+                <div class="form-group">
                     <label for="jmeter_destination">JMeter destination</label>
                     <input type="text" class="form-control" id="jmeter_destination" value="{{ project.jmeter_destination }}">
                 </div>
@@ -209,6 +213,7 @@
                           data: {
                           jmeter_destination: $('#jmeter_destination').val(),
                           test_plan_destination: $('#test_plan_destination').val(),
+                          test_display_name: $('#test_display_name').val(),
                           csrfmiddlewaretoken: '{{ csrf_token }}'
                           },
                           success: function(response) {

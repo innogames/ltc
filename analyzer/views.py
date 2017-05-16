@@ -167,21 +167,17 @@ def test_servers(request, test_id):
 
     return JsonResponse(list(servers_list), safe=False)
 
+
 def test_change(request, test_id):
     test = Test.objects.get(id=test_id)
     response = []
     if request.method == 'POST':
         if 'show' in request.POST:
             show = request.POST.get('show', '')
-            display_name = request.POST.get('display_name', '')
-            print show
-            print display_name
             test.show = True if show == 'true' else False
-            test.display_name = display_name
             test.save()
-        else:
+        elif 'display_name' in request.POST:
             display_name = request.POST.get('display_name', '')
-            print display_name
             test.display_name = display_name
             test.save()
         response = [{"message": "Test data was changed"}]

@@ -1,15 +1,15 @@
 # Description
 JMeter Control center.
 
-Online web-application for CI Load testing with JMeter, future replacement for Jenkins + Plugins + Jmeter combination. Now it is possible to  analyze JMeter test results and monitoring the running tests which were started in console mode (incl. distribution testing). Currently the part where is possible to run the tests is under development.
+Online web-application for CI Load testing with JMeter. Replacement for Jenkins + Plugins + Jmeter combination.  
+Now it is possible to run, analyze JMeter test results (incl. compare different results) and monitoring the running tests which were started in console mode (incl. distribution testing). 
 
-Currently it`s designed for integration with Jenkins. In post-job script need to include script datagenerator_linux.py which will populate database with all necessary data.
-
+Could be used in integration with Jenkins CI. In post-job script need to include script datagenerator_linux.py which will populate database with all necessary data.
 Consist of several modules:
 
 1. Analyzer - build reports, analyze results and compare results with another.
 2. Online - online monitoring for running tests
-3. Controller - central part for configuration and starting tests (currently ready ~ 60%)
+3. Controller - central part for configuration and starting tests
 
 
 # [ANALYZER] Create dynamic report for tests

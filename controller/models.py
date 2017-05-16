@@ -18,7 +18,7 @@ class Proxy(models.Model):
 
 class TestRunning(models.Model):
 	project = models.ForeignKey(Project, on_delete=models.CASCADE)
-	result_file_path = models.CharField(max_length=200, default = "")
+	result_file_dest = models.CharField(max_length=200, default = "")
 	log_file_dest = models.CharField(max_length=200, default = "")
 	display_name = models.CharField(max_length=100, default = "")
 	start_time = models.BigIntegerField()
