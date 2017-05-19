@@ -11,6 +11,7 @@ from django.db.models import Sum, Avg, Max, Min, FloatField
 from django.db.models.expressions import RawSQL, F
 from decimal import Decimal
 
+
 def to_dict(result_proxy):
     fieldnames = []
     for fieldname in result_proxy.keys():
@@ -24,22 +25,26 @@ def to_dict(result_proxy):
 def to_json(result_proxy, as_object):
     results = to_dict(result_proxy)
     if as_object:
-        json_object = json.loads(json.dumps(results , sort_keys=False),object_pairs_hook=OrderedDict)
+        json_object = json.loads(
+            json.dumps(results, sort_keys=False),
+            object_pairs_hook=OrderedDict)
         return json_object
     else:
-        json_string = json.dumps(results, sort_keys=False,default=str,indent=4)
+        json_string = json.dumps(
+            results, sort_keys=False, default=str, indent=4)
         return json_string
 
 
 def to_pivot(data, a, b, c):
     df = pd.DataFrame(data)
-    df_pivot = pd.pivot_table(df, index = a, columns = b, values = c)
+    df_pivot = pd.pivot_table(df, index=a, columns=b, values=c)
     return df_pivot
 
 
 def configure_page(request, project_id):
     project = Project.objects.get(id=project_id)
-    tests_list = Test.objects.filter(project_id=project_id).values().order_by('-start_time')
+    tests_list = Test.objects.filter(
+        project_id=project_id).values().order_by('-start_time')
     return render(request, 'overall_configure_page.html',
                   {'tests_list': tests_list,
                    'project': project})
@@ -51,8 +56,7 @@ def projects_list(request):
     for project in projects_all:
         if project['show']:
             project_list.append(project)
-    return JsonResponse(project_list,
-                        safe=False)
+    return JsonResponse(project_list, safe=False)
 
 
 def tests_list(request, project_id):
@@ -64,8 +68,7 @@ def tests_list(request, project_id):
 def last_test(request, project_id):
     t = Test.objects.filter(project__id=project_id)\
         .order_by('-start_time').values()
-    return JsonResponse([list(t)[0]]
-                        , safe=False)
+    return JsonResponse([list(t)[0]], safe=False)
 
 
 def project_history(request, project_id):
@@ -79,22 +82,21 @@ def project_history(request, project_id):
 
 
 def test_info(request, project_id, build_number):
-    t = Test.objects.filter(project__id=project_id,
-                            build_number=build_number).values()
-    return JsonResponse(list(t)
-                        , safe=False)
+    t = Test.objects.filter(
+        project__id=project_id, build_number=build_number).values()
+    return JsonResponse(list(t), safe=False)
 
 
 def test_info_from_id(request, test_id):
     t = Test.objects.filter(id=test_id).values()
-    return JsonResponse(list(t)
-                        , safe=False)
+    return JsonResponse(list(t), safe=False)
 
 
 def prev_test_id(request, test_id):
     p = Project.objects.\
         filter(test__id=test_id)
-    start_time = Test.objects.filter(id=test_id).values('start_time')[0]['start_time']
+    start_time = Test.objects.filter(
+        id=test_id).values('start_time')[0]['start_time']
     t = Test.objects.filter(start_time__lte=start_time,project=p).\
         values('id').order_by('-start_time')
     #data = db.get_prev_test_id(test_id, 2)
@@ -119,15 +121,18 @@ def test_report(request, test_id):
                'count',
                'errors')
 
-    return render(request, 'report.html',
-                  {'test_description': test_description[0],
-                   'aggregate_table': aggregate_table})
+    return render(request, 'report.html', {
+        'test_description': test_description[0],
+        'aggregate_table': aggregate_table
+    })
 
 
 def action_report(request, test_id, action_id):
-    return render(request, 'url_report.html',
-                  {'test_id': test_id,
-                   'action': Action.objects.get(id=action_id)})
+    return render(
+        request,
+        'url_report.html',
+        {'test_id': test_id,
+         'action': Action.objects.get(id=action_id)})
 
 
 def action_rtot(request, test_id, action_id):
@@ -144,7 +149,8 @@ def action_rtot(request, test_id, action_id):
         annotate(errors=(RawSQL("((data->>%s)::numeric)", ('errors',)))/60). \
         values('timestamp', "average", "median", "rps","errors"). \
         order_by('timestamp')
-    data = json.loads(json.dumps(list(x), indent=4, sort_keys=True, default=str))
+    data = json.loads(
+        json.dumps(list(x), indent=4, sort_keys=True, default=str))
     return JsonResponse(data, safe=False)
 
 
@@ -156,7 +162,7 @@ def available_test_monitoring_metrics(request, test_id, server_id):
     for value in data:
         if "test_id" not in value and "timestamp" not in value:
             metrics.append({"metric": value})
-    metrics.append({"metric":"CPU_all"})
+    metrics.append({"metric": "CPU_all"})
     return JsonResponse(metrics, safe=False)
 
 
@@ -183,10 +189,12 @@ def test_change(request, test_id):
         response = [{"message": "Test data was changed"}]
     return JsonResponse(response, safe=False)
 
+
 def compare_tests_cpu(request, test_id, num_of_tests):
     project = Test.objects.filter(id=test_id).values('project_id')
     project_id = project[0]['project_id']
-    start_time = Test.objects.filter(id=test_id).values('start_time')[0]['start_time']
+    start_time = Test.objects.filter(
+        id=test_id).values('start_time')[0]['start_time']
     data = (ServerMonitoringData.objects.\
         filter(test__start_time__lte=start_time, test__project_id=project_id). \
         values('test__display_name', 'server__server_name','test__start_time'). \
@@ -201,7 +209,8 @@ def compare_tests_cpu(request, test_id, num_of_tests):
         if counter < 1:
             d['rank'] = current_rank
         else:
-            if int(d['test__start_time']) == int(data[counter-1]['test__start_time']):
+            if int(d['test__start_time']) == int(
+                    data[counter - 1]['test__start_time']):
                 d['rank'] = current_rank
             else:
                 current_rank += 1
@@ -214,17 +223,20 @@ def compare_tests_cpu(request, test_id, num_of_tests):
             arr.append(d)
         counter += 1
     response = list(arr)
-    response = to_pivot(response, 'test__display_name', 'server__server_name', 'cpu_load')
+    response = to_pivot(response, 'test__display_name', 'server__server_name',
+                        'cpu_load')
     response = response.to_json(orient='index')
     #return HttpResponse(response)
     return HttpResponse(
-        json.loads(json.dumps(response , sort_keys=False),
-                   object_pairs_hook=OrderedDict))
+        json.loads(
+            json.dumps(response, sort_keys=False),
+            object_pairs_hook=OrderedDict))
 
 
 def compare_tests_avg(request, test_id, num_of_tests):
     project = Test.objects.filter(id=test_id).values('project_id')
-    start_time = Test.objects.filter(id=test_id).values('start_time')[0]['start_time']
+    start_time = Test.objects.filter(
+        id=test_id).values('start_time')[0]['start_time']
     project_id = project[0]['project_id']
 
     data = Aggregate.objects. \
@@ -242,7 +254,7 @@ def compare_tests_avg(request, test_id, num_of_tests):
         if counter < 1:
             d['rank'] = current_rank
         else:
-            if int(d['start_time']) == int(data[counter-1]['start_time']):
+            if int(d['start_time']) == int(data[counter - 1]['start_time']):
                 d['rank'] = current_rank
             else:
                 current_rank += 1
@@ -268,7 +280,8 @@ def test_rtot(request, test_id):
         annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',)))/60). \
         values('timestamp', "average", "median", "rps"). \
         order_by('timestamp')
-    data = json.loads(json.dumps(list(x), indent=4, sort_keys=True, default=str))
+    data = json.loads(
+        json.dumps(list(x), indent=4, sort_keys=True, default=str))
     return JsonResponse(data, safe=False)
 
 
@@ -278,8 +291,10 @@ def test_errors(request, test_id):
         annotate(errors_percentage=100*Sum(F("count")*F("errors")/100, output_field=FloatField())
                                     * Decimal('1.0')/Sum(F('count'), output_field=FloatField()))
     errors_percentage = float(list(value)[0]['errors_percentage'])
-    response = [{"fail_%": errors_percentage,
-                 "success_%": 100-errors_percentage}]
+    response = [{
+        "fail_%": errors_percentage,
+        "success_%": 100 - errors_percentage
+    }]
     return JsonResponse(response, safe=False)
 
 
@@ -308,8 +323,7 @@ def metric_max_value(request, test_id, server_id, metric):
 
 
 def tests_compare_aggregate(request, test_id_1, test_id_2):
-    data = Aggregate.objects.raw(
-        """
+    data = Aggregate.objects.raw("""
         SELECT a.url as "id", a1.average as "average_1", a2.average as "average_2", a1.average - a2.average as "avg_diff",
         (((a1.average-a2.average)/a2.average)*100) as "avg_diff_percent",
         a1.median - a2.median as "median_diff",
@@ -321,13 +335,15 @@ def tests_compare_aggregate(request, test_id_1, test_id_2):
         """, [test_id_1, test_id_2])
     response = []
     for row in data:
-        response.append({"url": row.id, "average_1": row.average_1,
-                         "average_2": row.average_2,
-                         "avg_diff": row.avg_diff,
-                         "avg_diff_percent": row.avg_diff_percent,
-                         "median_diff": row.median_diff,
-                         "median_diff_percent": row.median_diff_percent
-                         })
+        response.append({
+            "url": row.id,
+            "average_1": row.average_1,
+            "average_2": row.average_2,
+            "avg_diff": row.avg_diff,
+            "avg_diff_percent": row.avg_diff_percent,
+            "median_diff": row.median_diff,
+            "median_diff_percent": row.median_diff_percent
+        })
     return JsonResponse(response, safe=False)
 
 
@@ -339,26 +355,26 @@ def metric_data(request, test_id, server_id, metric):
 
     if metric == 'CPU_all':
         metric_mapping = {
-            metric: RawSQL("(((data->>%s)::numeric)+((data->>%s)::numeric)+((data->>%s)::numeric))",
-                           ('CPU_iowait','CPU_user','CPU_system',))
+            metric:
+            RawSQL(
+                "(((data->>%s)::numeric)+((data->>%s)::numeric)+((data->>%s)::numeric))",
+                ('CPU_iowait', 'CPU_user', 'CPU_system', ))
         }
     else:
-        metric_mapping = {
-            metric: RawSQL("((data->>%s)::numeric)", (metric,))
-        }
+        metric_mapping = {metric: RawSQL("((data->>%s)::numeric)", (metric, ))}
     x = ServerMonitoringData.objects. \
         filter(test_id=test_id, server_id=server_id). \
         annotate(timestamp=RawSQL("((data->>%s)::timestamp)", ('timestamp',))-min_timestamp).\
         annotate(**metric_mapping). \
         values('timestamp', metric)
     #annotate(metric=RawSQL("((data->>%s)::numeric)", (metric,)))
-    data = json.loads(json.dumps(list(x), indent=4, sort_keys=True, default=str))
+    data = json.loads(
+        json.dumps(list(x), indent=4, sort_keys=True, default=str))
     return JsonResponse(data, safe=False)
 
 
 def tests_compare_report(request, test_id_1, test_id_2):
-    data = Aggregate.objects.raw(
-        """
+    data = Aggregate.objects.raw("""
         SELECT a.url as "id", a1.average as "average_1", a2.average as "average_2", a1.average - a2.average as "avg_diff",
         (((a1.average-a2.average)/a2.average)*100) as "avg_diff_percent",
         a1.median - a2.median as "median_diff",
@@ -369,15 +385,15 @@ def tests_compare_report(request, test_id_1, test_id_2):
         WHERE a1.action_id = a2.action_id and a.id = a1.action_id
         """, [test_id_1, test_id_2])
     reasonable_percent = 3
-    reasonable_abs_diff = 5 #ms
+    reasonable_abs_diff = 5  #ms
     negatives = []
     positives = []
     absense = []
     for row in data:
-            if row.avg_diff_percent > reasonable_percent:
-                negatives.append(row)
-            elif row.avg_diff_percent < -reasonable_percent:
-                positives.append(row)
+        if row.avg_diff_percent > reasonable_percent:
+            negatives.append(row)
+        elif row.avg_diff_percent < -reasonable_percent:
+            positives.append(row)
     test_1_actions = list(Aggregate.objects. \
         annotate(url=F('action__url'))\
         .filter(test_id=test_id_1).values('url'))
@@ -387,14 +403,17 @@ def tests_compare_report(request, test_id_1, test_id_2):
     for url in test_2_actions:
         if url not in test_1_actions:
             absense.append(url)
-    return render(request, 'compare_report.html',
-                  {'negatives': negatives,
-                   'positives': positives,
-                   'absense': absense})
+    return render(request, 'compare_report.html', {
+        'negatives': negatives,
+        'positives': positives,
+        'absense': absense
+    })
+
 
 def dashboard(request):
     last_tests = []
-    s = Test.objects.values('project_id').annotate(latest_time=Max('start_time'))
+    s = Test.objects.values('project_id').annotate(
+        latest_time=Max('start_time'))
     for i in s:
         r = Test.objects.filter(project_id=i['project_id'],start_time=i['latest_time']).\
             values('project__project_name','display_name','id','project_id')
@@ -412,6 +431,5 @@ class Analyze(TemplateView):
 
 
 class History(TemplateView):
-        def get(self, request, **kwargs):
-            return render(request, 'history.html', context=None)
-
+    def get(self, request, **kwargs):
+        return render(request, 'history.html', context=None)

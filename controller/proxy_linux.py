@@ -9,6 +9,10 @@ import errno
 from time import sleep
 
 import sys
+from socket import _fileobject, timeout
+
+from select import poll, POLLIN, POLLOUT, POLLERR
+from select import epoll, EPOLLIN, EPOLLOUT, EPOLLERR
 
 from sqlalchemy import create_engine, Table, Column, Index, Integer, String, ForeignKey
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, TEXT, TIMESTAMP, BIGINT
@@ -33,12 +37,47 @@ insp = reflection.Inspector.from_engine(db_engine)
 Session = sessionmaker(bind=db_engine)
 db_session = Session()
 
+
+def _poll(reads, writes, exceptions, timeout):
+    pollfunc = epoll
+    read_flag = EPOLLIN
+    write_flag = EPOLLOUT
+    exc_flag = EPOLLERR
+    p = pollfunc()
+    for fd in reads:
+        p.register(fd, read_flag)
+    for fd in writes:
+        p.register(fd, write_flag)
+    for fd in exceptions:
+        p.register(fd, exc_flag)
+    return p.poll(timeout)
+
+
+def _select(readlist, writelist, exceptionallist, timeout):
+    return _poll(readlist, writelist, exceptionallist, timeout)
+
+
+def wait_to_read_data(socket, timeout=0.0):
+    sockets = _select([socket], [], [], timeout)
+    if isinstance(sockets, tuple):
+        return sockets[0]
+    return sockets
+
+
+def wait_to_write_data(socket, timeout=0.0):
+    sockets = _select([], [socket], [], timeout)
+    if isinstance(sockets, tuple):
+        return sockets[1]
+    return sockets
+
+
 if not db_engine.dialect.has_table(db_engine.connect(), "delay_table"):
     delay_table = Table(
         'delay_table',
         meta,
         Column('value', DOUBLE_PRECISION), )
     meta.create_all(db_connection)
+
 proxy = meta.tables['jltom.proxy']
 
 
@@ -86,17 +125,14 @@ class Forwarder(threading.Thread):
         self.destination.connect((DESTINATION_, 443))
         self.connection_string = str(self.destination.getpeername())
         print "[+] New forwarder: " + self.connection_string
-        #current_forwarders.append(self.connection_string)
-        #print current_forwarders
 
     def run(self):
         try:
             while 1:
-                r, _, _ = select.select(
-                    [self.destination],
-                    [],
-                    [], )
-                if r:
+                r = wait_to_read_data(self.destination, 1.0)
+                if not r:
+                    print "[<] Timeout to wait the data from destination"
+                else:
                     data = self.destination.recv(BUFFER_SIZE)
                     if len(data) == BUFFER_SIZE:
                         print "[<] Trying to get data from destination"
@@ -115,19 +151,14 @@ class Forwarder(threading.Thread):
             if e.errno != errno.ECONNRESET:
                 raise
             pass
-
-        #self.source.request.shutdown(socket.SHUT_RDWR)
         print "[-] Closed destination"
 
     def write_to_dest(self, data):
-        print "[>] Sending to destination"
-        _, w, _ = select.select(
-            [],
-            [self.destination],
-            [], )
-        if w:
-            self.destination.send(data)
-            print "[>] Data was sent to destination: " + str(len(data))
+        print "[>] Sending to destination: " + str(len(data))
+        wlist = wait_to_write_data(self.destination, 1.0)
+        if not wlist:
+            raise timeout()
+        self.destination.send(data)
 
     def close_connection(self):
         try:
@@ -145,17 +176,14 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
         self.connection_string = str(self.request.getpeername())
         self.request.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         print "[+] Incoming connection:" + str(self.connection_string)
-        #current_incomings.append(self.connection_string)
-        #print current_incomings
         f = Forwarder(self)
         f.start()
         try:
             while 1:
-                r, _, _ = select.select(
-                    [self.request],
-                    [],
-                    [], )
-                if r:
+                r = wait_to_read_data(self.request, 1.0)
+                if not r:
+                    print "[>] Timeout to wait the data from incoming connection"
+                else:
                     print "[>] Trying to get data from incoming connection"
                     data = self.request.recv(BUFFER_SIZE)
                     if (len(data) == BUFFER_SIZE):
@@ -171,7 +199,6 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                         break
                     print "[>] Data from incoming connection: " + str(
                         len(data))
-                print "[>] Data from incoming connection is not ready"
 
         except SocketError as e:
             if e.errno != errno.ECONNRESET:
@@ -180,14 +207,11 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
         print "[-] Close incoming connection"
 
     def write_to_source(self, data):
-        print "[<] Sending to incoming connect"
-        _, w, _ = select.select(
-            [],
-            [self.request],
-            [], )
-        if w:
-            self.request.send(data)
-            print "[<] Data was sent to incoming connect: " + str(len(data))
+        print "[<] Sending to incoming connect: " + str(len(data))
+        wlist = wait_to_write_data(self.request, 1.0)
+        if not wlist:
+            raise timeout()
+        self.request.send(data)
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -201,7 +225,7 @@ if __name__ == "__main__":
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
-    print "[*] Starting proxy on port: ", port
+    print "[*] LINUX Starting proxy on port: ", port
     try:
         while True:
             sleep(1)

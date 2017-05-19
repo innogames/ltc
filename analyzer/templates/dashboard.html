@@ -5,6 +5,7 @@
             <div class="panel-heading">Last tests:</div>
             <div class="panel-body">
                 {% if last_tests %}
+                <div class="table-responsive">
                 <table class="table">
                     <thead>
                         <tr>
@@ -25,6 +26,7 @@
                     </tr>
                     {% endfor %}
                 </table>
+                </div>
                 {% else %}
                     <b>No data</b>
                 {% endif %}

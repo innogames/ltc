@@ -20,6 +20,17 @@ var running_test_id = 0;
      }
  };
 
+function show_alert(message) {
+    // TODO: add validation for additional vars
+    var text = message['message']['text'];
+    var alert_type = message['message']['type'];
+    $('#alert_placeholder').append(
+    '<div id="alertdiv" class="alert alert-' +  alert_type + '">'+
+    '<a class="close" data-dismiss="alert">×</a><span>'+text+'</span></div></div>')
+    setTimeout(function() {
+      $("#alertdiv").remove();
+    }, 4000);
+  }
 
  function popitup(url) {
     newwindow=window.open(url,'{{title}}','height=400,width=650');
@@ -51,8 +62,7 @@ function updateSelectList(id, url, label, text_tag, value_tag) {
 
  $("#main_tabs").tabs();
  $("#analyzer_tabs").tabs();
- $(".selectpicker").selectpicker();
-
+ $("#administrator_tabs").tabs();
  $.ajax({
                           url: "/analyzer/dashboard",
                           type: "get",
@@ -77,6 +87,17 @@ function updateSelectList(id, url, label, text_tag, value_tag) {
                           }
                         });
 
+ $.ajax({
+                          url: "/administrator/",
+                          type: "get",
+                          success: function(response) {
+                            $("#administrator_page").html(response);
+
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
 
  $('#select_project_menu').on('change', function(){
                 selected_project = $(this).find("option:selected").val();

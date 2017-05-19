@@ -11,6 +11,7 @@
     <div class="panel-heading">Projects:</div>
     <div class="panel-body">
         {% if projects_list %}
+        <div class="table-responsive">
         <table class="table">
             <thead>
             <tr>
@@ -40,6 +41,7 @@
                 </td>
             </tr>
         </table>
+        </div>
         {% else %}
         <b>No data</b>
         {% endif %}
@@ -53,6 +55,7 @@
                 <div class="panel-heading">Running tests:</div>
                 <div class="panel-body">
                     {% if running_tests_list %}
+                    <div class="table-responsive">
                     <table class="table">
                         <thead>
                         <tr>
@@ -83,6 +86,7 @@
                         </tr>
                         {% endfor %}
                         </table>
+                        </div>
                         {% else %}
                         <b>There are no any running tests</b>
                         {% endif %}

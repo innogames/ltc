@@ -126,6 +126,74 @@ hr {
     border-radius: 0px;
 }
 
+/* admin tabs */
+#administrator_tabs {
+	position: relative;
+	padding-left: 1.5em;
+	background: transparent;
+    border: none;
+}
+#administrator_tabs .ui-tabs-nav {
+    margin-left:1px;
+    left:0px;
+    position: absolute;
+    width: 100vh;
+    transform: translate(-100%,0%) rotate(-90deg);
+    transform-origin: 100% 0%;
+}
+#administrator_tabs .ui-tabs-nav li {
+	float: right;
+}
+#administrator_tabs .ui-tabs-nav li.ui-tabs-selected,
+#administrator_tabs .ui-tabs-nav li.ui-state-active {
+	border-right: 1px solid transparent;
+}
+#administrator_tabs .ui-tabs-nav li a {
+	float: right;
+	width: 100%;
+	text-align: right;
+}
+#administrator_tabs > div {
+	height:100vh;
+	overflow: auto;
+}
+#administrator_tabs .ui-tabs-panel {
+    left: 0px;
+}
+#administrator_tabs .ui-tabs-panel {
+    padding-top: 0px;
+    height:100vh;
+}
+
+#administrator_tabs .ui-tabs-panel .ui-corner-bottom .ui-widget-content {
+    padding-top: 0px;
+}
+#administrator_tabs .ui-tabs-nav .ui-state-default a {
+    color: #c0c0c0;
+}
+#administrator_tabs .ui-tabs-nav .ui-state-active a {
+    color: #459e00;
+}
+#administrator_tabs .ui-tabs-nav .ui-state-active {
+    background: transparent url(images/uiTabsArrow.png) no-repeat bottom center;
+    border: none;
+
+}
+
+#administrator_tabs .ui-tabs-nav .ui-state-default {
+    background: transparent;
+    border: none;
+}
+
+#administrator_tabs .ui-widget-header {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #c0c0c0;
+    -moz-border-radius: 0px;
+    -webkit-border-radius: 0px;
+    border-radius: 0px;
+}
+
 /* табы от тест резальтов */
 #tabs_test_results .ui-tabs-nav {
     margin-left:1px;
@@ -208,4 +276,11 @@ hr {
 .editable_label:hover {
     background: #f2f5ff;
     border-radius:5px;
+}
+
+/* */
+#alert_placeholder {
+position: fixed;
+bottom: 0;
+width: 100%;
 }

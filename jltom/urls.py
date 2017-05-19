@@ -17,12 +17,14 @@ from django.conf.urls import url, include
 from django.contrib import admin
 from django.conf.urls.static import static
 from . import settings
-import debug_toolbar
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^', include('jltom_web.urls')),
     url(r'^analyzer/', include('analyzer.urls')),
     url(r'^online/', include('online.urls')),
-    url(r'^controller/', include('controller.urls',namespace="controller")),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_URL)
+    url(r'^controller/', include('controller.urls', namespace="controller")),
+    url(r'^administrator/',
+        include('administrator.urls', namespace="administrator")),
+] + static(
+    settings.STATIC_URL, document_root=settings.STATIC_URL)

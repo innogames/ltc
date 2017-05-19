@@ -15,6 +15,7 @@ import select
 import shutil
 
 from datagenerator import generate_data
+from administrator.models import JMeterProfile
 
 if _platform == "linux" or _platform == "linux2":
     import resource
@@ -31,6 +32,7 @@ from models import Proxy, TestRunning, LoadGeneratorServer, JMeterTestPlanParame
 from django.db.models import Sum, Avg, Max, Min, FloatField
 
 logger = logging.getLogger(__name__)
+
 
 def setlimits():
     print "Setting resource limit in child (pid %d)" % os.getpid()
@@ -342,8 +344,7 @@ def script_header(project_id):
     script_params_string = ""
     for script_param in script_params:
         script_params_string += "{0}={1}\n".format(
-		script_param.get('p_name'),
-		script_param.get('value'))
+            script_param.get('p_name'), script_param.get('value'))
     script_header += script_params_string
     return script_header
 
@@ -351,10 +352,11 @@ def script_header(project_id):
 def script_pre_configure(request, project_id):
     project = Project.objects.values().get(id=project_id)
     script_type = "pre"
-    return render(request, 'script_config.html',
-                  {'project': project,
-                   'script_type': script_type,
-				   'script_header': script_header(project_id)})
+    return render(request, 'script_config.html', {
+        'project': project,
+        'script_type': script_type,
+        'script_header': script_header(project_id)
+    })
 
 
 def script_post_configure(request, project_id):
@@ -466,6 +468,7 @@ def controller_page(request):
 
 def configure_test(request, project_id):
     project = Project.objects.values().get(id=project_id)
+    jmeter_profiles = JMeterProfile.objects.values()
     jmeter_parameters = json.loads(
         json.dumps(project['jmeter_parameters'], indent=4, sort_keys=True))
     jris = json.loads(
@@ -474,16 +477,16 @@ def configure_test(request, project_id):
     return render(request, 'configure_test_page.html', {
         'project': project,
         'jmeter_parameters': jmeter_parameters,
+        'jmeter_profiles': jmeter_profiles
     })
 
 
 def create_project_page(request):
     new_project = Project()
     new_project.save()
-    return render(request, 'create_project_page.html',
-           {
-               'project': new_project,
-           })
+    return render(request, 'create_project_page.html', {
+        'project': new_project,
+    })
 
 
 def create_project(request, project_id):
@@ -512,16 +515,14 @@ def running_test_log(request, running_test_id, log_type):
 
 
 def show_log_page(request, running_test_id):
-    return render(request, 'running_test_log.html',{"running_test_id":
-                                                        running_test_id})
+    return render(request, 'running_test_log.html',
+                  {"running_test_id": running_test_id})
+
 
 def delete_project(request, project_id):
     project = Project.objects.get(id=project_id)
     project.delete()
-    response = [{
-        "message": "project was deleted",
-        "test_id": project_id
-    }]
+    response = [{"message": "project was deleted", "test_id": project_id}]
     return JsonResponse(response, safe=False)
 
 
@@ -554,8 +555,10 @@ def start_test(request, project_id):
     test_id = 0
     if request.method == 'POST':
         # Create dir for new test:
-        last_test_id = Test.objects.filter(project_id=project_id).order_by("-id")[0]
-        running_test_dir = os.path.join('/tmp/', 'jltom', project.project_name, str(last_test_id.id+1))
+        last_test_id = Test.objects.filter(
+            project_id=project_id).order_by("-id")[0]
+        running_test_dir = os.path.join('/tmp/', 'jltom', project.project_name,
+                                        str(last_test_id.id + 1))
         running_test_results_dir = os.path.join(running_test_dir, 'results/')
         running_test_logs_dir = os.path.join(running_test_dir, 'logs/')
         running_test_testplan_dir = os.path.join(running_test_dir, 'testplan/')
@@ -568,19 +571,13 @@ def start_test(request, project_id):
                            "script_pre.log")
 
         result_file_destination = os.path.join(running_test_results_dir,
-                                                 "results.jtl")
+                                               "results.jtl")
         if os.path.exists(running_test_dir):
             shutil.rmtree(running_test_dir)
         os.makedirs(running_test_dir)
         os.mkdir(running_test_testplan_dir, 0777)
         os.mkdir(running_test_logs_dir, 0777)
         os.mkdir(running_test_results_dir, 0777)
-
-        JVM_ARGS = "-server -Xms2g -Xmx2g -XX:+UseCMSInitiatingOccupancyOnly " \
-                   "-XX:CMSInitiatingOccupancyFraction=70 -XX:+ScavengeBeforeFullGC " \
-                   "-XX:+CMSScavengeBeforeRemark -XX:+UseConcMarkSweepGC " \
-                   "-XX:+CMSParallelRemarkEnabled"
-
 
         test_plan_params_flag = ""
         test_plan_params_str = ""
@@ -609,16 +606,14 @@ def start_test(request, project_id):
                                   jmeter_param.get('p_name') + \
                                   '=' + \
                                   jmeter_param.get('value')
-
-
-        jmeter_destination = request.POST.get('jmeter_destination', '')
+        jmeter_profile_id = request.POST.get('jmeter_profile_id', '')
+        jmeter_profile = JMeterProfile.objects.get(id=jmeter_profile_id)
         test_plan_destination = request.POST.get('test_plan_destination', '{}')
         display_name = request.POST.get('test_display_name', '{}')
 
-        project.jmeter_destination = jmeter_destination
+        project.jmeter_profile_id = jmeter_profile_id
         project.test_plan_destination = test_plan_destination
         project.save()
-
         '''From Yandex.Tank plugin'''
         with open(test_plan_destination, 'r') as src_jmx:
             source_lines = src_jmx.readlines()
@@ -629,7 +624,7 @@ def start_test(request, project_id):
         except Exception, exc:
             raise RuntimeError("Failed to find the end of JMX XML: %s" % exc)
 
-        fd, fname = tempfile.mkstemp('.jmx','new_', running_test_testplan_dir)
+        fd, fname = tempfile.mkstemp('.jmx', 'new_', running_test_testplan_dir)
         os.close(fd)
         os.chmod(fname, 0644)
         #result_file_path = running_test_results_dir+'results.csv'
@@ -639,9 +634,7 @@ def start_test(request, project_id):
         file_handle = open(test_plan_destination, "wb")
         file_handle.write(''.join(source_lines))
         file_handle.write(
-            ''.join(
-            jmeter_simple_writer(result_file_destination)
-        ))
+            ''.join(jmeter_simple_writer(result_file_destination)))
         file_handle.write(closing)
         file_handle.close()
         #project.jmeter_parameters = json.loads(jmeter_parameters)
@@ -650,7 +643,7 @@ def start_test(request, project_id):
             java_exec = "java"
         else:
             java_exec = "C:\\Program Files\\Java\\jdk1.8.0_60\\bin\\java.exe"
-        jmeter_path = project.jmeter_destination + "/bin/ApacheJMeter.jar"
+        jmeter_path = jmeter_profile.path + "/bin/ApacheJMeter.jar"
         running_test_jris = []
         if jris is not None:
             for jri in jris:
@@ -658,38 +651,44 @@ def start_test(request, project_id):
                 count = int(jri.get('count'))
                 print "Try to connect via SSH to {0} {1} times". \
                     format(hostname, str(count))
-                for i in range(1,count+1):
-                    port = 10000+i
-                    jris_str += '{0}:{1},'.format(hostname,str(port))
+                for i in range(1, count + 1):
+                    port = 10000 + i
+                    jris_str += '{0}:{1},'.format(hostname, str(port))
                     print "{0} time". \
                         format(i)
                     ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    ssh.connect(hostname,  key_filename=ssh_key)
+                    ssh.connect(hostname, key_filename=ssh_key)
                     print 'Executing SSH commands:'
-                    cmds = ['cd {0}/bin/'.format(project.jmeter_destination),
-                            'DIRNAME=`dirname -- $0`']
+                    cmds = [
+                        'cd {0}/bin/'.format(jmeter_profile.path),
+                        'DIRNAME=`dirname -- $0`'
+                    ]
 
-                    stdin, stdout, stderr  =  ssh.exec_command(' ; '.join(cmds))
+                    stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
                     output = stdout.read()
                     text_file = open(running_test_log_file_destination, "w")
                     text_file.write(output)
                     text_file.close()
                     run_jmeter_server_cmd = 'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "$@" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -Jpoll={4} > /dev/null 2>&1 '.\
-                        format(JVM_ARGS, project.jmeter_destination, hostname, str(port), str(i))
-                    command = 'echo $$; exec '+ run_jmeter_server_cmd
+                        format(jmeter_profile.jvm_args_jris, jmeter_profile.path, hostname, str(port), str(i))
+                    command = 'echo $$; exec ' + run_jmeter_server_cmd
                     stdin, stdout, stderr = ssh.exec_command(command)
                     pid = int(stdout.readline())
-                    running_test_jris.append({'hostname':hostname,'pid':pid})
-                    logger.info("Started remote Jmeter instance, pid: " + str(pid))
+                    running_test_jris.append({
+                        'hostname': hostname,
+                        'pid': pid
+                    })
+                    logger.info("Started remote Jmeter instance, pid: " + str(
+                        pid))
                     ssh.close()
 
         jris_str = jris_str.rstrip(',')
 
         args = [
-            java_exec,
-            '-jar',
+            java_exec, '-jar',
+            jmeter_profile.jvm_args_main,
             jmeter_path,
             "-n",
             "-t",
@@ -705,20 +704,20 @@ def start_test(request, project_id):
         header = script_header(project_id)
         body = project.script_pre
         if body is not None:
-            script = header+body
+            script = header + body
             with open(script_pre_log_file_destination, 'w') as f:
                 rc = call(script, shell=True, stdout=f)
         if _platform == "linux" or _platform == "linux2":
-            jmeter_process = subprocess.Popen(args,
-                                              executable=java_exec,
-                                              stdout=subprocess.PIPE,
-                                              preexec_fn=os.setsid,
-                                              close_fds=True
-                                              )
+            jmeter_process = subprocess.Popen(
+                args,
+                executable=java_exec,
+                stdout=subprocess.PIPE,
+                preexec_fn=os.setsid,
+                close_fds=True)
         else:
-            jmeter_process = subprocess.Popen(args,
-                                              executable=java_exec,
-                                              )
+            jmeter_process = subprocess.Popen(
+                args,
+                executable=java_exec, )
         pid = jmeter_process.pid
         start_time = int(time.time())
         t = TestRunning(
@@ -729,18 +728,20 @@ def start_test(request, project_id):
             log_file_dest=running_test_log_file_destination,
             project_id=project_id,
             jmeter_remote_instances=running_test_jris,
-            workspace=running_test_dir
-        )
+            workspace=running_test_dir)
         t.save()
         test_id = t.id
 
     project = Project.objects.filter(id=project_id).values()
-    response = [{
-        "message": "test was started",
-        "test_id": test_id,
-        "pid": pid,
-        "project": list(project)[0]
-    }]
+    response = {
+        "message": {
+            "text": "Test was started",
+            "type": "info",
+            "msg_params": {
+                "pid": pid
+            }
+        }
+    }
     return JsonResponse(response, safe=False)
 
 
@@ -759,7 +760,7 @@ def stop_test(request, running_test_id):
             ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname,  key_filename=ssh_key)
+            ssh.connect(hostname, key_filename=ssh_key)
             cmds = ['kill -9 {0}'.format(str(pid))]
             stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
     response = []
@@ -782,12 +783,13 @@ def stop_test(request, running_test_id):
     #post-test script execution:
     project_id = running_test.project_id
     header = script_header(project_id)
-    project = Project.objects.get(id = project_id)
+    project = Project.objects.get(id=project_id)
     body = project.script_post
-    script = header+body
-    with open(workspace+'/logs/'+"script_pre.log", 'w') as f:
+    script = header + body
+    with open(workspace + '/logs/' + "script_pre.log", 'w') as f:
         rc = call(script, shell=True, stdout=f)
     return JsonResponse(response, safe=False)
+
 
 def jmeter_simple_writer(filename):
     template = \
@@ -829,6 +831,7 @@ def jmeter_simple_writer(filename):
     <hashTree/>
     """.format(filename)
     return template
+
 
 def splitstring(string):
     """

@@ -10,16 +10,20 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/c3.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/theme.bootstrap_2.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/my.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/vs.css' %}"/>
     <script src="{% static 'js/d3.min.js' %}"></script>
     <script src="{% static 'js/c3.min.js' %}"></script>
+    <script src="{% static 'js/highlight.pack.js' %}"></script>
 </head>
 <body>
 <article id="main_tabs" class="tabs">
     <ul>
-        <li><a href='#dashboard'>DASHBOARD</a></li>
-        <li><a href='#analyzer'>ANALYZER</a></li>
-        <li><a href='#online'>ONLINE</a></li>
-        <li><a href='#controller'>CONTROLLER</a></li>
+        <li><a href='#dashboard'><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span> DASHBOARD</a></li>
+        <li><a href='#analyzer'><span class="glyphicon glyphicon-stats" aria-hidden="true"></span> ANALYZER</a></li>
+        <li><a href='#online'><span class="glyphicon glyphicon-scale" aria-hidden="true"></span> ONLINE</a></li>
+        <li><a href='#controller'><span class="glyphicon glyphicon-play" aria-hidden="true"></span> CONTROLLER</a></li>
+        <li><a href='#administrator'><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> ADMINISTRATOR</a></li>
+
     </ul>
     <div id="dashboard">
         <div id="dashboard_page"></div>
@@ -53,7 +57,11 @@
     <div id="controller">
         <div id="controller_page"></div>
     </div>
+    <div id="administrator">
+        <div id="administrator_page"></div>
+    </div>
 </article>
+<div id="alert_placeholder"></div>
 <script src="{% static 'js/jquery-3.1.1.min.js' %}"></script>
 <script src="{% static 'js/jquery-ui.min.js' %}"></script>
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
