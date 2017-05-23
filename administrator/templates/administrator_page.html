@@ -3,7 +3,7 @@
     <ul>
         <li><a href="#config_tab_1">JMeter</a></li>
         <li><a href="#config_tab_2">GIT</a></li>
-        <li><a href="#config_tab_2">SSH</a></li>
+        <li><a href="#config_tab_3">SSH</a></li>
     </ul>
     <div id="config_tab_1">
         <div id="config_body_1">
@@ -62,7 +62,48 @@
 
     </div>
     <div id="config_tab_3">
-
+        <div id="config_body_3">
+            <div class="panel panel-primary">
+                <div class="panel-heading">JMeter profiles:</div>
+                <div class="panel-body">
+                    <div class="row">
+                        {% if ssh_keys %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                <tr>
+                                    <th>SSH-key path</th>
+                                    <th>Description</th>
+                                </tr>
+                                </thead>
+                                {% for ssh_key in ssh_keys %}
+                                <tr>
+                                    <td>
+                                        {{ ssh_key.path }}
+                                    </td>
+                                    <td>
+                                        {{ ssh_key.description }}
+                                    </td>
+                                    <td>
+                                        <button id="delete_ssh_key_btn_{{ ssh_key.id }}" value="{{ ssh_key.id }}" class="btn btn-danger delete_ssh_key_btn btn-xs"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <hr/>
+                    <div class="row">
+                        <td>
+                            <button id="add_ssh_key_btn" value="" type="button" class="btn btn-default btn-lg">
+                                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add SSH-key
+                            </button>
+                        </td>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </article>
 
@@ -83,10 +124,46 @@
                         });
         });
 
+   $('#add_ssh_key_btn').click(function() {
+                 $.ajax({
+                          url: "/administrator/new_ssh_key/",
+                          type: "get",
+                          success: function(response) {
+                            $("#config_body_3").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+
  $('.delete_jd_btn').click(function() {
  var jd_id = $(this).val();
        $.ajax({
                           url: "/administrator/jd/"+jd_id+"/delete/",
+                          type: "get",
+                          success: function(response) {
+                          show_alert(response);
+                            $.ajax({
+                          url: "/administrator/",
+                          success: function(response) {
+                            $("#administrator_page").html(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+        });
+        
+ $('.delete_ssh_key_btn').click(function() {
+ var ssh_key_id = $(this).val();
+       $.ajax({
+                          url: "/administrator/ssh_key/"+ssh_key_id+"/delete/",
                           type: "get",
                           success: function(response) {
                           show_alert(response);

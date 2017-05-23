@@ -48,9 +48,9 @@
     </div>
     </div>
     </div>
-            <div class="col-xs-4">
+            <div class="col-xs-2">
             </div>
-        <div class="col-xs-4">
+        <div class="col-xs-6">
             <div class="panel panel-primary">
                 <div class="panel-heading">Running tests:</div>
                 <div class="panel-body">
@@ -60,6 +60,7 @@
                         <thead>
                         <tr>
                             <th>Project</th>
+                            <th>Test name</th>
                             <th>Test ID</th>
                             <th>Log</th>
                             <th>Remote instances</th>
@@ -72,6 +73,9 @@
                                 {{ row.project__project_name }}
                             </td>
                             <td>
+                                {{ row.display_name }}
+                            </td>
+                            <td>
                                 {{ row.id }}
                             </td>
                             <td>
@@ -81,7 +85,7 @@
                                 <button id="show_jris_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-primary btn-xs show_jris_btn">Show JRIs</button>
                             </td>
                             <td>
-                                <button id="stop_test_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-danger  btn-xs stop_test_btn">Stop test</button>
+                                <button id="stop_test_button_{{ row.id }}" value="{{ row.id }}" class="btn btn-danger  btn-xs stop_test_btn"><span class="glyphicon-stop" aria-hidden="true"></span></button>
                             </td>
                         </tr>
                         {% endfor %}

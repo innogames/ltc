@@ -4,16 +4,13 @@ import json
 from pandas import DataFrame
 from pylab import *
 import pandas as pd
-import matplotlib.font_manager
 import sys
-import re
 import os
 import zipfile
 from os.path import basename
-from django.conf import settings
 from controller.models import TestRunning
 from analyzer.models import Project, Test, Action, \
-    TestActionData, TestAggregate, TestData
+    TestActionData, TestAggregate, TestData, Aggregate
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -97,7 +94,7 @@ def generate_data(t_id):
                 'average', 'url', 'responseCode', 'success', 'threadName',
                 'failureMessage', 'grpThreads', 'allThreads'
             ]
-            df = df[~df['url'].str.contains('exclude_')]
+            df = df[~df['url'].str.contains('exclude_', na=False)]
 
         df.columns = [
             'average', 'url', 'responseCode', 'success', 'threadName',
@@ -110,9 +107,10 @@ def generate_data(t_id):
         print "Number of lines in filrue: %d." % num_lines
         unique_urls = df['url'].unique()
         for url in unique_urls:
+            url = str(url)
             if not Action.objects.filter(
                     url=url, project_id=project_id).exists():
-                print "Adding new action: " + url + " project_id: " + str(
+                print "Adding new action: " + str(url) + " project_id: " + str(
                     project_id)
                 a = Action(url=url, project_id=project_id)
                 a.save()
@@ -179,8 +177,8 @@ def generate_data(t_id):
             print agg.columns
             for index, row in agg.iterrows():
                 print "add row:" + str(row)
-                aggr = TestAggregate(
-                    test_id=row['test_id'],
+                aggr = Aggregate(
+                    test_id=int(row['test_id']),
                     action_id=int(row['action_id']),
                     average=row['average'],
                     median=row['median'],
@@ -190,8 +188,9 @@ def generate_data(t_id):
                     maximum=row['maximum'],
                     minimum=row['minimum'],
                     count=int(row['cnt']),
-                    errors=row['errors'],
-                    weight=row['weight'])
+                    errors=int(row['errors']),
+                    weight=row['weight']
+                )
                 aggr.save()
             zip_results_file(jmeter_results_file)
         except ValueError, e:

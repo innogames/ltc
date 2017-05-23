@@ -2,13 +2,14 @@ from django.http import JsonResponse
 from django.shortcuts import render
 
 # Create your views here.
-from administrator.models import JMeterProfile
-
+from administrator.models import JMeterProfile, SSHKey
 
 def administrator_page(request):
     jds = JMeterProfile.objects.values()
+    ssh_keys = SSHKey.objects.values()
     return render(request, 'administrator_page.html', {
         'jds': jds,
+        'ssh_keys':ssh_keys
     })
 
 
@@ -56,6 +57,50 @@ def create_jd(request, jd_id):
                 "type": "info",
                 "msg_params": {
                     "id": jd_id
+                }
+            }
+        }
+    return JsonResponse(response, safe=False)
+
+
+def new_ssh_key_page(request):
+    new_ssh_key = SSHKey()
+    new_ssh_key.save()
+    return render(request, 'new_ssh_key.html', {
+        'ssh_key': new_ssh_key,
+    })
+
+
+def delete_ssh_key(request, ssh_key_id):
+    ssh_key = SSHKey.objects.get(id=ssh_key_id)
+    ssh_key.delete()
+    response = {
+        "message": {
+            "text": "SSH-key was deleted",
+            "type": "warning",
+            "msg_params": {
+                "id": ssh_key_id
+            }
+        }
+    }
+    return JsonResponse(response, safe=False)
+
+
+def create_ssh_key(request, ssh_key_id):
+    ssh_key = SSHKey.objects.get(id=ssh_key_id)
+    response = {}
+    if request.method == 'POST':
+        path = request.POST.get('path', '')
+        description = request.POST.get('description', '')
+        ssh_key.path = path
+        ssh_key.description = description
+        ssh_key.save()
+        response = {
+            "message": {
+                "text": "SSH-key was added",
+                "type": "info",
+                "msg_params": {
+                    "id": ssh_key_id
                 }
             }
         }

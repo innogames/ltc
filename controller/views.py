@@ -15,7 +15,7 @@ import select
 import shutil
 
 from datagenerator import generate_data
-from administrator.models import JMeterProfile
+from administrator.models import JMeterProfile, SSHKey
 
 if _platform == "linux" or _platform == "linux2":
     import resource
@@ -129,7 +129,9 @@ def new_proxy_page(request):
 
 
 def new_jri_page(request, project_id):
-    return render(request, "new_jri.html", {'project_id': project_id})
+    ssh_keys = SSHKey.objects.values()
+    return render(request, "new_jri.html", {'project_id': project_id,
+                                            'ssh_keys': ssh_keys})
 
 
 def new_jmeter_param_page(request, project_id):
@@ -200,11 +202,15 @@ def jri_delete(request, project_id, jri_id):
     project = Project.objects.get(id=project_id)
     project.jmeter_remote_instances = jris
     project.save()
-    response = [{
-        "message": "JRI was deleted",
-        "project_id": project_id,
-        "jri_id": jri_id
-    }]
+    response = {
+        "message": {
+            "text": "JMeter remote instance was deleted from project",
+            "type": "success",
+            "msg_params": {
+                "project_id": project_id
+            }
+        }
+    }
     return JsonResponse(response, safe=False)
 
 
@@ -395,13 +401,15 @@ def add_jri(request, project_id):
     if request.method == 'POST':
         server_id = 0
         address = request.POST.get('address', '127.0.0.1')
+        ssh_key_id = request.POST.get('ssh_key_id', '0')
         if not LoadGeneratorServer.objects.filter(address=address).exists():
-            s = LoadGeneratorServer(address=address)
+            s = LoadGeneratorServer(address=address, ssh_key_id=ssh_key_id)
             s.save()
             server_id = s.id
         else:
             s = LoadGeneratorServer.objects.get(address=address)
             server_id = s.id
+            ssh_key_id = s.ssh_key_id
         count = request.POST.get('count', '1')
         jris = json.loads(
             json.dumps(
@@ -410,14 +418,20 @@ def add_jri(request, project_id):
             jris = list([{
                 'id': server_id,
                 'address': address,
+                'ssh_key_id': ssh_key_id,
                 'count': count
             }])
-            response = [{
-                "message": "JRI was added",
-                "id": server_id,
-                "address": address,
-                "count": count
-            }]
+
+            response = {
+                "message": {
+                    "text": "JMeter remote instance was added to project",
+                    "type": "success",
+                    "msg_params": {
+                        "server_id": server_id
+                    }
+                }
+            }
+
         else:
             already_in_list = False
             for jri in jris:
@@ -431,15 +445,20 @@ def add_jri(request, project_id):
 
                 jris.append({
                     'id': server_id,
+                    'ssh_key_id': ssh_key_id,
                     'address': address,
                     'count': count
                 })
-                response = [{
-                    "message": "JRI was added",
-                    "id": server_id,
-                    "address": address,
-                    "count": count
-                }]
+
+                response = {
+                    "message": {
+                        "text": "JMeter remote instance was added to project",
+                        "type": "success",
+                        "msg_params": {
+                            "server_id": server_id
+                        }
+                    }
+                }
 
         project = Project.objects.get(id=project_id)
         project.jmeter_remote_instances = jris
@@ -648,6 +667,7 @@ def start_test(request, project_id):
         if jris is not None:
             for jri in jris:
                 hostname = jri.get('address')
+                ssh_key_id = int(jri.get('ssh_key_id'))
                 count = int(jri.get('count'))
                 print "Try to connect via SSH to {0} {1} times". \
                     format(hostname, str(count))
@@ -656,7 +676,7 @@ def start_test(request, project_id):
                     jris_str += '{0}:{1},'.format(hostname, str(port))
                     print "{0} time". \
                         format(i)
-                    ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
+                    ssh_key = SSHKey.objects.get(id=ssh_key_id).path
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     ssh.connect(hostname, key_filename=ssh_key)
@@ -686,9 +706,9 @@ def start_test(request, project_id):
 
         jris_str = jris_str.rstrip(',')
 
-        args = [
-            java_exec, '-jar',
-            jmeter_profile.jvm_args_main,
+        args = [java_exec, '-jar']
+        args += splitstring(jmeter_profile.jvm_args_main)
+        args += [
             jmeter_path,
             "-n",
             "-t",
@@ -719,7 +739,7 @@ def start_test(request, project_id):
                 args,
                 executable=java_exec, )
         pid = jmeter_process.pid
-        start_time = int(time.time())
+        start_time = int(time.time()*1000)
         t = TestRunning(
             pid=pid,
             start_time=start_time,
@@ -728,7 +748,8 @@ def start_test(request, project_id):
             log_file_dest=running_test_log_file_destination,
             project_id=project_id,
             jmeter_remote_instances=running_test_jris,
-            workspace=running_test_dir)
+            workspace=running_test_dir,
+            is_running=True)
         t.save()
         test_id = t.id
 
@@ -736,20 +757,33 @@ def start_test(request, project_id):
     response = {
         "message": {
             "text": "Test was started",
-            "type": "info",
+            "type": "success",
             "msg_params": {
                 "pid": pid
             }
         }
     }
+    wait_for_finished_test(request, t, jmeter_process)
     return JsonResponse(response, safe=False)
+
+
+def wait_for_finished_test(request, t, jmeter_process):
+    ''' Check if test is still running'''
+    while t.is_running:
+
+        retcode = jmeter_process.poll()
+        print "Check if JMeter process is still exists, current state: {0}".format(retcode)
+        if retcode is not None:
+            print "JMeter process finished with exit code: {0}".format(retcode)
+            t.is_running = False
+            stop_test(request, t.id)
+            break
+        time.sleep(10)
 
 
 def stop_test(request, running_test_id):
     running_test = TestRunning.objects.get(id=running_test_id)
     workspace = running_test.workspace
-    print "Workspace"
-    print workspace
     jris = json.loads(
         json.dumps(
             running_test.jmeter_remote_instances, indent=4, sort_keys=True))
@@ -757,7 +791,8 @@ def stop_test(request, running_test_id):
         for jri in jris:
             hostname = jri.get('hostname')
             pid = int(jri.get('pid'))
-            ssh_key = '/var/lib/jenkins/.ssh/id_rsa'
+            ssh_key_id = int(LoadGeneratorServer.objects.get(address=hostname).ssh_key_id)
+            ssh_key = SSHKey.objects.get(id=ssh_key_id).path
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(hostname, key_filename=ssh_key)

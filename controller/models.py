@@ -4,6 +4,7 @@ from django.contrib.postgres.fields import JSONField
 from django.db import models
 
 # Create your models here.
+from administrator.models import SSHKey
 
 
 class Proxy(models.Model):
@@ -18,6 +19,7 @@ class Proxy(models.Model):
 
 
 class TestRunning(models.Model):
+    '''Model for the running test'''
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     result_file_dest = models.CharField(max_length=200, default="")
     log_file_dest = models.CharField(max_length=200, default="")
@@ -26,6 +28,7 @@ class TestRunning(models.Model):
     pid = models.IntegerField(default=0)
     jmeter_remote_instances = JSONField(null=True, blank=True)
     workspace = models.CharField(max_length=200, default="")
+    is_running = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'test_running'
@@ -33,7 +36,7 @@ class TestRunning(models.Model):
 
 class LoadGeneratorServer(models.Model):
     address = models.CharField(max_length=200, default="")
-
+    ssh_key = models.ForeignKey(SSHKey, on_delete=models.CASCADE,null=True, blank=True)
     class Meta:
         db_table = 'load_generator_server'
 
