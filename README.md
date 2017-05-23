@@ -13,7 +13,7 @@ Consist of several modules:
 4. Administrator - configurator for different parameters
 
 
-# [ANALYZER] 
+## [ANALYZER] 
 Get a performance trends for all test results
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/trend.png)
 
@@ -26,11 +26,11 @@ Get fancy good-readable aggregate table for the test with graphs for every execu
 Get response times, rps, errors data from test:
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/graphs.png)
 
-# [ONLINE] Online test monitoring
+## [ONLINE] Online test monitoring
 Provides online test monitoring, reads .csv result files and builds graphs online without Graphite,plugins,etc:
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/online.png)
 
-# [CONTROLLER]
+## [CONTROLLER]
 Configure and start tests, using normal or distribution testing. Possible to configure and run pre- and post-test bash-scripts (currently on development) and additional JMeter test-plan parameters:
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/controller_1.png)
 
@@ -81,5 +81,5 @@ nohup python manage.py runserver 8888 &
 
 ### 5. Jenkins
 
-It`s possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)
+It iss possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)
 In post-job script need to include script `datagenerator_linux.py` which will populate database with all necessary data after executed test.
