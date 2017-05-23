@@ -15,7 +15,7 @@ Consist of several modules:
 
 ## [ANALYZER] 
 Get a performance trends for all test results
-![alt tag](https://github.com/v0devil/jltom/blob/master/pics/trend.png)
+![alt tag](https://github.com/v0devil/jltom/blob/master/pics/trend_.png)
 
 Create dynamic report for the tests
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/report.png)
