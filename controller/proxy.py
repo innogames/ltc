@@ -19,10 +19,12 @@ from sqlalchemy.engine import reflection
 
 PORT_ = sys.argv[1]
 DESTINATION_ = sys.argv[2]
-PROXY_ID_ = sys.argv[3]
+DESTINATION_PORT_ = sys.argv[3]
+PROXY_ID_ = sys.argv[4]
 
 print "PORT_:" + PORT_
 print "DESTINATION_:" + DESTINATION_
+print "DESTINATION_PORT_:" + DESTINATION_PORT_
 print "PROXY_ID_:" + PROXY_ID_
 
 db_engine = create_engine(
@@ -83,7 +85,7 @@ class Forwarder(threading.Thread):
         self.destination = \
          socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.destination.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.destination.connect((DESTINATION_, 443))
+        self.destination.connect((DESTINATION_, int(DESTINATION_PORT_)))
         self.connection_string = str(self.destination.getpeername())
         print "[+] New forwarder: " + self.connection_string
         #current_forwarders.append(self.connection_string)

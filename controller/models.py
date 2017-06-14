@@ -11,6 +11,7 @@ class Proxy(models.Model):
     port = models.IntegerField(default=0)
     pid = models.IntegerField(default=0)
     destination = models.CharField(max_length=200, default="https://dest")
+    destination_port = models.IntegerField(default=443)
     delay = models.FloatField()
     started = models.BooleanField(default=False)
 
@@ -22,6 +23,7 @@ class TestRunning(models.Model):
     '''Model for the running test'''
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     result_file_dest = models.CharField(max_length=200, default="")
+    monitoring_file_dest = models.CharField(max_length=200, default="")
     log_file_dest = models.CharField(max_length=200, default="")
     display_name = models.CharField(max_length=100, default="")
     start_time = models.BigIntegerField()
@@ -29,6 +31,7 @@ class TestRunning(models.Model):
     jmeter_remote_instances = JSONField(null=True, blank=True)
     workspace = models.CharField(max_length=200, default="")
     is_running = models.BooleanField(default=False)
+    build_number = models.IntegerField(default=0)
 
     class Meta:
         db_table = 'test_running'

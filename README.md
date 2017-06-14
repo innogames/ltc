@@ -82,4 +82,7 @@ nohup python manage.py runserver 8888 &
 ### 5. Jenkins
 
 It iss possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)
-In post-job script need to include script `datagenerator_linux.py` which will populate database with all necessary data after executed test.
+In post-job script you need to add HTTP post request:
+`curl --data "results_dir=$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/" http://localhost:8888/controller/parse_results`
+OR
+include script `datagenerator_linux.py` which will populate database with all necessary data after executed test.

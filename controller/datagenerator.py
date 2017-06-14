@@ -4,13 +4,16 @@ import json
 from pandas import DataFrame
 from pylab import *
 import pandas as pd
+import re
 import sys
 import os
 import zipfile
+from xml.etree.ElementTree import ElementTree
 from os.path import basename
 from controller.models import TestRunning
 from analyzer.models import Project, Test, Action, \
-    TestActionData, TestAggregate, TestData, Aggregate
+    TestActionData, TestAggregate, TestData, Aggregate, \
+    Server, ServerMonitoringData
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -56,24 +59,93 @@ def zip_results_file(file):
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 
 
+def parse_results_in_dir(results_dir):
+    id = add_running_test(results_dir)
+    generate_data(id)
+    running_test = TestRunning.objects.get(id=id)
+    running_test.delete()
+    print("Data was parsed, directory: {0}".format(results_dir))
+
+def add_running_test(root):
+    # Parse data from Jenkins Job folder
+    build_xml = ElementTree()
+    build_parameters = []
+    display_name = "unknown"
+    start_time = 0
+    duration = 0
+    project_id = 0
+    jmeter_results_path = os.path.join(
+        root, "jmeter.jtl")
+    monitoring_data = os.path.join(
+        root, "monitoring.data")
+    build_xml_path = os.path.join(
+        root, "build.xml")
+
+    if os.path.isfile(build_xml_path):
+        build_xml.parse(build_xml_path)
+        build_tag = build_xml.getroot()
+
+        for params in build_tag:
+            if params.tag == 'actions':
+                parameters = params.find('.//parameters')
+                for parameter in parameters:
+                    name = parameter.find('name')
+                    value = parameter.find('value')
+                    build_parameters.append(
+                        [name.text, value.text])
+            elif params.tag == 'startTime':
+                start_time = int(params.text)
+            elif params.tag == 'duration':
+                duration = int(params.text)
+            elif params.tag == 'displayName':
+                display_name = params.text
+    project_name = re.search('/([^/]+)/builds', root).group(1)
+    if not Project.objects.filter(project_name=project_name).exists():
+        print "Adding new project: " + project_name
+        project = Project(
+            project_name=project_name,
+            show=True
+        )
+        project.save()
+        project_id = project.id
+    print "Project_id: " + str(project_id)
+    build_number = int(
+        re.search('/builds/(\d+)', root).group(1))
+    running_test = TestRunning(
+        project_id=project_id,
+        build_number=build_number,
+        result_file_dest=jmeter_results_path,
+        monitoring_file_dest=monitoring_data,
+        log_file_dest='',
+        display_name=display_name,
+        start_time=start_time,
+        pid=0,
+        jmeter_remote_instances=None,
+        workspace=root,
+        is_running=True,
+    )
+    running_test.save()
+    return running_test.id
+
+
 def generate_data(t_id):
     print "Parse and generate test data: " + str(t_id)
     test_running = TestRunning.objects.get(id=t_id)
+    if not Test.objects.filter(path=test_running.workspace).exists():
+        test = Test(
+            project_id=test_running.project_id,
+            path=test_running.workspace,
+            display_name=test_running.display_name,
+            start_time=test_running.start_time,
+            build_number=0,
+            show=True)
+        test.save()
+    else:
+        test = Test.objects.get(path=test_running.workspace)
+    project_id = test.project_id
+    test_id = test.id
     jmeter_results_file = test_running.result_file_dest
     if os.path.exists(jmeter_results_file):
-        if not Test.objects.filter(path=test_running.workspace).exists():
-            test = Test(
-                project_id=test_running.project_id,
-                path=test_running.workspace,
-                display_name=test_running.display_name,
-                start_time=test_running.start_time,
-                build_number=0,
-                show=True)
-            test.save()
-        else:
-            test = Test.objects.get(path=test_running.workspace)
-        project_id = test.project_id
-        test_id = test.id
         df = pd.DataFrame()
         if os.stat(jmeter_results_file).st_size > 1000007777:
             print "Executing a parse for a huge file"
@@ -215,6 +287,69 @@ def generate_data(t_id):
             test_data = TestData(
                 test_id=output_json[row]['test_id'], data=data)
             test_data.save()
+    else:
+        print "Result file does not exist"
+
+    monitoring_results_file = test_running.monitoring_file_dest
+    if os.path.exists(monitoring_results_file):
+        f = open(monitoring_results_file, "r")
+        lines = f.readlines()
+        f.close()
+        f = open(monitoring_results_file, "w")
+        for line in lines:
+            if not ('start' in line):
+                f.write(line)
+
+        f.close()
+        monitoring_df = pd.read_csv(monitoring_results_file, index_col=1, sep=";")
+
+        monitoring_df.columns = [
+            'server_name', 'Memory_used', 'Memory_free', 'Memory_buff',
+            'Memory_cached', 'Net_recv', 'Net_send', 'Disk_read', 'Disk_write',
+            'System_la1', 'CPU_user', 'CPU_system', 'CPU_iowait'
+        ]
+        monitoring_df.index = pd.to_datetime(
+            dateconv((monitoring_df.index.values)))
+        monitoring_df.index.names = ['timestamp']
+
+        unique_servers = monitoring_df['server_name'].unique()
+        for server_ in unique_servers:
+            if not Server.objects.filter(
+                    server_name=server_).exists():
+                print "Adding new server: " + server_
+                s = Server(
+                    server_name=server_
+                )
+                s.save()
+            server_id = s.id
+            if not ServerMonitoringData.objects.filter(
+                    server_id=server_id,
+                    test_id=test_id).exists():
+                df_server = monitoring_df[(
+                    monitoring_df.server_name == server_)]
+                output_json = json.loads(
+                    df_server.to_json(orient='index', date_format='iso'),
+                    object_pairs_hook=OrderedDict)
+                for row in output_json:
+                    data = {
+                        'timestamp': row,
+                        'Memory_used': output_json[row]['Memory_used'],
+                        'Memory_free': output_json[row]['Memory_free'],
+                        'Memory_buff': output_json[row]['Memory_buff'],
+                        'Memory_cached': output_json[row]['Memory_cached'],
+                        'Net_recv': output_json[row]['Net_recv'],
+                        'Net_send': output_json[row]['Net_send'],
+                        'Disk_read': output_json[row]['Disk_read'],
+                        'Disk_write': output_json[row]['Disk_write'],
+                        'System_la1': output_json[row]['System_la1'],
+                        'CPU_user': output_json[row]['CPU_user'],
+                        'CPU_system': output_json[row]['CPU_system'],
+                        'CPU_iowait': output_json[row]['CPU_iowait']
+                    }
+                    server_monitoring_data = ServerMonitoringData(
+                        test_id=test_id, server_id=server_id, data=data
+                    )
+                    server_monitoring_data.save()
     else:
         print "Result file does not exist"
 

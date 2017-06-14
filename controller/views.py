@@ -14,13 +14,13 @@ import select
 
 import shutil
 
-from datagenerator import generate_data
+from datagenerator import generate_data, parse_results_in_dir
 from administrator.models import JMeterProfile, SSHKey
 
 if _platform == "linux" or _platform == "linux2":
     import resource
 
-import signal
+
 import paramiko
 import tempfile
 
@@ -54,6 +54,14 @@ def change_proxy_delay(request, proxy_id):
     return JsonResponse(response, safe=False)
 
 
+def parse_results(request):
+    response = []
+    if request.method == 'POST':
+        results_dir = request.POST.get('results_dir', '/tmp')
+        parse_results_in_dir(results_dir)
+    return JsonResponse(response, safe=False)
+
+
 def stop_proxy(request, proxy_id):
     p = Proxy.objects.get(id=proxy_id)
     if p.pid != 0:
@@ -78,10 +86,12 @@ def start_proxy(request, proxy_id):
     if request.method == 'POST':
         port = request.POST.get('port', '0')
         destination = request.POST.get('destination', 'https://empty')
+        destination_port = request.POST.get('destination_port', '443')
         delay = request.POST.get('delay', '0')
         p.delay = delay
         p.port = port
         p.destination = destination
+        p.destination_port = destination_port
         p.started = True
         p.save()
     out = open('/tmp/proxy_output_' + str(proxy_id), 'w')
@@ -90,7 +100,8 @@ def start_proxy(request, proxy_id):
     #	proxy_script = "proxy_linux.py"
     env = dict(os.environ, **{'PYTHONUNBUFFERED': '1'})
     proxy_process = subprocess.Popen(
-        [sys.executable, proxy_script, str(p.port), p.destination, str(p.id)],
+        [sys.executable, proxy_script, str(p.port), p.destination,
+         p.destination_port, str(p.id)],
         cwd=os.path.dirname(os.path.realpath(__file__)),
         stdout=out,
         stderr=out,
@@ -110,11 +121,13 @@ def add_proxy(request):
     if request.method == 'POST':
         port = request.POST.get('port', '0')
         destination = request.POST.get('destination', 'https://empty')
+        destination_port = request.POST.get('destination_port', '443')
         delay = request.POST.get('delay', '0')
         p = Proxy(
             delay=delay,
             port=port,
             destination=destination,
+            destination_port = destination_port,
             started=False,
             pid=0)
         p.save()
@@ -744,11 +757,13 @@ def start_test(request, project_id):
             pid=pid,
             start_time=start_time,
             result_file_dest=result_file_destination,
+            monitoring_file_dest="",
             display_name=display_name,
             log_file_dest=running_test_log_file_destination,
             project_id=project_id,
             jmeter_remote_instances=running_test_jris,
             workspace=running_test_dir,
+            build_number=0,
             is_running=True)
         t.save()
         test_id = t.id

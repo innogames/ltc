@@ -33,6 +33,7 @@ class Test(models.Model):
     path = models.CharField(max_length=200)
     display_name = models.CharField(max_length=100)
     start_time = models.BigIntegerField(db_index=True)
+    end_time = models.BigIntegerField(default=0)
     build_number = models.IntegerField(default=0)
     show = models.BooleanField(default=True)
 
