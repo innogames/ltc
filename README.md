@@ -89,8 +89,8 @@ include script `datagenerator_linux.py` which will populate database with all ne
 
 To use with HTML Pulblisher plugin (https://wiki.jenkins.io/display/JENKINS/HTML+Publisher+Plugin) set this values in project setting in Publish HTML reports section:
 
-HTML directory to archive: $JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/
+HTML directory to archive: `$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/`
 
-Index page[s]: https://loadtest-jltom.innogames.de/?action=getbuilddata&project_name=$JOB_NAME&build_number=$BUILD_NUMBER
+Index page[s]: `https://loadtest-jltom.innogames.de/?action=getbuilddata&project_name=$JOB_NAME&build_number=$BUILD_NUMBER`
 
-Keep past HTML reports: enabled
+Keep past HTML reports: `enabled`
