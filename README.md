@@ -1,5 +1,5 @@
 # Description
-JMeter Control Center (or `jltom`)
+JMeter Control Center (or `jltom`) - dashboard for load testing with JMeter.
 
 Online web-application for "continuous integration" (CI) Load testing with JMeter.  
 A central system for launching (incl. distribution testing), monitoring tests, creating reports and for a comparative analysis between different load tests provided with Jmeter (http://jmeter.apache.org/)
