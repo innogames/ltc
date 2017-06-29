@@ -196,7 +196,7 @@ def compare_tests_cpu(request, test_id, num_of_tests):
     start_time = Test.objects.filter(
         id=test_id).values('start_time')[0]['start_time']
     data = (ServerMonitoringData.objects.\
-        filter(test__start_time__lte=start_time, test__project_id=project_id). \
+        filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True). \
         values('test__display_name', 'server__server_name','test__start_time'). \
         annotate(cpu_load=RawSQL("((data->>%s)::float)+((data->>%s)::float)+((data->>%s)::float)",
                             ('CPU_user','CPU_iowait','CPU_system',))). \
@@ -242,7 +242,7 @@ def compare_tests_avg(request, test_id, num_of_tests):
     data = Aggregate.objects. \
         annotate(display_name=F('test__display_name')). \
         annotate(start_time=F('test__start_time')). \
-        filter(test__start_time__lte=start_time, test__project_id=project_id).\
+        filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True).\
         values('display_name','start_time'). \
         annotate(average=Avg('average')). \
         annotate(median=Avg('median')). \

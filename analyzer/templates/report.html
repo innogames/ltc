@@ -251,7 +251,6 @@
 
         json_compare_cpu = JSON.parse(httpGet('/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_cpu'));
         var arr = [];
-        console.log(json_compare_cpu);
         var graph_values = []; //values for the graph
 
         for (var test_name in json_compare_cpu) {
@@ -264,7 +263,7 @@
             arr.push(json_compare_cpu[test_name]);
         }
 
-        var new_json = JSON.stringify(arr);
+        var new_json = JSON.stringify(arr.reverse());
         new_json = JSON.parse(new_json);
         var compare_cpu_graph = c3.generate({
             data: {
@@ -300,6 +299,11 @@
                     }]
                 }
             },
+            regions: [{
+                axis: 'x',
+                start: 0.5,
+                class: 'regionX'
+            }, ],
             //regions: [
             //{axis: 'x', start: 0,  class: 'regionX'},
             //],
