@@ -90,38 +90,26 @@
             <div class="panel-body">
                 <table id="aggregate_table" class="tablesorter">
                     <thead>
-                    <tr>
-                        {% for key in aggregate_table.0 %}
-                            {% if key != "action_id" %}
-                                <th> {{ key }} </th>
-                            {% endif %}
-                        {% endfor %}
-                    </tr>
+                        <tr>
+                            {% for key in aggregate_table.0 %} {% if key != "action_id" %}
+                            <th> {{ key }} </th>
+                            {% endif %} {% endfor %}
+                        </tr>
                     </thead>
                     {% for row in aggregate_table %}
                     <tr>
-                        {% for k, v in row.items %}
-                            {% if k == "url" %}
-                            <td><b><a href='/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report' onclick="return popitup('/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report')">{{ v }}</a></b></td>
-                            {% else %}
-                                {% if k == "errors" %}
+                        {% for k, v in row.items %} {% if k == "url" %}
+                        <td><b><a href='/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report' onclick="return popitup('/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report')">{{ v }}</a></b></td>
+                        {% else %} {% if k == "errors" %} {% if v > 10 %}
+                        <td style="background-color:red"> {{ v }} %</td>
+                        {% else %} {% if v == None %}
+                        <td style="background-color:red"> {{ 100 }} %</td>
 
-                                    {% if v > 10 %}
-                                        <td style="background-color:red"> {{ v }} %</td>
-                                    {% else %}
-										                                    {% if v == None %}
-                                        <td style="background-color:red"> {{ 100 }} %</td>
-                                    
-									{% else %}
-                                        <td> {{ v }} %</td>
-										{% endif %}
-                                    {% endif %}
-                                {% elif k == "action_id" %}
-                                {% else %}
-                                <td> {{ v }} </td>
-                                {% endif %}
-                            {% endif %}
-                        {% endfor %}
+                        {% else %}
+                        <td> {{ v }} %</td>
+                        {% endif %} {% endif %} {% elif k == "action_id" %} {% else %}
+                        <td> {{ v }} </td>
+                        {% endif %} {% endif %} {% endfor %}
                     </tr>
                     {% endfor %}
                 </table>
@@ -248,72 +236,84 @@
             },
             bindto: '#compare_avg_graph'
         });
-		
-		
-		var arr = [];
+
+        var arr = [];
         var graph_values = []; //values for the graph
-		$.getJSON('/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_cpu',
-            function(json) {
-                $.each(json, function(i, obj) {
-						for (server_name in obj.test_name) {
-								if ($.inArray(server_name, graph_values) < 0) {
-								graph_values.push(server_name);
-						}
-					}
-					obj.test_name.display_name = test_name;
-					arr.push(obj.test_name);
-                });
 
-        });
-        var new_json = JSON.stringify(arr.reverse());
-        new_json = JSON.parse(new_json);
-        var compare_cpu_graph = c3.generate({
-            data: {
-                json: new_json,
-                keys: {
-                    x: 'display_name',
-                    value: graph_values
-                },
-                type: 'bar',
+        $.ajax({
+            url: '/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_cpu',
+            type: "get",
+            success: function(response) {
+                var r = response;
+                var json_compare_cpu = JSON.parse(r);
+                for (var test_name in json_compare_cpu) {
+                    console.log(">" + test_name);
+                    for (server_name in json_compare_cpu[test_name]) {
+                        console.log(">>" + server_name);
+                        if ($.inArray(server_name, graph_values) < 0) {
+                            graph_values.push(server_name);
+                        }
+                    }
+                    json_compare_cpu[test_name].display_name = test_name;
+                    arr.push(json_compare_cpu[test_name]);
+                    var new_json = JSON.stringify(arr.reverse());
+                    new_json = JSON.parse(new_json);
+                    var compare_cpu_graph = c3.generate({
+                        data: {
+                            json: new_json,
+                            keys: {
+                                x: 'display_name',
+                                value: graph_values
+                            },
+                            type: 'bar',
 
-            },
-            axis: {
-                x: {
-                    type: 'category'
-                },
-                y: {
-                    padding: {
-                        top: 0,
-                        bottom: 0
-                    },
-                    label: '%',
-                    max: 100,
-                    min: 0,
+                        },
+                        axis: {
+                            x: {
+                                type: 'category'
+                            },
+                            y: {
+                                padding: {
+                                    top: 0,
+                                    bottom: 0
+                                },
+                                label: '%',
+                                max: 100,
+                                min: 0,
+                            }
+                        },
+
+                        grid: {
+                            x: {
+                                lines: [{
+                                    value: test[0].display_name,
+                                    text: 'Current test',
+                                    position: 'end'
+                                }]
+                            }
+                        },
+                        regions: [{
+                            axis: 'x',
+                            start: 0.5,
+                            class: 'regionX'
+                        }, ],
+                        //regions: [
+                        //{axis: 'x', start: 0,  class: 'regionX'},
+                        //],
+                        title: {
+                            text: 'Comparison of average CPU load (%)'
+                        },
+                        bindto: '#compare_cpu_graph'
+                    });
+
                 }
             },
-
-            grid: {
-                x: {
-                    lines: [{
-                        value: test[0].display_name,
-                        text: 'Current test',
-                        position: 'end'
-                    }]
-                }
-            },
-            regions: [{
-                axis: 'x',
-                start: 0.5,
-                class: 'regionX'
-            }, ],
-            //regions: [
-            //{axis: 'x', start: 0,  class: 'regionX'},
-            //],
-            title: {
-                text: 'Comparison of average CPU load (%)'
-            },
-            bindto: '#compare_cpu_graph'
+            error: function(xhr) {
+                response = JSON.parse("{\"message\":{\"text\": \"Cannot fetch compare CPU data\",\"type\": \"danger\"}}")
+                show_alert(response);
+            }
         });
+
 
 
         var errors_graph = c3.generate({
@@ -350,8 +350,8 @@
                 $("#top_errors_list").empty();
                 $.each(json, function(i, obj) {
                     url = '/analyzer/test/' + test_id_1 + '/' + obj.action_id + '/action_report';
-					//cuz in database 100% is null >_<
-					var actionErrors = (obj.errors == null)?100:obj.errors;
+                    //cuz in database 100% is null >_<
+                    var actionErrors = (obj.errors == null) ? 100 : obj.errors;
                     $("#top_errors_list").append('<ul class="list-group"><li class="list-group-item"><span class="badge alert-danger">' + actionErrors + ' %</span><div style="word-wrap:break-word;"><b><a href="/analyzer/test/' + test_id_1 + '/' + obj.action_id + '/action_report" onclick="return popitup("/analyzer/test/' + test_id_1 + "/" + obj.action_id + '/action_report")">' + obj.url + '</a></b></div></li></ul>');
                 });
 
@@ -439,22 +439,22 @@
             }
         });
         $('#get_previous_test_button').click(function() {
-			$.ajax({
-                          url: '/analyzer/test/' + test_id_1 + '/prev_test_id/',
-                          type: "get",
-                          success: function(response) {
-							test_2 = response;
-							test_id_2 = test_2[0].id;
-							$('#select_test_2').val(test_id_2);
-							selectValueInList('#select_test_2', test_id_2);
-                           },
-                          error: function(xhr) {
-							response = JSON.parse("{\"message\":{\"text\": \"Cannot fetch a previous test\",\"type\": \"danger\"}}")
-                            show_alert(response);
-                          }
+            $.ajax({
+                url: '/analyzer/test/' + test_id_1 + '/prev_test_id/',
+                type: "get",
+                success: function(response) {
+                    test_2 = response;
+                    test_id_2 = test_2[0].id;
+                    $('#select_test_2').val(test_id_2);
+                    selectValueInList('#select_test_2', test_id_2);
+                },
+                error: function(xhr) {
+                    response = JSON.parse("{\"message\":{\"text\": \"Cannot fetch a previous test\",\"type\": \"danger\"}}")
+                    show_alert(response);
+                }
             });
 
-            
+
         });
     });
 </script>
