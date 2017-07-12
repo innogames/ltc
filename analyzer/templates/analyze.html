@@ -21,20 +21,20 @@ $('#select_test_1').on('change', function(){
                 //Do Something to handle error
               }
      });
-
-     var test_2 = JSON.parse(httpGet('/analyzer/test/'+ test_id_1 +'/prev_test_id/'));
-     test_id_2 = test_2[0].id
-     $('#select_test_2').val(test_id_2);
-     $.ajax({
-                  url: '/analyzer/test/' + test_id_1 + '/' + test_id_2 + "/compare_report/",
-                  type: "get",
-                  success: function(response) {
-                         $("#test_compare_results").html(response);
-                  },
-                       error: function(xhr) {
-                         //Do Something to handle error
-                       }
-     });
+			$.ajax({
+                          url: '/analyzer/test/' + test_id_1 + '/prev_test_id/',
+                          type: "get",
+                          success: function(response) {
+							test_2 = response;
+							test_id_2 = test_2[0].id;
+							$('#select_test_2').val(test_id_2);
+							selectValueInList('#select_test_2', test_id_2);
+                           },
+                          error: function(xhr) {
+							response = JSON.parse("{\"message\":{\"text\": \"Cannot fetch a previous test\",\"type\": \"warning\"}}")
+                            show_alert(response);
+                          }
+            });
  });
 
  $('#get_last_test_report_button').click(function () {

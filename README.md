@@ -1,9 +1,9 @@
 # Description
-JMeter Control Center (or `jltom`) - dashboard for load testing with JMeter.
+JMeter Control Center (codename `jltom`) - dashboard/report analyzer for load testing with JMeter (http://jmeter.apache.org/).
 
-Online web-application for "continuous integration" (CI) Load testing with JMeter.  
-A central system for launching (incl. distribution testing), monitoring tests, creating reports and for a comparative analysis between different load tests provided with Jmeter (http://jmeter.apache.org/)
-Replacement for Jenkins + Plugins + Jmeter combination, but could be also used in integration with Jenkins CI. 
+Online web-application/dashboard for "continuous integration" (CI) Load testing with JMeter.  
+A central system for launching (incl. distribution testing), monitoring tests, creating reports and for a comparative analysis between different load tests provided with Jmeter.
+Can be used with Jenkins or as a replacement for Jenkins + Plugins + Jmeter combination.
 
 Consist of several modules:
 
@@ -81,16 +81,16 @@ nohup python manage.py runserver 8888 &
 
 ### 5. Jenkins
 
-It iss possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)
-In post-job script you need to add HTTP post request:
+It is possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)
+To parse data after the test just add in Jenkins post-job script:
 `curl --data "results_dir=$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/" http://localhost:8888/controller/parse_results`
 OR
-include script `datagenerator_linux.py` which will populate database with all necessary data after executed test.
+`datagenerator_linux.py`
 
 To use with HTML Pulblisher plugin (https://wiki.jenkins.io/display/JENKINS/HTML+Publisher+Plugin) set this values in project setting in Publish HTML reports section:
 
+```
 HTML directory to archive: `$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/`
-
-Index page[s]: `https://loadtest-jltom.innogames.de/?action=getbuilddata&project_name=$JOB_NAME&build_number=$BUILD_NUMBER`
-
+Index page[s]: `https://URL/?action=getbuilddata&project_name=$JOB_NAME&build_number=$BUILD_NUMBER`
 Keep past HTML reports: `enabled`
+```
