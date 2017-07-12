@@ -248,21 +248,23 @@
             },
             bindto: '#compare_avg_graph'
         });
-
-        json_compare_cpu = JSON.parse(httpGet('/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_cpu'));
-        var arr = [];
+		
+		
+		var arr = [];
         var graph_values = []; //values for the graph
+		$.getJSON('/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_cpu',
+            function(json) {
+                $.each(json, function(i, obj) {
+						for (server_name in obj.test_name) {
+								if ($.inArray(server_name, graph_values) < 0) {
+								graph_values.push(server_name);
+						}
+					}
+					obj.test_name.display_name = test_name;
+					arr.push(obj.test_name);
+                });
 
-        for (var test_name in json_compare_cpu) {
-            for (server_name in json_compare_cpu[test_name]) {
-                if ($.inArray(server_name, graph_values) < 0) {
-                    graph_values.push(server_name);
-                }
-            }
-            json_compare_cpu[test_name].display_name = test_name;
-            arr.push(json_compare_cpu[test_name]);
-        }
-
+        });
         var new_json = JSON.stringify(arr.reverse());
         new_json = JSON.parse(new_json);
         var compare_cpu_graph = c3.generate({
@@ -437,12 +439,22 @@
             }
         });
         $('#get_previous_test_button').click(function() {
-            var test_2 = JSON.parse(httpGet('/analyzer/test/' + test_id_1 + '/prev_test_id/'));
-            test_id_2 = test_2[0].id
+			$.ajax({
+                          url: '/analyzer/test/' + test_id_1 + '/prev_test_id/',
+                          type: "get",
+                          success: function(response) {
+							test_2 = response;
+							test_id_2 = test_2[0].id;
+							$('#select_test_2').val(test_id_2);
+							selectValueInList('#select_test_2', test_id_2);
+                           },
+                          error: function(xhr) {
+							response = JSON.parse("{\"message\":{\"text\": \"Cannot fetch a previous test\",\"type\": \"danger\"}}")
+                            show_alert(response);
+                          }
+            });
 
-            $('#select_test_2').val(test_id_2);
-            $('#select_test_2').change();
-            $('#select_test_2').selectpicker('refresh');
+            
         });
     });
 </script>
