@@ -1,13 +1,14 @@
 from __future__ import unicode_literals
 import pandas as pd
 import os
+import logging
 from pylab import *
 from django.db import models
 
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 
 # Create your models here.
-
+logger = logging.getLogger(__name__)
 
 class RunningTestsList(object):
     def __init__(self):
@@ -81,7 +82,6 @@ class RunningTest():
             df1 = pd.concat([self.response_codes_frame, add_df]).groupby(
                 'response_code')['count'].sum().reset_index()
             self.response_codes_frame = df1
-            print add_df
             #create aggregate table
             group_by_url = df.groupby('URL')  # group date by URLs
             add_aggregate_data = group_by_url.aggregate({
@@ -138,7 +138,7 @@ class RunningTest():
             self.data_frame = result_df
             #print self.data_frame
         else:
-            print ".jtl file was not changed"
+            logger.info(".jtl file was not changed")
 
     def successful_requests_percentage(self):
         df = self.data_frame
@@ -154,7 +154,6 @@ class RunningTest():
         return last_minute_avg_rps
 
     def get_response_codes(self):
-        print self.response_codes_frame
         return self.response_codes_frame
 
     def get_rtot_frame(self):

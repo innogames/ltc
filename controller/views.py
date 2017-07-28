@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 def setlimits():
-    print "Setting resource limit in child (pid %d)" % os.getpid()
+    logger.info("Setting resource limit in child (pid %d)" % os.getpid())
     if _platform == "linux" or _platform == "linux2":
         resource.setrlimit(resource.RLIMIT_NOFILE, (131072, 131072))
 
@@ -107,13 +107,12 @@ def start_proxy(request, proxy_id):
         stderr=out,
         env=env,
         preexec_fn=setlimits)
-    print "proxy pid:" + str(proxy_process.pid)
+    logger.info("Proxy pid:" + str(proxy_process.pid))
     p = Proxy.objects.get(id=proxy_id)
     p.pid = proxy_process.pid
     p.save()
     p = Proxy.objects.filter(id=proxy_id).values()
     response = [{"message": "proxy was started", "proxy": list(p)[0]}]
-    print response
     return JsonResponse(response, safe=False)
 
 
@@ -682,18 +681,18 @@ def start_test(request, project_id):
                 hostname = jri.get('address')
                 ssh_key_id = int(jri.get('ssh_key_id'))
                 count = int(jri.get('count'))
-                print "Try to connect via SSH to {0} {1} times". \
-                    format(hostname, str(count))
+                logger.info( "Try to connect via SSH to {0} {1} times". \
+                    format(hostname, str(count)))
                 for i in range(1, count + 1):
                     port = 10000 + i
                     jris_str += '{0}:{1},'.format(hostname, str(port))
-                    print "{0} time". \
-                        format(i)
+                    logger.info( "{0} time". \
+                        format(i))
                     ssh_key = SSHKey.objects.get(id=ssh_key_id).path
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     ssh.connect(hostname, key_filename=ssh_key)
-                    print 'Executing SSH commands:'
+                    logger.info( 'Executing SSH commands.')
                     cmds = [
                         'cd {0}/bin/'.format(jmeter_profile.path),
                         'DIRNAME=`dirname -- $0`'
@@ -787,9 +786,9 @@ def wait_for_finished_test(request, t, jmeter_process):
     while t.is_running:
 
         retcode = jmeter_process.poll()
-        print "Check if JMeter process is still exists, current state: {0}".format(retcode)
+        logger.info( "Check if JMeter process is still exists, current state: {0}".format(retcode))
         if retcode is not None:
-            print "JMeter process finished with exit code: {0}".format(retcode)
+            logger.info( "JMeter process finished with exit code: {0}".format(retcode))
             t.is_running = False
             stop_test(request, t.id)
             break

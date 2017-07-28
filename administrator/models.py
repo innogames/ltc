@@ -15,6 +15,16 @@ class JMeterProfile(models.Model):
     class Meta:
         db_table = 'jmeter_profile'
 
+
+class Configuration(models.Model):
+    name = models.CharField(max_length=1000, default="")
+    value = models.CharField(max_length=1000, default="")
+    description = models.CharField(max_length=1000, default="")
+
+    class Meta:
+        db_table = 'configuration'
+
+
 class SSHKey(models.Model):
     path = models.CharField(max_length=1000, default="")
     description = models.CharField(max_length=1000, default="")

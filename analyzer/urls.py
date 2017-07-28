@@ -2,10 +2,11 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'^projects_list$', views.projects_list),
+    url(r'^projects_list', views.projects_list),
     url(r'^analyze$', views.Analyze.as_view()),
     url(r'^history$', views.History.as_view()),
     url(r'^dashboard', views.dashboard),
+    url(r'^generate_overall_report', views.generate_overall_report),
     url(r'^project/(?P<project_id>\d+)/project_history/$',
         views.project_history),
     url(r'^project/(?P<project_id>\d+)/tests_list/$', views.tests_list),

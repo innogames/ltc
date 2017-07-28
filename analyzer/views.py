@@ -1,16 +1,22 @@
-from collections import OrderedDict
 import json
+from collections import OrderedDict
+from decimal import Decimal
+import logging
 import pandas as pd
+from django.db.models import Sum, Avg, Max, Min, FloatField
+from django.db.models.expressions import RawSQL, F
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.generic import TemplateView
-from models import Project, Test, Aggregate, Server, TestData,\
-    ServerMonitoringData, TestActionData, Action
-from django.db.models import Sum, Avg, Max, Min, FloatField
-from django.db.models.expressions import RawSQL, F
-from decimal import Decimal
 
+from administrator.models import Configuration
+from analyzer.confluence import confluenceposter
+from analyzer.confluence.utils import generate_confluence_graph
+from models import Project, Test, Aggregate, Server, TestData, \
+    ServerMonitoringData, TestActionData, Action
+
+logger = logging.getLogger(__name__)
 
 def to_dict(result_proxy):
     fieldnames = []
@@ -433,3 +439,85 @@ class Analyze(TemplateView):
 class History(TemplateView):
     def get(self, request, **kwargs):
         return render(request, 'history.html', context=None)
+
+
+def generate_overall_report(request):
+    content = ""
+    projects_all = list(Project.objects.values())
+    for project in projects_all:
+        if project['show']:
+            project_id = int(project['id'])
+            a = Aggregate.objects.annotate(test_name=F('test__display_name')) \
+                .filter(test__project__id=project_id, test__show=True) \
+                .values('test_name') \
+                .annotate(Average=Avg('average')) \
+                .annotate(Median=Avg('median')) \
+                .order_by('test__start_time')[10:]
+            content += generate_confluence_graph(project, list(a))
+
+    response = post_to_confluence(content)
+    return JsonResponse(response, safe=False)
+
+
+def post_to_confluence(content):
+
+    wiki_url = Configuration.objects.get(name='wiki_url').value
+    wiki_user = Configuration.objects.get(name='wiki_user').value
+    wiki_password = Configuration.objects.get(name='wiki_password').value
+    space = "SystemAdministration"
+    target_page = 'Overall performance testing results'
+    target_url = '{}/display/{}/{}'.format(
+        wiki_url,
+        space,
+        target_page.replace(' ', '+')
+    )
+    cp = confluenceposter.ConfluencePoster(
+        wiki_url,
+        wiki_user,
+        wiki_password
+    )
+    response = {
+        "message": {
+            "text": "Overall report is posted to Confluence: {}".format(target_url),
+            "type": "success",
+            "msg_params": {
+                "link": target_url
+            }
+        }
+    }
+    cp.login()
+    try:
+        logger.info('Try to open Confluence page: ' + target_page)
+        page_target = cp.get_page(
+            space, target_page
+        )
+    except Exception as e:
+        logger.error(e)
+        response = {
+            "message": {
+                "text": e,
+                "type": "danger",
+                "msg_params": {
+                    "link": target_url
+                }
+            }
+        }
+    page_target['content'] = content
+    try:
+        cp.post_page(page_target)
+    except Exception as e:
+        logger.error(e)
+        response = {
+            "message": {
+                "text": e,
+                "type": "danger",
+                "msg_params": {
+                    "link": target_url
+                }
+            }
+        }
+
+    cp.logout()
+
+
+    return response
