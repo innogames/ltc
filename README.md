@@ -14,18 +14,17 @@ Consist of several modules:
 
 
 ## [ANALYZER] 
-Get a performance trends for all test results
-![alt tag](https://github.com/v0devil/jltom/blob/master/pics/trend_.png)
-
 Create dynamic report for the tests
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/report.png)
+
+Get a performance trends for all test results
+![alt tag](https://github.com/v0devil/jltom/blob/master/pics/trend_.png)
 
 Get fancy good-readable aggregate table for the test:
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/aggregate.png)
 
 Get detailed report for executed action:
-
-![alt tag](https://github.com/v0devil/jltom/blob/master/pics/action_report.png)
+![alt tag](https://github.com/v0devil/jltom/blob/master/pics/action_report_.png)
 
 Get response times, rps, errors data from test:
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/graphs.png)
@@ -45,6 +44,7 @@ The application comes with:
 * [Twitter Bootstrap](http://getbootstrap.com/)
 * [Highlights.js](https://highlightjs.org/)
 * [nvd3](http://nvd3-community.github.io)
+
 Current `requirements.txt` file is:
 
 ```
