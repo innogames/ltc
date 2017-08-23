@@ -83,7 +83,6 @@ Then execute:
 nohup python manage.py runserver 8888 &
 
 ### 5. Jenkins
-
 It is possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)
 To parse data after the test just add in Jenkins post-job script:
 `curl --data "results_dir=$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/" http://localhost:8888/controller/parse_results`
