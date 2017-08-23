@@ -1,0 +1,7 @@
+*.pyc
+*.idea
+*.iml
+*.xml
+*.hg
+*.log
+desktop.ini

@@ -1,8 +1,4 @@
 <hr/>
-<span>Test name:
-    {{test_description.display_name}}
-</span>
-
 <article id="tabs_test_results" class="tabs">
     <ul>
         <li><a href='#overview_tab'>Overview</a></li>
@@ -21,9 +17,7 @@
                             <div class="panel-body">
                                 <div class="row">
                                     <div class="col-xs-6">
-
                                         <div id="errors_graph"></div>
-
                                     </div>
                                     <div class="col-xs-6">
                                         <div class="panel panel-danger">
@@ -91,25 +85,43 @@
                 <table id="aggregate_table" class="tablesorter">
                     <thead>
                         <tr>
-                            {% for key in aggregate_table.0 %} {% if key != "action_id" %}
+                            <th>Action</th>
+                            {% for key in aggregate_table.0.data %} {% if key != "action_id" %}
                             <th> {{ key }} </th>
                             {% endif %} {% endfor %}
                         </tr>
                     </thead>
                     {% for row in aggregate_table %}
                     <tr>
-                        {% for k, v in row.items %} {% if k == "url" %}
+                        {% for k, v in row.items %}
+                        {% if k == "url" %}
                         <td><b><a href='/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report' onclick="return popitup('/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report')">{{ v }}</a></b></td>
-                        {% else %} {% if k == "errors" %} {% if v > 10 %}
+                        {% elif k == "data" %}
+                            {% for name, value in v.items %}
+                                {% if name == "errors" %}
+                                <td> {% get_percentage value v.count %} % ({{ value|floatformat }}) </td>
+                                {% else %}
+                                <td> {{ value|floatformat }} </td>
+                                {% endif %}
+                            {% endfor %}
+                        <!--/*{% else %}
+                        {% if k == "errors" %}
+                        {% if v > 10 %}
                         <td style="background-color:red"> {{ v }} %</td>
-                        {% else %} {% if v == None %}
+                        {% else %}
+                        {% if v == None %}
                         <td style="background-color:red"> {{ 100 }} %</td>
 
                         {% else %}
                         <td> {{ v }} %</td>
-                        {% endif %} {% endif %} {% elif k == "action_id" %} {% else %}
+                        {% endif %}
+                        {% endif %}
+                        {% elif k == "action_id" %}
+                        {% else %}
                         <td> {{ v }} </td>
-                        {% endif %} {% endif %} {% endfor %}
+                        {% endif %}-->
+                        {% endif %}
+                        {% endfor %}
                     </tr>
                     {% endfor %}
                 </table>

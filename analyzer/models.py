@@ -32,6 +32,8 @@ class Test(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     path = models.CharField(max_length=200)
     display_name = models.CharField(max_length=100)
+    description = models.CharField(max_length=400, null=True, blank=True)
+    parameters = JSONField(null=True, blank=True)
     start_time = models.BigIntegerField(db_index=True)
     end_time = models.BigIntegerField(default=0)
     build_number = models.IntegerField(default=0)
@@ -100,6 +102,17 @@ class TestAggregate(models.Model):
     class Meta:
         db_table = 'test_aggregate'
 
+
+class TestActionAggregateData(models.Model):
+    test = models.ForeignKey(Test)
+    action = models.ForeignKey(Action)
+    data = JSONField()
+
+    class Meta:
+        db_table = 'test_action_aggregate_data'
+        index_together = [
+            ("test", "action"),
+        ]
 
 class Server(models.Model):
     server_name = models.CharField(max_length=100)

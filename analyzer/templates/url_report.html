@@ -1,6 +1,6 @@
 <head>
     <meta charset="UTF-8">
-    <title>URL report</title>
+    <title>Action report</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/jquery-ui.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
@@ -8,69 +8,139 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/c3.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/theme.bootstrap_2.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/my.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'css/nv.d3.min.css' %}" />
     <script src="{% static 'js/d3.min.js' %}"></script>
     <script src="{% static 'js/c3.min.js' %}"></script>
+    <script src="{% static 'js/nv.d3.min.js' %}"></script>
+    <style>
+      text {
+      font: 12px sans-serif;
+      }
+      svg {
+      display: block;
+      }
+      html, body, #chart1, svg {
+      margin: 0px;
+      padding: 0px;
+      height: 100%;
+      width: 100%;
+      }
+   </style>
 </head>
-
 <body>
-
 <div class="panel panel-primary">
-    <div class="panel-heading">URL data:</div>
-        <div class="panel-body">
-            <div id="url_rtot_graph"></div>
-        </div>
-</div>
+    <div class="panel-body">
 
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h4 class="page-header">{{ action.url }}</h4>
+
+        <div class="col-xs-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">Average/median response times (ms) and errors during the test</div>
+                <div class="panel-body">
+                     <div id="url_rtot_graph"></div>
+                </div>
+            </div>
+        </div>nv
+        <div class="col-xs-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">Boxplot:</div>
+                <div class="panel-body">
+                    <div class="col-xs-6">
+                        <li><b>Min:</b> {{ action_data.min }} ms</li>
+                        <li><b>Max:</b> {{ action_data.max }} ms</li>
+                        <li><b>Median:</b> {{ action_data.q2 }} ms</li>
+                        <li><b>Mean:</b> {{ action_data.Mean }} ms</li>
+                        <li><b>IQR:</b> {{ action_data.IQR }} ms</li>
+                        <li><b>Lower wisker:</b> {{ action_data.LW }} ms</li>
+                        <li><b>Upper wisker:</b> {{ action_data.UW }} ms</li>
+                    </div>
+                    <div class="col-xs-6">
+                    <div class="gallery" id="chart1">
+                        <svg></svg>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+                </div>
+            </div>
+    </div>
+    </div>
 <script>
-        url_rtot_graph = c3.generate({
-            data: {
-                url: "/analyzer/test/{{ test_id }}/action/{{ action.id }}/rtot",
-                mimeType: 'json',
-                type: 'line',
-                keys: {
-                    x: 'timestamp',
-                    value: ['average', 'median', 'errors'],
+      url_rtot_graph = c3.generate({
+          data: {
+              url: "/analyzer/test/{{ test_id }}/action/{{ action.id }}/rtot",
+              mimeType: 'json',
+              type: 'line',
+              keys: {
+                  x: 'timestamp',
+                  value: ['average', 'median', 'errors'],
 
-                },
-                xFormat: '%H:%M:%S',
+              },
+              xFormat: '%H:%M:%S',
 
-                axes: {
-                    errors: 'y2'
-                },
-                colors: {
-                'errors': 'red',
-                },
-            },
-            axis: {
-                x: {
-                    type: 'timeseries',
-                    tick: {
-                        format: '%H:%M'
-                    }
-                },
-                y: {
-                    padding: {
-                        top: 0,
-                        bottom: 0
-                    },
-                    label: 'response times (ms)',
-                },
-                y2: {
-                    min: 0,
-                    show: true,
-                    padding: {
-                        top: 0,
-                        bottom: 0
-                    },
-                    label: 'Errors / s',
-                }
+              axes: {
+                  errors: 'y2'
+              },
+              colors: {
+              'errors': 'red',
+              },
+          },
+          axis: {
+              x: {
+                  type: 'timeseries',
+                  tick: {
+                      format: '%H:%M'
+                  }
+              },
+              y: {
+                  padding: {
+                      top: 0,
+                      bottom: 0
+                  },
+                  label: 'response times (ms)',
+              },
+              y2: {
+                  min: 0,
+                  show: true,
+                  padding: {
+                      top: 0,
+                      bottom: 0
+                  },
+                  label: 'Errors / s',
+              }
 
-            },
-            title: {
-                text: 'Average/median response times (ms) and errors for {{ action.url }}'
-            },
-            bindto: '#url_rtot_graph'
-        });
-    </script>
+          },
+          bindto: '#url_rtot_graph'
+      });
 
-<body>
+             nv.addGraph(function() {
+      var chart = nv.models.boxPlotChart()
+          .x(function(d) { return d.label })
+          .staggerLabels(true)
+          .maxBoxWidth(100)
+          ;
+      d3.select('#chart1 svg')
+          .datum(exampleData())
+          .call(chart);
+      nv.utils.windowResize(chart.update);
+      return chart;
+      });
+      function exampleData() {
+      return  [
+        {
+          label: "{{ action.url }}",
+          values: {
+            Q1: {{ action_data.q1 }},
+            Q2: {{ action_data.q2 }},
+            Q3: {{ action_data.q3 }},
+            whisker_low: {{ action_data.LW }},
+            whisker_high: {{ action_data.UW }},
+          },
+        },
+      ];
+      }
+   </script>
+</body>

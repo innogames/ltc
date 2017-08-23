@@ -1,22 +1,25 @@
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 import json
+import logging
 from pylab import *
 import numpy as na
 import pandas as pd
 import matplotlib.font_manager
-import csv
 import sys
 import re
 import os
 import zipfile
 import sqlalchemy
-from StringIO import StringIO
 from xml.etree.ElementTree import ElementTree
 from os.path import basename
-from sqlalchemy import create_engine, Table, Column, Index, Integer, String, ForeignKey
-from sqlalchemy.sql import select, delete
+from sqlalchemy import create_engine
+from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import reflection
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logger = logging.getLogger()
+
+
 db_engine = create_engine(
     'postgresql://postgres:postgres@localhost:5432/postgres')
 db_connection = db_engine.connect()
@@ -33,31 +36,33 @@ server = meta.tables['jltom.server']
 aggregate = meta.tables['jltom.aggregate']
 server_monitoring_data = meta.tables['jltom.server_monitoring_data']
 test_aggregate = meta.tables['jltom.test_aggregate']
+test_action_aggregate_data = meta.tables['jltom.test_action_aggregate_data']
 
 Session = sessionmaker(bind=db_engine)
 
 db_session = Session()
-#stm = server_monitoring_data.delete()
-#result = db_session.execute(stm)
-#stm = test_aggregate.delete()
-#result = db_session.execute(stm)
-#stm = test_action_data.delete()
-#result = db_session.execute(stm)
-#stm = test_data.delete()
-#result = db_session.execute(stm)
-#stm = aggregate.delete()
-#result = db_session.execute(stm)
-#stm = test.delete()
-#result = db_session.execute(stm)
-#stm = action.delete()
-#result = db_session.execute(stm)
-#stm = server.delete()
-#result = db_session.execute(stm)
-#stm = project.delete()
-#result = db_session.execute(stm)
-
+stm = server_monitoring_data.delete()
+result = db_session.execute(stm)
+stm = test_aggregate.delete()
+result = db_session.execute(stm)
+stm = test_action_data.delete()
+result = db_session.execute(stm)
+stm = test_data.delete()
+result = db_session.execute(stm)
+stm = aggregate.delete()
+result = db_session.execute(stm)
+stm = test.delete()
+result = db_session.execute(stm)
+stm = action.delete()
+result = db_session.execute(stm)
+stm = server.delete()
+result = db_session.execute(stm)
+stm = project.delete()
+result = db_session.execute(stm)
+stm = test_action_aggregate_data.delete()
+result = db_session.execute(stm)
 db_session.commit()
-
+logger.info("Starting data generating script.")
 reload(sys)
 sys.setdefaultencoding('utf-8')
 matplotlib.style.use('bmh')
@@ -76,7 +81,7 @@ def mask(df, f):
 
 
 def getIndex(item):
-    return int(re.search('(\d+)/', item[0]).group(1))
+    return int(re.search('(\d+)\\\\', item[0]).group(1))
 
 
 def ord_to_char(v, p=None):
@@ -96,32 +101,34 @@ def get_dir_size(path):
 def zip_results_file(file):
     if os.path.exists(file + '.zip'):
         os.remove(file + '.zip')
-    print "Move results file " + file + " to zip archive"
+    logger.info("Move results file " + file + " to zip archive")
     with zipfile.ZipFile(
             file + ".zip", "w", zipfile.ZIP_DEFLATED,
             allowZip64=True) as zip_file:
         zip_file.write(file, basename(file))
     os.remove(file)
-    print "File was packed, original file was deleted"
+    logger.info("File was packed, original file was deleted")
 
 
 jtl_files = []
 
 builds_dir = "/var/lib/jenkins/jobs"
 
+builds_dir="C:\\work\\reportdata"
 jtl_files = []
 releases = []
 
 build_xml = ElementTree()
 
-rx = re.compile(r'/var/lib/jenkins/jobs/.+?/builds/\d+?/jmeter\.jtl')
-
+#rx = re.compile(r'/var/lib/jenkins/jobs/.+?/builds/\d+?/jmeter\.jtl')
+rx = re.compile(r'C:\\work\\reportdata.+?\\builds\\\d+?\\jmeter\.jtl')
 for root, dirs, files in os.walk(builds_dir):
     for file in files:
         if re.match(rx, os.path.join(root, file)):
             if os.stat(os.path.join(root, file)).st_size > 0:
                 build_parameters = []
                 display_name = "unknown"
+                description = ""
                 start_time = 0
                 duration = 0
                 monitoring_data = os.path.join(
@@ -130,7 +137,7 @@ for root, dirs, files in os.walk(builds_dir):
                     root, "build.xml")
 
                 if os.path.isfile(build_xml_path):
-                    print("Try to parse Jenkins build XML-file: {0}".
+                    logger.info("Try to parse Jenkins build XML-file: {0}".
                           format(build_xml_path))
                     build_xml.parse(build_xml_path)
                     build_tag = build_xml.getroot()
@@ -149,16 +156,19 @@ for root, dirs, files in os.walk(builds_dir):
                             display_name = params.text
                         elif params.tag == 'duration':
                             duration = int(params.text)
+                        elif params.tag == 'description':
+                            description = params.text
 
                 if "Performance_HTML_Report" not in os.path.join(root, file):
                     jtl_files.append([
                         os.path.join(root, file), monitoring_data, display_name,
                         build_parameters, root
                     ])
-                    project_name = re.search('/([^/]+)/builds', root).group(1)
+                    #project_name = re.search('/([^/]+)/builds', root).group(1)
+                    project_name = re.search('\\\\([^/]+)\\\\builds', root).group(1)
                     if db_session.query(project.c.id). \
                             filter(project.c.project_name == project_name).count() == 0:
-                        print("Adding new project: {0}".format(project_name))
+                        logger.info("Adding new project: {0}".format(project_name))
                         stm = project.insert().values(
                             project_name=project_name, show=True)
                         result = db_connection.execute(stm)
@@ -167,12 +177,15 @@ for root, dirs, files in os.walk(builds_dir):
                             filter(project.c.project_name == project_name).scalar()
                     if db_session.query(test.c.path).filter(
                             test.c.path == root).count() == 0:
-                        print("Was found new test data, adding.")
+                        logger.info("Was found new test data, adding.")
                         build_number = int(
-                            re.search('/builds/(\d+)', root).group(1))
+                            #re.search('/builds/(\d+)', root).group(1))
+                            re.search('\\\\builds\\\\(\d+)', root).group(1))
                         stm = test.insert().values(
                             path=root,
                             display_name=display_name,
+                            description=description,
+                            parameters=build_parameters,
                             project_id=project_id,
                             start_time=start_time,
                             end_time=start_time+duration,
@@ -195,7 +208,7 @@ rtot_over_releases = []
 cpu_over_releases = []
 
 file_index = 0
-print "Trying to open CSV-files"
+logger.info("Trying to open CSV-files")
 
 build_roots = [jtl_files[i][4] for i in xrange(0, len(jtl_files))]
 
@@ -203,7 +216,7 @@ build_roots = [jtl_files[i][4] for i in xrange(0, len(jtl_files))]
 
 for build_root in build_roots:
 
-    print "Current build directory:" + build_root
+    logger.info("Current build directory:" + build_root)
     test_id = db_session.query(test.c.id).filter(
         test.c.path == build_root).scalar()
     project_id = db_session.query(test.c.project_id).filter(
@@ -217,49 +230,49 @@ for build_root in build_roots:
         df = pd.DataFrame()
         jmeter_results_file = build_root + "/jmeter.jtl"
         if not os.path.exists(jmeter_results_file):
-            print "Results file does not exists, try to check archive"
+            logger.info("Results file does not exists, try to check archive")
             jmeter_results_zip = jmeter_results_file + ".zip"
             if os.path.exists(jmeter_results_zip):
-                print "Archive file was found " + jmeter_results_zip
+                logger.info("Archive file was found: " + jmeter_results_zip)
                 with zipfile.ZipFile(jmeter_results_zip, "r") as z:
                     z.extractall(build_root)
-        print "Executing a new parse: " + jmeter_results_file + " size: " + str(
-            os.stat(jmeter_results_file).st_size)
+        logger.info("Executing a new parse: " + jmeter_results_file + " size: " + str(
+            os.stat(jmeter_results_file).st_size))
         if os.stat(jmeter_results_file).st_size > 1000007777:
-            print "Executing a parse for a huge file"
+            logger.info("Executing a parse for a huge file")
             chunks = pd.read_table(
                 jmeter_results_file, sep=',', index_col=0, chunksize=3000000)
             for chunk in chunks:
                 chunk.columns = [
-                    'average', 'url', 'responseCode', 'success', 'threadName',
+                    'response_time', 'url', 'responseCode', 'success', 'threadName',
                     'failureMessage', 'grpThreads', 'allThreads'
                 ]
                 chunk = chunk[~chunk['url'].str.contains('exclude_')]
                 df = df.append(chunk)
-                print "Parsing a huge file,size: " + str(df.size)
+                logger.info("Parsing a huge file,size: " + str(df.size))
         else:
             df = pd.read_csv(
                 jmeter_results_file, index_col=0, low_memory=False)
             df.columns = [
-                'average', 'url', 'responseCode', 'success', 'threadName',
+                'response_time', 'url', 'responseCode', 'success', 'threadName',
                 'failureMessage', 'grpThreads', 'allThreads'
             ]
             df = df[~df['url'].str.contains('exclude_')]
 
         df.columns = [
-            'average', 'url', 'responseCode', 'success', 'threadName',
+            'response_time', 'url', 'responseCode', 'success', 'threadName',
             'failureMessage', 'grpThreads', 'allThreads'
         ]
         #convert timestamps to normal date/time
         df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
-        num_lines = df['average'].count()
-        print "Number of lines in file 1: %d." % num_lines
+        num_lines = df['response_time'].count()
+        logger.info("Number of lines in file: %d." % num_lines)
 
         unique_urls = df['url'].unique()
         for url in unique_urls:
             if db_session.query(action.c.id).filter(action.c.url == url).\
                     filter(action.c.project_id == project_id).count() == 0:
-                print "Adding new action: " + url
+                logger.info("Adding new action with URL: {}".format(url))
                 stm = action.insert().values(
                     url=url,
                     project_id=project_id, )
@@ -267,12 +280,12 @@ for build_root in build_roots:
 
             action_id = db_session.query(action.c.id).filter(action.c.url == url). \
                 filter(action.c.project_id == project_id).scalar()
-            print "Adding action data: " + url
+            logger.info("Adding data for action: {}".format(url))
             df_url = df[(df.url == url)]
             url_data = pd.DataFrame()
             df_url_gr_by_ts = df_url.groupby(pd.TimeGrouper(freq='1Min'))
-            url_data['avg'] = df_url_gr_by_ts.average.mean()
-            url_data['median'] = df_url_gr_by_ts.average.median()
+            url_data['avg'] = df_url_gr_by_ts.response_time.mean()
+            url_data['median'] = df_url_gr_by_ts.response_time.median()
             url_data['count'] = df_url_gr_by_ts.success.count()
             df_url_gr_by_ts_only_errors = df_url[(
                 df_url.success == False)].groupby(pd.TimeGrouper(freq='1Min'))
@@ -298,23 +311,34 @@ for build_root in build_roots:
                     data=data)
                 result = db_connection.execute(stm)
 
+            url_agg_data = dict(json.loads(df_url['response_time'].describe().to_json()))
+            url_agg_data['99%'] = df_url['response_time'].quantile(.99).round(1)
+            url_agg_data['90%'] = df_url['response_time'].quantile(.90).round(1)
+            url_agg_data['weight'] = float(df_url['response_time'].sum())
+            url_agg_data['errors'] = df_url[(df_url['success']==False)]['success'].count()
+            stm = test_action_aggregate_data.insert().values(
+                test_id=test_id,
+                action_id=action_id,
+                data=url_agg_data)
+            result = db_connection.execute(stm)
+
         try:
             by_url = df.groupby('url')
-            agg[file_index] = by_url.aggregate({'average': np.mean}).round(1)
-            agg[file_index]['median'] = by_url.average.median().round(1)
-            agg[file_index]['percentile_75'] = by_url.average.quantile(
+            agg[file_index] = by_url.aggregate({'response_time': np.mean}).round(1)
+            agg[file_index]['median'] = by_url.response_time.median().round(1)
+            agg[file_index]['percentile_75'] = by_url.response_time.quantile(
                 .75).round(1)
-            agg[file_index]['percentile_90'] = by_url.average.quantile(
+            agg[file_index]['percentile_90'] = by_url.response_time.quantile(
                 .90).round(1)
-            agg[file_index]['percentile_99'] = by_url.average.quantile(
+            agg[file_index]['percentile_99'] = by_url.response_time.quantile(
                 .99).round(1)
-            agg[file_index]['maximum'] = by_url.average.max().round(1)
-            agg[file_index]['minimum'] = by_url.average.min().round(1)
+            agg[file_index]['maximum'] = by_url.response_time.max().round(1)
+            agg[file_index]['minimum'] = by_url.response_time.min().round(1)
             agg[file_index]['count'] = by_url.success.count().round(1)
             agg[file_index]['errors'] = (
                 (1 - df[(df.success == True)].groupby('url')['success'].count()
                  / by_url['success'].count()) * 100).round(1)
-            agg[file_index]['weight'] = by_url.average.sum()
+            agg[file_index]['weight'] = by_url.response_time.sum()
             agg[file_index]['test_id'] = test_id
             action_df = pd.read_sql(
                 db_session.query(action.c.id, action.c.url).filter(
@@ -326,19 +350,22 @@ for build_root in build_roots:
             agg[file_index] = pd.merge(
                 action_df, agg[file_index], left_index=True, right_index=True)
             agg[file_index] = agg[file_index].set_index('action_id')
-            print agg[file_index].columns
+            agg[file_index].columns = [
+                'average', 'median', 'percentile_75', 'percentile_90', 'percentile_99',
+                'maximum', 'minimum', 'count', 'errors', 'weight', 'test_id'
+            ]
             agg[file_index].to_sql(
                 "aggregate", schema='jltom', con=db_engine, if_exists='append')
             zip_results_file(jmeter_results_file)
         except ValueError, e:
-            print "error", e
+            logger.error(e)
 
         #print df.groupby(pd.TimeGrouper(freq='1Min')).average.agg(lambda x: x.to_json(orient='records'))
         test_overall_data = pd.DataFrame()
         df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
-        test_overall_data['avg'] = df_gr_by_ts.average.mean()
-        test_overall_data['median'] = df_gr_by_ts.average.median()
-        test_overall_data['count'] = df_gr_by_ts.average.count()
+        test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
+        test_overall_data['median'] = df_gr_by_ts.response_time.median()
+        test_overall_data['count'] = df_gr_by_ts.response_time.count()
         test_overall_data['test_id'] = test_id
         output_json = json.loads(
             test_overall_data.to_json(orient='index', date_format='iso'),
@@ -392,7 +419,7 @@ for build_root in build_roots:
         for server_ in unique_servers:
             if db_session.query(server.c.id).\
                     filter(server.c.server_name == server_).count() == 0:
-                print "Adding new server: " + server_
+                logger.info("Adding new server: {}".format(server_))
                 stm = server.insert().values(server_name=server_)
                 result = db_connection.execute(stm)
 
@@ -428,19 +455,20 @@ for build_root in build_roots:
                     result = db_connection.execute(stm)
 
     else:
-        print "Monitoring data is not exist"
+        logger.info("Monitoring data is not exist")
     num += 1
 
 stmt = select([test.c.id, test.c.path])
 query_result = db_engine.execute(stmt)
 
-print "Cleanup obsolete test results"
+logger.info("Cleanup obsolete test results")
 for q in query_result:
     test_id = q.id
     test_path = q.path
-    print "Check: " + test_path
+    logger.info("Check data in directory: {}".format(test_path))
     if not os.path.exists(q.path):
-        print "Deleting test_id:" + str(test_id) + " path:" + test_path
+        logger.info("Deleting test_id: {} path: {}".format(str(test_id),
+                                                             test_path))
         stm1 = aggregate.delete().where(aggregate.c.test_id == test_id)
         stm2 = server_monitoring_data.delete().where(
             server_monitoring_data.c.test_id == test_id)

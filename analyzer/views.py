@@ -9,12 +9,13 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.generic import TemplateView
-
+from scipy import stats
 from administrator.models import Configuration
 from analyzer.confluence import confluenceposter
 from analyzer.confluence.utils import generate_confluence_graph
 from models import Project, Test, Aggregate, Server, TestData, \
-    ServerMonitoringData, TestActionData, Action
+    ServerMonitoringData, TestActionData, Action, TestActionAggregateData
+from django import template
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,10 @@ def test_report(request, test_id):
                'minimum',
                'count',
                'errors')
+    aggregate_table = TestActionAggregateData.objects.annotate(url=F('action__url')).filter(test_id=test_id). \
+        values('url',
+               'action_id',
+               'data')
 
     return render(request, 'report.html', {
         'test_description': test_description[0],
@@ -134,11 +139,39 @@ def test_report(request, test_id):
 
 
 def action_report(request, test_id, action_id):
+    action_aggregate_data = list(TestActionAggregateData.objects.
+                       filter(test_id=test_id, action_id=action_id).
+                       values('data'))[0]['data']
+    mean = action_aggregate_data['mean']
+    min = action_aggregate_data['min']
+    max = action_aggregate_data['max']
+    q1 = action_aggregate_data['25%']
+    q3 = action_aggregate_data['75%']
+    q2 = action_aggregate_data['50%']
+    IQR = q3 - q1
+    LW = q1 - 1.5 * IQR
+    UW = q3 + 1.5 * IQR
+    action_data = {
+        "q1": q1,
+        "q2": q2,
+        "q3": q3,
+        "IQR": IQR,
+        "LW": LW,
+        "UW": UW,
+        "mean": mean,
+        "min": min,
+        "max": max
+    }
+
     return render(
         request,
         'url_report.html',
-        {'test_id': test_id,
-         'action': Action.objects.get(id=action_id)})
+        {
+            'test_id': test_id,
+            'action': Action.objects.get(id=action_id),
+            'action_data': action_data
+        }
+    )
 
 
 def action_rtot(request, test_id, action_id):
@@ -401,6 +434,46 @@ def tests_compare_report(request, test_id_1, test_id_2):
         elif row.avg_diff_percent < -reasonable_percent:
             positives.append(row)
     test_1_actions = list(Aggregate.objects. \
+                          annotate(url=F('action__url')) \
+                          .filter(test_id=test_id_1).values('url'))
+    test_2_actions = list(Aggregate.objects. \
+                          annotate(url=F('action__url')) \
+                          .filter(test_id=test_id_2).values('url'))
+    for url in test_2_actions:
+        if url not in test_1_actions:
+            absense.append(url)
+    return render(request, 'compare_report.html', {
+        'negatives': negatives,
+        'positives': positives,
+        'absense': absense
+    })
+
+
+def tests_compare_report_experimental(request, test_id_1, test_id_2):
+    data = Aggregate.objects.raw("""
+        SELECT a.url as "id", a1.average as "average_1", a2.average as "average_2", a1.average - a2.average as "avg_diff",
+        (((a1.average-a2.average)/a2.average)*100) as "avg_diff_percent",
+        a1.median - a2.median as "median_diff",
+        (((a1.median-a2.median)/a2.median)*100) as "median_diff_percent" FROM
+        (SELECT action_id, average, median FROM jltom.aggregate WHERE test_id = %s) a1,
+        (SELECT action_id, average, median FROM jltom.aggregate WHERE test_id = %s) a2,
+        jltom.action a
+        WHERE a1.action_id = a2.action_id and a.id = a1.action_id
+        """, [test_id_1, test_id_2])
+    reasonable_percent = 3
+    reasonable_abs_diff = 5  #ms
+    negatives = []
+    positives = []
+    absense = []
+    MWW_test = []
+    avg_list_1 = []
+    avg_list_2 = []
+    for row in data:
+        if row.avg_diff_percent > reasonable_percent:
+            negatives.append(row)
+        elif row.avg_diff_percent < -reasonable_percent:
+            positives.append(row)
+    test_1_actions = list(Aggregate.objects. \
         annotate(url=F('action__url'))\
         .filter(test_id=test_id_1).values('url'))
     test_2_actions = list(Aggregate.objects. \
@@ -409,10 +482,62 @@ def tests_compare_report(request, test_id_1, test_id_2):
     for url in test_2_actions:
         if url not in test_1_actions:
             absense.append(url)
+
+    action_list_2 = TestActionAggregateData.objects.filter(
+        test_id=test_id_2).values()
+    for action in action_list_2:
+        action_id = action['action_id']
+        action_url = Action.objects.values().get(id=action_id)['url']
+        set_1 = TestActionData.objects. \
+            filter(test_id=test_id_1, action_id=action_id). \
+            annotate(average=RawSQL("((data->>%s)::numeric)", ('avg',))). \
+            values("average")
+        set_2 = TestActionData.objects. \
+            filter(test_id=test_id_2, action_id=action_id). \
+            annotate(average=RawSQL("((data->>%s)::numeric)", ('avg',))). \
+            values("average")
+        data_1 = queryset_to_json(set_1)
+        data_2 = queryset_to_json(set_2)
+        for d in data_1:
+            avg_list_1.append(d['average'])
+        for d in data_2:
+            avg_list_2.append(d['average'])
+
+        logger.info(action_id)
+        if not avg_list_1:
+            absense.append(action_url)
+        else:
+            z_stat, p_val = stats.ranksums(avg_list_1, avg_list_2)
+            if p_val <= 0.05:
+                a_1 = queryset_to_json(TestActionAggregateData.objects.\
+                    filter(test_id=test_id_1, action_id=action_id). \
+                    annotate(mean=RawSQL("((data->>%s)::numeric)", ('mean',))). \
+                    annotate(p50=RawSQL("((data->>%s)::numeric)", ('50%',))). \
+                    values("mean","p50"))
+                a_2 = queryset_to_json(TestActionAggregateData.objects. \
+                    filter(test_id=test_id_2, action_id=action_id). \
+                    annotate(mean=RawSQL("((data->>%s)::numeric)", ('mean',))). \
+                    annotate(p50=RawSQL("((data->>%s)::numeric)", ('50%',))). \
+                    values("mean","p50"))
+                mean_1 = float(a_1[0]['mean'])
+                mean_2 = float(a_2[0]['mean'])
+
+                mean_diff_percent = (mean_1-mean_2/mean_2)*100
+                if mean_diff_percent > 0:
+                    negatives.append({"id":action_url,"mean_diff_percent": mean_diff_percent, "mean_1": mean_1, "mean_2": mean_2})
+                else:
+                    positives.append({"id":action_url,"mean_diff_percent": mean_diff_percent, "mean_1": mean_1, "mean_2": mean_2})
+
+                MWW_test.append({"url": action_url, "p_val": p_val})
+
+                logger.info("MWW RankSum P for 1 and 2 = {}".format(p_val))
+
+
     return render(request, 'compare_report.html', {
         'negatives': negatives,
         'positives': positives,
-        'absense': absense
+        'absense': absense,
+        'MWW_test': MWW_test,
     })
 
 
@@ -521,3 +646,8 @@ def post_to_confluence(content):
 
 
     return response
+
+
+def queryset_to_json(set):
+    return json.loads(json.dumps(list(set), indent=4, sort_keys=True, default=str))
+
