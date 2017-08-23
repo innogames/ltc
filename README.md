@@ -24,6 +24,7 @@ Get fancy good-readable aggregate table for the test:
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/aggregate.png)
 
 Get detailed report for executed action:
+
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/action_report.png)
 
 Get response times, rps, errors data from test:
