@@ -157,6 +157,8 @@ def action_report(request, test_id, action_id):
             q1 = q2 - (q3 - q2)
         IQR = q3 - q1
         LW = q1 - 1.5 * IQR
+        if LW < 0:
+            LW = 0.1
         UW = q3 + 1.5 * IQR
         test_name = e['test_name']
         action_data.append({

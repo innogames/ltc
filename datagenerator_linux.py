@@ -137,6 +137,11 @@ for root, dirs, files in os.walk(builds_dir):
                 if os.path.isfile(build_xml_path):
                     logger.info("Try to parse Jenkins build XML-file: {0}".
                           format(build_xml_path))
+                    with open(build_xml_path, "r") as fixfile:
+                        data = fixfile.read()
+                    data = data.replace("&#x", "")
+                    with open(build_xml_path, "w") as fixfile:
+                        fixfile.write(data)
                     build_xml.parse(build_xml_path)
                     build_tag = build_xml.getroot()
 
