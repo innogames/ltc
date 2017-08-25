@@ -41,27 +41,27 @@ test_action_aggregate_data = meta.tables['jltom.test_action_aggregate_data']
 Session = sessionmaker(bind=db_engine)
 
 db_session = Session()
-# stm = server_monitoring_data.delete()
-# result = db_session.execute(stm)
-# stm = test_aggregate.delete()
-# result = db_session.execute(stm)
-# stm = test_action_data.delete()
-# result = db_session.execute(stm)
-# stm = test_data.delete()
-# result = db_session.execute(stm)
-# stm = aggregate.delete()
-# result = db_session.execute(stm)
-# stm = test.delete()
-# result = db_session.execute(stm)
-# stm = action.delete()
-# result = db_session.execute(stm)
-# stm = server.delete()
-# result = db_session.execute(stm)
-# stm = project.delete()
-# result = db_session.execute(stm)
-# stm = test_action_aggregate_data.delete()
-# result = db_session.execute(stm)
-# db_session.commit()
+stm = server_monitoring_data.delete()
+result = db_session.execute(stm)
+stm = test_aggregate.delete()
+result = db_session.execute(stm)
+stm = test_action_data.delete()
+result = db_session.execute(stm)
+stm = test_data.delete()
+result = db_session.execute(stm)
+stm = aggregate.delete()
+result = db_session.execute(stm)
+stm = test.delete()
+result = db_session.execute(stm)
+stm = action.delete()
+result = db_session.execute(stm)
+stm = server.delete()
+result = db_session.execute(stm)
+stm = project.delete()
+result = db_session.execute(stm)
+stm = test_action_aggregate_data.delete()
+result = db_session.execute(stm)
+db_session.commit()
 logger.info("Starting data generating script.")
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -81,7 +81,7 @@ def mask(df, f):
 
 
 def getIndex(item):
-    return int(re.search('(\d+)/', item[0]).group(1))
+    return int(re.search('(\d+)\\\\', item[0]).group(1))
 
 
 def ord_to_char(v, p=None):
@@ -114,12 +114,14 @@ jtl_files = []
 
 builds_dir = "/var/lib/jenkins/jobs"
 
+builds_dir="C:\\work\\reportdata"
 jtl_files = []
 releases = []
 
 build_xml = ElementTree()
 
-rx = re.compile(r'/var/lib/jenkins/jobs/.+?/builds/\d+?/jmeter\.jtl')
+#rx = re.compile(r'/var/lib/jenkins/jobs/.+?/builds/\d+?/jmeter\.jtl')
+rx = re.compile(r'C:\\work\\reportdata.+?\\builds\\\d+?\\jmeter\.jtl')
 for root, dirs, files in os.walk(builds_dir):
     for file in files:
         if re.match(rx, os.path.join(root, file)):
@@ -162,7 +164,8 @@ for root, dirs, files in os.walk(builds_dir):
                         os.path.join(root, file), monitoring_data, display_name,
                         build_parameters, root
                     ])
-                    project_name = re.search('/([^/]+)/builds', root).group(1)
+                    #project_name = re.search('/([^/]+)/builds', root).group(1)
+                    project_name = re.search('\\\\([^/]+)\\\\builds', root).group(1)
                     if db_session.query(project.c.id). \
                             filter(project.c.project_name == project_name).count() == 0:
                         logger.info("Adding new project: {0}".format(project_name))
@@ -176,8 +179,8 @@ for root, dirs, files in os.walk(builds_dir):
                             test.c.path == root).count() == 0:
                         logger.info("Was found new test data, adding.")
                         build_number = int(
-                            re.search('/builds/(\d+)', root).group(1))
-
+                            #re.search('/builds/(\d+)', root).group(1))
+                            re.search('\\\\builds\\\\(\d+)', root).group(1))
                         stm = test.insert().values(
                             path=root,
                             display_name=display_name,
@@ -472,12 +475,10 @@ for q in query_result:
         stm3 = test_action_data.delete().where(
             test_action_data.c.test_id == test_id)
         stm4 = test_data.delete().where(test_data.c.test_id == test_id)
-        stm5 = test_action_aggregate_data.delete().where(test_action_aggregate_data.c.test_id == test_id)
-        stm6 = test.delete().where(test.c.id == test_id)
+        stm5 = test.delete().where(test.c.id == test_id)
 
         result1 = db_connection.execute(stm1)
         result2 = db_connection.execute(stm2)
         result3 = db_connection.execute(stm3)
         result4 = db_connection.execute(stm4)
         result5 = db_connection.execute(stm5)
-        result6 = db_connection.execute(stm6)

@@ -139,30 +139,39 @@ def test_report(request, test_id):
 
 
 def action_report(request, test_id, action_id):
-    action_aggregate_data = list(TestActionAggregateData.objects.
-                       filter(test_id=test_id, action_id=action_id).
-                       values('data'))[0]['data']
-    mean = action_aggregate_data['mean']
-    min = action_aggregate_data['min']
-    max = action_aggregate_data['max']
-    q1 = action_aggregate_data['25%']
-    q3 = action_aggregate_data['75%']
-    q2 = action_aggregate_data['50%']
-    IQR = q3 - q1
-    LW = q1 - 1.5 * IQR
-    UW = q3 + 1.5 * IQR
-    action_data = {
-        "q1": q1,
-        "q2": q2,
-        "q3": q3,
-        "IQR": IQR,
-        "LW": LW,
-        "UW": UW,
-        "mean": mean,
-        "min": min,
-        "max": max
-    }
-
+    action_aggregate_data = list(TestActionAggregateData.objects.annotate(test_name=F('test__display_name')).
+                       filter(action_id=action_id).
+                       values('test_name', 'data').order_by('-test__start_time'))
+    action_data = []
+    for e in action_aggregate_data:
+        data = e['data']
+        mean = data['mean']
+        min = data['min']
+        max = data['max']
+        q3 = data['75%']
+        q2 = data['50%']
+        if '25%' in data:
+            q1 = data['25%']
+        else:
+            # WTF lol
+            q1 = q2 - (q3 - q2)
+        IQR = q3 - q1
+        LW = q1 - 1.5 * IQR
+        UW = q3 + 1.5 * IQR
+        test_name = e['test_name']
+        action_data.append({
+            "q1": q1,
+            "q2": q2,
+            "q3": q3,
+            "IQR": IQR,
+            "LW": LW,
+            "UW": UW,
+            "mean": mean,
+            "min": min,
+            "max": max,
+            "test_name": test_name
+        })
+    print(action_data)
     return render(
         request,
         'url_report.html',

@@ -33,7 +33,7 @@ function show_alert(message) {
   }
 
  function popitup(url) {
-    newwindow=window.open(url,'{{title}}','height=400,width=1200');
+    newwindow=window.open(url,'{{title}}','height=600,width=1200');
     if (window.focus) {newwindow.focus()}
     return false;
 }
