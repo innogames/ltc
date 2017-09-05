@@ -1,5 +1,6 @@
 # Description
 JMeter Control Center (codename `jltom`) - dashboard/report analyzer for load testing with JMeter (http://jmeter.apache.org/).
+Developed and used in Innogames GmbH (www.innogames.com) to provide load tests results.
 
 Online web-application/dashboard for "continuous integration" (CI) Load testing with JMeter.  
 A central system for launching (incl. distribution testing), monitoring tests, creating reports and for a comparative analysis between different load tests provided with Jmeter.
