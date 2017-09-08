@@ -4,6 +4,7 @@
         <li><a href="#config_tab_1">JMeter</a></li>
         <li><a href="#config_tab_2">GIT</a></li>
         <li><a href="#config_tab_3">SSH</a></li>
+        <li><a href="#config_tab_4">Other</a></li>
     </ul>
     <div id="config_tab_1">
         <div id="config_body_1">
@@ -105,12 +106,29 @@
             </div>
         </div>
     </div>
+    <div id="config_tab_4">
+        <button id="reread_tests_data_btn" class="btn btn-danger btn-xs"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>Re-read tests information from Jenkins</button>
+    </div>
 </article>
 
 
 
 <script>
  $("#administrator_tabs").tabs();
+
+
+ $('#reread_tests_data_btn').click(function() {
+                 $.ajax({
+                          url: "/administrator/test_data/refresh/",
+                          type: "get",
+                          success: function(response) {
+                            show_alert(response);
+                          },
+                          error: function(xhr) {
+                            //Do Something to handle error
+                          }
+                        });
+   });
  $('#add_jmeter_distr_btn').click(function() {
                  $.ajax({
                           url: "/administrator/new_jd/",

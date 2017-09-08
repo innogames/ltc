@@ -14,6 +14,14 @@
     <script src="{% static 'js/d3.min.js' %}"></script>
     <script src="{% static 'js/c3.min.js' %}"></script>
     <script src="{% static 'js/highlight.pack.js' %}"></script>
+    <style type="text/css">
+    .greeting{
+        position:absolute;
+        top:10px;
+        right:10px;
+    }
+    </style>
+
 </head>
 <body>
 <article id="main_tabs" class="tabs">
@@ -23,7 +31,7 @@
         <li><a href='#online'><span class="glyphicon glyphicon-scale" aria-hidden="true"></span> ONLINE</a></li>
         <li><a href='#controller'><span class="glyphicon glyphicon-play" aria-hidden="true"></span> CONTROLLER</a></li>
         <li><a href='#administrator'><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> ADMINISTRATOR</a></li>
-
+        <div class="greeting"></div>
     </ul>
     <div id="dashboard">
         <div id="dashboard_page"></div>
@@ -69,5 +77,25 @@
 <script src="{% static 'js/jquery.tablesorter.min.js' %}"></script>
 <script src="{% static 'js/jquery.tablesorter.widgets.min.js' %}"></script>
 <script src="{% static 'js/main_script.js' %}"></script>
+<script>
+    var thehours = new Date().getHours();
+	var themessage;
+	var morning = ('Good morning, ');
+	var afternoon = ('Good afternoon, ');
+	var evening = ('Good evening, ');
+
+	if (thehours >= 0 && thehours < 12) {
+		themessage = morning;
+
+	} else if (thehours >= 12 && thehours < 17) {
+		themessage = afternoon;
+
+	} else if (thehours >= 17 && thehours < 24) {
+		themessage = evening;
+	}
+
+	$('.greeting').append(themessage).append("<b>{{ user.login }}</b>");
+
+</script>
 </body>
 </html>

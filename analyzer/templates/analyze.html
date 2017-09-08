@@ -6,7 +6,7 @@
 
 <script>
 $('#select_test_1').selectpicker();
-updateSelectList('#select_test_1', '/analyzer/project/' + selected_project + "/tests_list/", "Select test", "display_name", "id");
+updateTestsSelectList('#select_test_1', '/analyzer/project/' + selected_project + "/tests_list/", "Select test", "display_name", "id");
 
 $('#select_test_1').on('change', function(){
      test_id_1 = $(this).find("option:selected").val();

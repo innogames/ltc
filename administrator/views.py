@@ -1,9 +1,16 @@
+import os
+import re
+
+import logging
+from xml.etree.ElementTree import ElementTree
 from django.http import JsonResponse
 from django.shortcuts import render
 
 # Create your views here.
-from administrator.models import JMeterProfile, SSHKey
+from administrator.models import JMeterProfile, SSHKey, User
+from analyzer.models import Test
 
+logger = logging.getLogger(__name__)
 def administrator_page(request):
     jds = JMeterProfile.objects.values()
     ssh_keys = SSHKey.objects.values()
@@ -104,4 +111,84 @@ def create_ssh_key(request, ssh_key_id):
                 }
             }
         }
+    return JsonResponse(response, safe=False)
+
+
+def test_data_refresh(request):
+    builds_dir = "/var/lib/jenkins/jobs"
+    # builds_dir="C:\\work\\reportdata"
+    build_xml = ElementTree()
+    rx = re.compile(r'/var/lib/jenkins/jobs/.+?/builds/\d+?/build\.xml')
+    # rx = re.compile(r'C:\\work\\reportdata.+?\\builds\\\d+?\\build\.xml')
+    logger.info("Refreshing test data")
+    for root, dirs, files in os.walk(builds_dir):
+        for file in files:
+            if re.match(rx, os.path.join(root, file)):
+                if os.stat(os.path.join(root, file)).st_size > 0:
+                    build_parameters = []
+                    display_name = "unknown"
+                    description = ""
+                    start_time = 0
+                    duration = 0
+                    build_xml_path = os.path.join(
+                        root, "build.xml")
+                    if os.path.isfile(build_xml_path):
+                        logger.info("Try to parse Jenkins build XML-file: {0}".
+                                    format(build_xml_path))
+                        with open(build_xml_path, "r") as fixfile:
+                            data = fixfile.read()
+                        data = data.replace("&#x", "")
+                        with open(build_xml_path, "w") as fixfile:
+                            fixfile.write(data)
+                        build_xml.parse(build_xml_path)
+                        build_tag = build_xml.getroot()
+
+                        for params in build_tag:
+                            if params.tag == 'actions':
+                                parameters = params.find('.//parameters')
+                                for parameter in parameters:
+                                    name = parameter.find('name')
+                                    value = parameter.find('value')
+                                    build_parameters.append(
+                                        [name.text, value.text])
+                                userId = params.find('.//userId')
+                                if userId is not None:
+                                    started_by = userId.text
+                                    if not User.objects.filter(login=started_by).exists():
+                                        u = User(login=started_by)
+                                        u.save()
+                                        user_id = u.id
+                                    else:
+                                        u = User.objects.get(login=started_by)
+                                        user_id = u.id
+                                else:
+                                    user_id = 0
+                            elif params.tag == 'startTime':
+                                start_time = int(params.text)
+                            elif params.tag == 'displayName':
+                                display_name = params.text
+                            elif params.tag == 'duration':
+                                duration = int(params.text)
+                            elif params.tag == 'description':
+                                description = params.text
+                        if Test.objects.filter(path=root).exists():
+                            test = Test.objects.get(path=root)
+                            logger.info("Updating test, id: {0}".
+                                        format(str(test.id)))
+                            test.display_name = display_name
+                            test.start_time = start_time
+                            test.end_time = start_time + duration
+                            test.description = description
+                            test.parameters = build_parameters
+                            test.started_by_id = user_id
+                            test.save()
+    response = {
+        "message": {
+            "text": "Tests information was updated.",
+            "type": "info",
+            "msg_params":{
+            }
+        }
+    }
+
     return JsonResponse(response, safe=False)

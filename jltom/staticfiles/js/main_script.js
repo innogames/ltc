@@ -57,6 +57,20 @@ function updateSelectList(id, url, label, text_tag, value_tag) {
 });
 }
 
+function updateTestsSelectList(id, url, label, text_tag, value_tag) {
+ console.log("updateTestsSelectList2");
+ $.getJSON(url, function(json){
+               //json = JSON.parse(json_string);
+               $(id).empty();
+               $(id).append($('<option disabled selected>').text(label).attr('value', label));
+               $.each(json, function(i, obj){
+                       console.log(obj["description"]);
+                       $(id).append($('<option>').text(obj[text_tag]).attr('value', obj[value_tag]).attr('data-subtext', obj["description"]));
+               });
+               $(id).selectpicker('refresh');
+});
+}
+
 function selectValueInList(id, value){
 	// wait until select list has got values and then select value
 	$(function() {

@@ -123,6 +123,7 @@ def add_running_test(root):
         jmeter_remote_instances=None,
         workspace=root,
         is_running=True,
+        end_time=start_time+duration,
     )
     running_test.save()
     return running_test.id
@@ -137,6 +138,7 @@ def generate_data(t_id):
             path=test_running.workspace,
             display_name=test_running.display_name,
             start_time=test_running.start_time,
+            end_tiem=test_running.end_time,
             build_number=0,
             show=True)
         test.save()

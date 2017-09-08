@@ -30,3 +30,13 @@ class SSHKey(models.Model):
     description = models.CharField(max_length=1000, default="")
     class Meta:
         db_table = 'ssh_key'
+
+
+class User(models.Model):
+    login = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'user'
+
+    def __str__(self):
+        return self.login
