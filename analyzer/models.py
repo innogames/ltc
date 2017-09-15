@@ -25,7 +25,7 @@ class Project(models.Model):
         db_table = 'project'
 
     def __str__(self):
-        return self.project_name
+        return self.project_name;
 
 
 class Test(models.Model):

@@ -1,0 +1,52 @@
+{% for action in actions_list %}
+<h4>{{ action.name }}</h4>
+<div id="action_graph_{{ action.action_id }}"></div>
+<script>
+            action_graph_{{ action.action_id }} = c3.generate({
+            data: {
+              url: "/analyzer/test/{{ test_id }}/action/{{ action.action_id }}/rtot",
+              mimeType: 'json',
+              type: 'line',
+              keys: {
+                  x: 'timestamp',
+                  value: ['average', 'median', 'errors'],
+
+              },
+              xFormat: '%H:%M:%S',
+
+              axes: {
+                  errors: 'y2'
+              },
+              colors: {
+              'errors': 'red',
+              },
+            },
+            axis: {
+              x: {
+                  type: 'timeseries',
+                  tick: {
+                      format: '%H:%M'
+                  }
+              },
+              y: {
+                  padding: {
+                      top: 0,
+                      bottom: 0
+                  },
+                  label: 'response times (ms)',
+              },
+              y2: {
+                  min: 0,
+                  show: true,
+                  padding: {
+                      top: 0,
+                      bottom: 0
+                  },
+                  label: 'Errors / s',
+              }
+
+            },
+            bindto: '#action_graph_{{ action.action_id }}'
+            });
+            </script>
+{% endfor %}

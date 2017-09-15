@@ -1,23 +1,26 @@
 import json
+import logging
+import math
 from collections import OrderedDict
 from decimal import Decimal
-import logging
-import pandas as pd
-from django.db.models import Sum, Avg, Max, Min, FloatField
-from django.db.models.expressions import RawSQL, F
-from django.http import HttpResponse
-from django.http import JsonResponse
+
+from django import template
+from django.db.models import Avg, FloatField, Max, Min, Sum
+from django.db.models.expressions import F, RawSQL
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.generic import TemplateView
-from scipy import stats
+
+import pandas as pd
 from administrator.models import Configuration
 from analyzer.confluence import confluenceposter
 from analyzer.confluence.utils import generate_confluence_graph
-from models import Project, Test, Aggregate, Server, TestData, \
-    ServerMonitoringData, TestActionData, Action, TestActionAggregateData
-from django import template
+from models import (Action, Aggregate, Project, Server, ServerMonitoringData,
+                    Test, TestActionAggregateData, TestActionData, TestData)
+from scipy import stats
 
 logger = logging.getLogger(__name__)
+
 
 def to_dict(result_proxy):
     fieldnames = []
@@ -104,7 +107,7 @@ def prev_test_id(request, test_id):
         filter(test__id=test_id)
     start_time = Test.objects.filter(
         id=test_id).values('start_time')[0]['start_time']
-    t = Test.objects.filter(start_time__lte=start_time,project=p).\
+    t = Test.objects.filter(start_time__lte=start_time, project=p).\
         values('id').order_by('-start_time')
     #data = db.get_prev_test_id(test_id, 2)
     return JsonResponse([list(t)[1]], safe=False)
@@ -139,9 +142,10 @@ def test_report(request, test_id):
 
 
 def action_report(request, test_id, action_id):
-    action_aggregate_data = list(TestActionAggregateData.objects.annotate(test_name=F('test__display_name')).
-                       filter(action_id=action_id).
-                       values('test_name', 'data').order_by('-test__start_time'))
+    action_aggregate_data = list(
+        TestActionAggregateData.objects.annotate(test_name=F(
+            'test__display_name')).filter(action_id=action_id).values(
+                'test_name', 'data').order_by('-test__start_time'))
     action_data = []
     for e in action_aggregate_data:
         data = e['data']
@@ -176,28 +180,27 @@ def action_report(request, test_id, action_id):
     print(action_data)
     return render(
         request,
-        'url_report.html',
-        {
+        'url_report.html', {
             'test_id': test_id,
             'action': Action.objects.get(id=action_id),
             'action_data': action_data
-        }
-    )
+        })
 
 
 def action_rtot(request, test_id, action_id):
     min_timestamp = TestActionData.objects. \
         filter(test_id=test_id, action_id=action_id). \
         values("test_id", "action_id"). \
-        aggregate(min_timestamp=Min(RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
+        aggregate(min_timestamp=Min(
+            RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
     x = TestActionData.objects. \
         filter(test_id=test_id, action_id=action_id). \
-        annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',))-min_timestamp)). \
+        annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
         annotate(average=RawSQL("((data->>%s)::numeric)", ('avg',))). \
         annotate(median=RawSQL("((data->>%s)::numeric)", ('median',))). \
-        annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',)))/60). \
-        annotate(errors=(RawSQL("((data->>%s)::numeric)", ('errors',)))/60). \
-        values('timestamp', "average", "median", "rps","errors"). \
+        annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',))) / 60). \
+        annotate(errors=(RawSQL("((data->>%s)::numeric)", ('errors',))) / 60). \
+        values('timestamp', "average", "median", "rps", "errors"). \
         order_by('timestamp')
     data = json.loads(
         json.dumps(list(x), indent=4, sort_keys=True, default=str))
@@ -206,7 +209,7 @@ def action_rtot(request, test_id, action_id):
 
 def available_test_monitoring_metrics(request, test_id, server_id):
     x = ServerMonitoringData.objects.\
-        filter(test_id = test_id, server_id = server_id).values('data')[:1]
+        filter(test_id=test_id, server_id=server_id).values('data')[:1]
     data = list(x)[0]["data"]
     metrics = []
     for value in data:
@@ -245,13 +248,18 @@ def compare_tests_cpu(request, test_id, num_of_tests):
     project_id = project[0]['project_id']
     start_time = Test.objects.filter(
         id=test_id).values('start_time')[0]['start_time']
-    data = (ServerMonitoringData.objects.\
-        filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True). \
-        values('test__display_name', 'server__server_name','test__start_time'). \
-        annotate(cpu_load=RawSQL("((data->>%s)::float)+((data->>%s)::float)+((data->>%s)::float)",
-                            ('CPU_user','CPU_iowait','CPU_system',))). \
-        annotate(cpu_load=Avg('cpu_load')).order_by('-test__start_time'))
-    #FUCK YOU DJANGO ORM >_<. DENSE_RANK does not work so:
+    data = (ServerMonitoringData.objects.filter(
+        test__start_time__lte=start_time,
+        test__project_id=project_id,
+        test__show=True).values(
+            'test__display_name', 'server__server_name', 'test__start_time'
+        ).annotate(cpu_load=RawSQL(
+            "((data->>%s)::float)+((data->>%s)::float)+((data->>%s)::float)", (
+                'CPU_user',
+                'CPU_iowait',
+                'CPU_system', ))).annotate(
+                    cpu_load=Avg('cpu_load')).order_by('-test__start_time'))
+    # FUCK YOU DJANGO ORM >_<. DENSE_RANK does not work so:
     current_rank = 1
     counter = 0
     arr = []
@@ -269,14 +277,14 @@ def compare_tests_cpu(request, test_id, num_of_tests):
         if int(d['rank']) <= int(num_of_tests) + 1:
             # C3.js does not accept "."
             d['server__server_name'] = d['server__server_name'].\
-                replace(".","_")
+                replace(".", "_")
             arr.append(d)
         counter += 1
     response = list(arr)
     response = to_pivot(response, 'test__display_name', 'server__server_name',
                         'cpu_load')
     response = response.to_json(orient='index')
-    #return HttpResponse(response)
+    # return HttpResponse(response)
     return HttpResponse(
         json.loads(
             json.dumps(response, sort_keys=False),
@@ -293,7 +301,7 @@ def compare_tests_avg(request, test_id, num_of_tests):
         annotate(display_name=F('test__display_name')). \
         annotate(start_time=F('test__start_time')). \
         filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True).\
-        values('display_name','start_time'). \
+        values('display_name', 'start_time'). \
         annotate(average=Avg('average')). \
         annotate(median=Avg('median')). \
         order_by('-test__start_time')
@@ -321,13 +329,14 @@ def test_rtot(request, test_id):
     min_timestamp = TestData.objects. \
         filter(test_id=test_id). \
         values("test_id").\
-        aggregate(min_timestamp=Min(RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
+        aggregate(min_timestamp=Min(
+            RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
     x = TestData.objects. \
         filter(test_id=test_id). \
-        annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',))-min_timestamp)). \
+        annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
         annotate(average=RawSQL("((data->>%s)::numeric)", ('avg',))). \
         annotate(median=RawSQL("((data->>%s)::numeric)", ('median',))). \
-        annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',)))/60). \
+        annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',))) / 60). \
         values('timestamp', "average", "median", "rps"). \
         order_by('timestamp')
     data = json.loads(
@@ -338,8 +347,8 @@ def test_rtot(request, test_id):
 def test_errors(request, test_id):
     value = Aggregate.objects.filter(test_id=test_id)\
         .values('test_id'). \
-        annotate(errors_percentage=100*Sum(F("count")*F("errors")/100, output_field=FloatField())
-                                    * Decimal('1.0')/Sum(F('count'), output_field=FloatField()))
+        annotate(errors_percentage=100 * Sum(F("count") * F("errors") / 100, output_field=FloatField())
+                 * Decimal('1.0') / Sum(F('count'), output_field=FloatField()))
     errors_percentage = float(list(value)[0]['errors_percentage'])
     response = [{
         "fail_%": errors_percentage,
@@ -350,13 +359,13 @@ def test_errors(request, test_id):
 
 def test_top_avg(request, test_id, top_number):
     data = Aggregate.objects.annotate(url=F('action__url')).filter(test_id=test_id) \
-        .order_by('-average').values('url','average')[:top_number]
+        .order_by('-average').values('url', 'average')[:top_number]
     return JsonResponse(list(data), safe=False)
 
 
 def test_top_errors(request, test_id):
     data = Aggregate.objects.annotate(url=F('action__url')).filter(test_id=test_id) \
-               .order_by('-errors').values('url','action_id','errors')[:5]
+        .order_by('-errors').values('url', 'action_id', 'errors')[:5]
     return JsonResponse(list(data), safe=False)
 
 
@@ -366,9 +375,9 @@ def metric_max_value(request, test_id, server_id, metric):
         max_value = {'max_value': 100}
     else:
         max_value = ServerMonitoringData.objects. \
-        filter(test_id=test_id, server_id=server_id).\
-        annotate(val=RawSQL("((data->>%s)::numeric)", (metric,))).\
-        aggregate(max_value=Max('val', output_field=FloatField()))
+            filter(test_id=test_id, server_id=server_id).\
+            annotate(val=RawSQL("((data->>%s)::numeric)", (metric,))).\
+            aggregate(max_value=Max('val', output_field=FloatField()))
     return JsonResponse(max_value, safe=False)
 
 
@@ -401,20 +410,24 @@ def metric_data(request, test_id, server_id, metric):
     min_timestamp = ServerMonitoringData.objects. \
         filter(test_id=test_id). \
         values("test_id"). \
-        aggregate(min_timestamp=Min(RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
+        aggregate(min_timestamp=Min(
+            RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
 
     if metric == 'CPU_all':
         metric_mapping = {
             metric:
             RawSQL(
                 "(((data->>%s)::numeric)+((data->>%s)::numeric)+((data->>%s)::numeric))",
-                ('CPU_iowait', 'CPU_user', 'CPU_system', ))
+                (
+                    'CPU_iowait',
+                    'CPU_user',
+                    'CPU_system', ))
         }
     else:
         metric_mapping = {metric: RawSQL("((data->>%s)::numeric)", (metric, ))}
     x = ServerMonitoringData.objects. \
         filter(test_id=test_id, server_id=server_id). \
-        annotate(timestamp=RawSQL("((data->>%s)::timestamp)", ('timestamp',))-min_timestamp).\
+        annotate(timestamp=RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp).\
         annotate(**metric_mapping). \
         values('timestamp', metric)
     #annotate(metric=RawSQL("((data->>%s)::numeric)", (metric,)))
@@ -423,7 +436,7 @@ def metric_data(request, test_id, server_id, metric):
     return JsonResponse(data, safe=False)
 
 
-def tests_compare_report(request, test_id_1, test_id_2):
+def tests_compare_report_2(request, test_id_1, test_id_2):
     data = Aggregate.objects.raw("""
         SELECT a.url as "id", a1.average as "average_1", a2.average as "average_2", a1.average - a2.average as "avg_diff",
         (((a1.average-a2.average)/a2.average)*100) as "avg_diff_percent",
@@ -435,7 +448,7 @@ def tests_compare_report(request, test_id_1, test_id_2):
         WHERE a1.action_id = a2.action_id and a.id = a1.action_id
         """, [test_id_1, test_id_2])
     reasonable_percent = 3
-    reasonable_abs_diff = 5  #ms
+    reasonable_abs_diff = 5  # ms
     negatives = []
     positives = []
     absense = []
@@ -444,12 +457,12 @@ def tests_compare_report(request, test_id_1, test_id_2):
             negatives.append(row)
         elif row.avg_diff_percent < -reasonable_percent:
             positives.append(row)
-    test_1_actions = list(Aggregate.objects. \
-                          annotate(url=F('action__url')) \
-                          .filter(test_id=test_id_1).values('url'))
-    test_2_actions = list(Aggregate.objects. \
-                          annotate(url=F('action__url')) \
-                          .filter(test_id=test_id_2).values('url'))
+    test_1_actions = list(
+        Aggregate.objects.annotate(url=F('action__url'))
+        .filter(test_id=test_id_1).values('url'))
+    test_2_actions = list(
+        Aggregate.objects.annotate(url=F('action__url'))
+        .filter(test_id=test_id_2).values('url'))
     for url in test_2_actions:
         if url not in test_1_actions:
             absense.append(url)
@@ -458,6 +471,98 @@ def tests_compare_report(request, test_id_1, test_id_2):
         'positives': positives,
         'absense': absense
     })
+
+
+def tests_compare_report(request, test_id_1, test_id_2):
+    '''
+    Compare current test (test_id_1) with one of the previous
+    '''
+    report = {'absense':[],
+            'higher_response_times':[],
+            'lower_response_times':[],
+            'lower_count':[],
+    }
+    sp = int(Configuration.objects.get(name='signifficant_actions_compare_percent').value)
+    test_2_actions = list(
+        TestActionAggregateData.objects.annotate(url=F('action__url'))
+        .filter(test_id=test_id_2).values('action_id', 'url', 'data'))
+    for action in test_2_actions:
+        action_id = action['action_id']
+        action_url = action['url']
+        action_data_2 = action['data']
+
+        # Check if one of the actions were not executed
+        if not TestActionAggregateData.objects.filter(
+                test_id=test_id_1, action_id=action_id).exists():
+            report['absense'].append({
+                "action": action_url,
+                "severity": "danger",
+                })
+        else:
+            action_data_1 = list(
+                TestActionAggregateData.objects.filter(
+                    test_id=test_id_1, action_id=action_id).values('data'))[0][
+                        'data']
+            # Student t-criteria
+            Xa = action_data_1['mean']
+            Xb = action_data_2['mean']
+            Sa = action_data_1['std']
+            Sb = action_data_2['std']
+            Na = action_data_1['count']
+            Nb = action_data_2['count']
+            df = Na - 1 + Nb - 1
+            t = stats.t.ppf(1 - 0.01, df)
+            Sab = math.sqrt(
+                ((Na - 1) * math.pow(Sa, 2) + (Nb - 1) * math.pow(Sb, 2)) / df)
+            Texp = (math.fabs(Xa - Xb)) / (Sab * math.sqrt(1 / Na + 1 / Nb))
+            if Texp > t:
+                logger.debug(
+                    'Action: {0} Texp: {1} t: {2} Xa: {3} Xb: {4} Sa: {5} Sb: {6} Na: {7} Nb: {8}'.
+                    format(action_url, Texp,
+                           stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb))
+                diff_percent = abs(100 - 100 * Xa / Xb)
+                print diff_percent
+                if Xa > Xb:
+                    if diff_percent > sp:
+                        if diff_percent > 10:
+                            severity = "danger"
+                        else:
+                            severity = "warning"
+                        report["higher_response_times"].append({
+                            "action": action_url,
+                            "severity": severity,
+                            "action_data_1": action_data_1,
+                            "action_data_2": action_data_2,
+                            })
+                else:
+                    if diff_percent > sp:
+                        report["lower_response_times"].append({
+                            "action": action_url,
+                            "severity": "success",
+                            "action_data_1": action_data_1,
+                            "action_data_2": action_data_2,
+                            })
+
+                if Na/100*Nb < 90:
+                    report["lower_count"].append({
+                        "action": action_url,
+                        "severity": "warning",
+                        "action_data_1": action_data_1,
+                        "action_data_2": action_data_2,
+                        })
+    return render(request, 'compare_report.html', {
+        'report': report,
+    })
+    #return JsonResponse(report, safe=False)
+
+
+def action_graphs(request, test_id):
+    actions_list = list(
+        TestActionAggregateData.objects.annotate(name=F('action__url')).filter(
+            test_id=test_id).values('action_id', 'name'))
+    return render(request, 'action_graphs.html',
+                  {'actions_list': actions_list,
+                   'test_id': test_id})
 
 
 def tests_compare_report_experimental(request, test_id_1, test_id_2):
@@ -472,7 +577,7 @@ def tests_compare_report_experimental(request, test_id_1, test_id_2):
         WHERE a1.action_id = a2.action_id and a.id = a1.action_id
         """, [test_id_1, test_id_2])
     reasonable_percent = 3
-    reasonable_abs_diff = 5  #ms
+    reasonable_abs_diff = 5  # ms
     negatives = []
     positives = []
     absense = []
@@ -484,11 +589,11 @@ def tests_compare_report_experimental(request, test_id_1, test_id_2):
             negatives.append(row)
         elif row.avg_diff_percent < -reasonable_percent:
             positives.append(row)
-    test_1_actions = list(Aggregate.objects. \
-        annotate(url=F('action__url'))\
+    test_1_actions = list(
+        Aggregate.objects.annotate(url=F('action__url'))
         .filter(test_id=test_id_1).values('url'))
-    test_2_actions = list(Aggregate.objects. \
-        annotate(url=F('action__url')) \
+    test_2_actions = list(
+        Aggregate.objects.annotate(url=F('action__url'))
         .filter(test_id=test_id_2).values('url'))
     for url in test_2_actions:
         if url not in test_1_actions:
@@ -520,29 +625,40 @@ def tests_compare_report_experimental(request, test_id_1, test_id_2):
         else:
             z_stat, p_val = stats.ranksums(avg_list_1, avg_list_2)
             if p_val <= 0.05:
-                a_1 = queryset_to_json(TestActionAggregateData.objects.\
-                    filter(test_id=test_id_1, action_id=action_id). \
-                    annotate(mean=RawSQL("((data->>%s)::numeric)", ('mean',))). \
-                    annotate(p50=RawSQL("((data->>%s)::numeric)", ('50%',))). \
-                    values("mean","p50"))
-                a_2 = queryset_to_json(TestActionAggregateData.objects. \
-                    filter(test_id=test_id_2, action_id=action_id). \
-                    annotate(mean=RawSQL("((data->>%s)::numeric)", ('mean',))). \
-                    annotate(p50=RawSQL("((data->>%s)::numeric)", ('50%',))). \
-                    values("mean","p50"))
+                a_1 = queryset_to_json(
+                    TestActionAggregateData.objects.filter(
+                        test_id=test_id_1, action_id=action_id).annotate(
+                            mean=RawSQL("((data->>%s)::numeric)", ('mean', )))
+                    .annotate(p50=RawSQL("((data->>%s)::numeric)", (
+                        '50%', ))).values("mean", "p50"))
+                a_2 = queryset_to_json(
+                    TestActionAggregateData.objects.filter(
+                        test_id=test_id_2, action_id=action_id).annotate(
+                            mean=RawSQL("((data->>%s)::numeric)", ('mean', )))
+                    .annotate(p50=RawSQL("((data->>%s)::numeric)", (
+                        '50%', ))).values("mean", "p50"))
                 mean_1 = float(a_1[0]['mean'])
                 mean_2 = float(a_2[0]['mean'])
 
-                mean_diff_percent = (mean_1-mean_2/mean_2)*100
+                mean_diff_percent = (mean_1 - mean_2 / mean_2) * 100
                 if mean_diff_percent > 0:
-                    negatives.append({"id":action_url,"mean_diff_percent": mean_diff_percent, "mean_1": mean_1, "mean_2": mean_2})
+                    negatives.append({
+                        "id": action_url,
+                        "mean_diff_percent": mean_diff_percent,
+                        "mean_1": mean_1,
+                        "mean_2": mean_2
+                    })
                 else:
-                    positives.append({"id":action_url,"mean_diff_percent": mean_diff_percent, "mean_1": mean_1, "mean_2": mean_2})
+                    positives.append({
+                        "id": action_url,
+                        "mean_diff_percent": mean_diff_percent,
+                        "mean_1": mean_1,
+                        "mean_2": mean_2
+                    })
 
                 MWW_test.append({"url": action_url, "p_val": p_val})
 
                 logger.info("MWW RankSum P for 1 and 2 = {}".format(p_val))
-
 
     return render(request, 'compare_report.html', {
         'negatives': negatives,
@@ -557,8 +673,8 @@ def dashboard(request):
     s = Test.objects.values('project_id').annotate(
         latest_time=Max('start_time'))
     for i in s:
-        r = Test.objects.filter(project_id=i['project_id'],start_time=i['latest_time']).\
-            values('project__project_name','display_name','id','project_id')
+        r = Test.objects.filter(project_id=i['project_id'], start_time=i['latest_time']).\
+            values('project__project_name', 'display_name', 'id', 'project_id')
         last_tests.append(list(r)[0])
 
     projects_list = list(Project.objects.values())
@@ -602,20 +718,15 @@ def post_to_confluence(content):
     wiki_password = Configuration.objects.get(name='wiki_password').value
     space = "SystemAdministration"
     target_page = 'Overall performance testing results'
-    target_url = '{}/display/{}/{}'.format(
-        wiki_url,
-        space,
-        target_page.replace(' ', '+')
-    )
-    cp = confluenceposter.ConfluencePoster(
-        wiki_url,
-        wiki_user,
-        wiki_password
-    )
+    target_url = '{}/display/{}/{}'.format(wiki_url, space,
+                                           target_page.replace(' ', '+'))
+    cp = confluenceposter.ConfluencePoster(wiki_url, wiki_user, wiki_password)
     response = {
         "message": {
-            "text": "Overall report is posted to Confluence: {}".format(target_url),
-            "type": "success",
+            "text":
+            "Overall report is posted to Confluence: {}".format(target_url),
+            "type":
+            "success",
             "msg_params": {
                 "link": target_url
             }
@@ -624,9 +735,7 @@ def post_to_confluence(content):
     cp.login()
     try:
         logger.info('Try to open Confluence page: ' + target_page)
-        page_target = cp.get_page(
-            space, target_page
-        )
+        page_target = cp.get_page(space, target_page)
     except Exception as e:
         logger.error(e)
         response = {
@@ -655,10 +764,9 @@ def post_to_confluence(content):
 
     cp.logout()
 
-
     return response
 
 
 def queryset_to_json(set):
-    return json.loads(json.dumps(list(set), indent=4, sort_keys=True, default=str))
-
+    return json.loads(
+        json.dumps(list(set), indent=4, sort_keys=True, default=str))

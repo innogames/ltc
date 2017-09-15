@@ -141,6 +141,15 @@
         <div class="row">
             <div id="test_rtot_graph"></div>
         </div>
+        <hr/>
+        <button id="get_action_graphs_btn" class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+            <span class="glyphicon glyphicon-menu-down" aria-hidden="true"></span> Get graphs for all actions
+        </button>
+        <div class="collapse" id="collapseExample">
+            <div class="card card-body">
+               <div id="action_graphs"></div>
+            </div>
+        </div>
     </div>
 
     <div id="monitoring_graphs_tab">
@@ -470,6 +479,21 @@
                 },
                 error: function(xhr) {
                     response = JSON.parse("{\"message\":{\"text\": \"Cannot fetch a previous test\",\"type\": \"danger\"}}")
+                    show_alert(response);
+                }
+            });
+
+
+        });
+        $('#get_action_graphs_btn').click(function() {
+            $.ajax({
+                url: '/analyzer/test/' + test_id_1 + '/action_graphs/',
+                type: "get",
+                success: function(response) {
+                    $("#action_graphs").html(response);
+                },
+                error: function(xhr) {
+                    response = JSON.parse("{\"message\":{\"text\": \"Cannot generate action graphs\",\"type\": \"danger\"}}")
                     show_alert(response);
                 }
             });

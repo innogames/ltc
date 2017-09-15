@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Load Test monitor</title>
@@ -9,93 +10,97 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap-select.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/c3.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/theme.bootstrap_2.min.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/my.css' %}"/>
-    <link rel="stylesheet" type="text/css" href="{% static 'css/vs.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/my.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'css/vs.css' %}" />
     <script src="{% static 'js/d3.min.js' %}"></script>
     <script src="{% static 'js/c3.min.js' %}"></script>
     <script src="{% static 'js/highlight.pack.js' %}"></script>
     <style type="text/css">
-    .greeting{
-        position:absolute;
-        top:10px;
-        right:10px;
-    }
+        .greeting {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
     </style>
 
 </head>
+
 <body>
-<article id="main_tabs" class="tabs">
-    <ul>
-        <li><a href='#dashboard'><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span> DASHBOARD</a></li>
-        <li><a href='#analyzer'><span class="glyphicon glyphicon-stats" aria-hidden="true"></span> ANALYZER</a></li>
-        <li><a href='#online'><span class="glyphicon glyphicon-scale" aria-hidden="true"></span> ONLINE</a></li>
-        <li><a href='#controller'><span class="glyphicon glyphicon-play" aria-hidden="true"></span> CONTROLLER</a></li>
-        <li><a href='#administrator'><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> ADMINISTRATOR</a></li>
-        <div class="greeting"></div>
-    </ul>
-    <div id="dashboard">
-        <div id="dashboard_page"></div>
-    </div>
-    <div id="analyzer">
-        <hr/>
-        <select name="select_project_menu" id="select_project_menu" class="selectpicker">
+    <article id="main_tabs" class="tabs">
+        <ul>
+            <li><a href='#dashboard'><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span> DASHBOARD</a></li>
+            <li><a href='#analyzer'><span class="glyphicon glyphicon-stats" aria-hidden="true"></span> ANALYZER</a></li>
+            <li><a href='#online'><span class="glyphicon glyphicon-scale" aria-hidden="true"></span> ONLINE</a></li>
+            <li><a href='#controller'><span class="glyphicon glyphicon-play" aria-hidden="true"></span> CONTROLLER</a></li>
+            <li><a href='#administrator'><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> ADMINISTRATOR</a></li>
+            <div class="greeting"></div>
+        </ul>
+        <div id="dashboard">
+            <div id="dashboard_page"></div>
+        </div>
+        <div id="analyzer">
+            <hr/>
+            <select name="select_project_menu" id="select_project_menu" class="selectpicker">
         </select>
-        <hr/>
-        <article id="analyzer_tabs" class="tabs">
-            <ul>
-                <li><a href="#history">History</a></li>
-                <li><a href="#analyze">Analyze tests results</a></li>
-            </ul>
-            <div id="history">
-                <div id="history_project_page"></div>
-            </div>
-            <div id="analyze">
-                <div id="analyze_page"></div>
-            </div>
-        </article>
-    </div>
-    <div id="online">
-        <hr/>
-        <select name="select_running_test" id="select_running_test" class="selectpicker">
+            <hr/>
+            <article id="analyzer_tabs" class="tabs">
+                <ul>
+
+                    <li><a href="#analyze">Analyze tests results</a></li>
+                    <li><a href="#history">Results history and trends</a></li>
+                </ul>
+
+                <div id="analyze">
+                    <div id="analyze_page"></div>
+                </div>
+                <div id="history">
+                    <div id="history_project_page"></div>
+                </div>
+            </article>
+        </div>
+        <div id="online">
+            <hr/>
+            <select name="select_running_test" id="select_running_test" class="selectpicker">
             <option disabled selected>Select running test</option>
         </select>
-        <hr/>
-        <div id="online_page"></div>
-    </div>
-    <div id="controller">
-        <div id="controller_page"></div>
-    </div>
-    <div id="administrator">
-        <div id="administrator_page"></div>
-    </div>
-</article>
-<div id="alert_placeholder"></div>
-<script src="{% static 'js/jquery-3.1.1.min.js' %}"></script>
-<script src="{% static 'js/jquery-ui.min.js' %}"></script>
-<script src="{% static 'js/bootstrap.min.js' %}"></script>
-<script src="{% static 'js/bootstrap-select.min.js' %}"></script>
-<script src="{% static 'js/jquery.tablesorter.min.js' %}"></script>
-<script src="{% static 'js/jquery.tablesorter.widgets.min.js' %}"></script>
-<script src="{% static 'js/main_script.js' %}"></script>
-<script>
-    var thehours = new Date().getHours();
-	var themessage;
-	var morning = ('Good morning, ');
-	var afternoon = ('Good afternoon, ');
-	var evening = ('Good evening, ');
+            <hr/>
+            <div id="online_page"></div>
+        </div>
+        <div id="controller">
+            <div id="controller_page"></div>
+        </div>
+        <div id="administrator">
+            <div id="administrator_page"></div>
+        </div>
+    </article>
+    <div id="alert_placeholder"></div>
+    <script src="{% static 'js/jquery-3.1.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-ui.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap-select.min.js' %}"></script>
+    <script src="{% static 'js/jquery.tablesorter.min.js' %}"></script>
+    <script src="{% static 'js/jquery.tablesorter.widgets.min.js' %}"></script>
+    <script src="{% static 'js/main_script.js' %}"></script>
+    <script>
+        var thehours = new Date().getHours();
+        var themessage;
+        var morning = ('Good morning, ');
+        var afternoon = ('Good afternoon, ');
+        var evening = ('Good evening, ');
 
-	if (thehours >= 0 && thehours < 12) {
-		themessage = morning;
+        if (thehours >= 0 && thehours < 12) {
+            themessage = morning;
 
-	} else if (thehours >= 12 && thehours < 17) {
-		themessage = afternoon;
+        } else if (thehours >= 12 && thehours < 17) {
+            themessage = afternoon;
 
-	} else if (thehours >= 17 && thehours < 24) {
-		themessage = evening;
-	}
+        } else if (thehours >= 17 && thehours < 24) {
+            themessage = evening;
+        }
 
-	$('.greeting').append(themessage).append("<b>{{ user.login }}</b>");
+        $('.greeting').append(themessage).append("<b>{{ user.login }}</b>");
 
-</script>
+    </script>
 </body>
+
 </html>

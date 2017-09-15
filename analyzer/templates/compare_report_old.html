@@ -5,11 +5,8 @@
             <div class="panel-heading">Positive:</div>
             <div class="panel-body">
                 <ul>
-                    {% if report.lower_response_times|length > 0 %} {% for row in report.lower_response_times %} 
-                    {% get_percentage_abs row.action_data_1.mean row.action_data_2.mean as diff_percentage %}
-                    <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} is became
-                        faster on <b>{{ diff_percentage }} % </b>in average ({{ row.action_data_2.mean|floatformat }} ms
-                        -> {{ row.action_data_1.mean|floatformat }} ms)</li>
+                    {% if positives %} {% for row in positives %}
+                    <li> Action {{ row.id }} is became faster on {{ row.avg_diff_percent|floatformat|slice:"1:" }} % ({{row.average_2|floatformat}} ms -> {{row.average_1|floatformat}} ms) </li>
                     {% endfor %} {% else %}
                     <b>No any reasonable improvements</b> {% endif %}
                 </ul>
@@ -19,36 +16,21 @@
             <div class="panel-heading">Negatives:</div>
             <div class="panel-body">
                 <ul>
-                    {% if report.higher_response_times|length > 0 %} 
-                    {% for row in report.higher_response_times %} 
-                    {% get_percentage_abs row.action_data_1.mean row.action_data_2.mean as diff_percentage %}
-                    <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} is became
-                        slower on <b>{{ diff_percentage }} % </b>in average ({{ row.action_data_2.mean|floatformat }} ms
-                        -> {{ row.action_data_1.mean|floatformat }} ms)</li>
-                    {% endfor %}
-                    {% else %}
-                    <b>No any reasonable negative changes</b> 
-                    {% endif %}
+                    {% if negatives %} {% for row in negatives %}
+                    <li> Action {{ row.id }} is became slower on {{ row.avg_diff_percent|floatformat }} % ({{row.average_2|floatformat}} ms -> {{row.average_1|floatformat}} ms) </li>
+                    {% endfor %} {% else %}
+                    <b>No any reasonable negative changes</b> {% endif %}
                 </ul>
             </div>
         </div>
-        <div class="panel panel-info">
+        <div class="panel panel-danger">
             <div class="panel-heading">Additional:</div>
             <div class="panel-body">
                 <ul>
-                    {% if report.absense|length > 0 %} 
-                        {% for row in report.absense %}
-                        <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} was not
-                        executed during the last test</li>
-                        {% endfor %} 
-                    {% elif report.lower_count|length > 0 %}
-                        {% for row in report.lower_count %}
-                        {% get_percentage_abs row.action_data_1.count row.action_data_2.count as diff_percentage %}
-                        <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} had <b>{{ diff_percentage }}</b> % less executions than before</li>
-                        {% endfor %} 
-                    {% else %}
-                    <b>No any additional info</b>
-                     {% endif %}
+                    {% if absense %} {% for row in absense %}
+                    <li><b color="red">! Action {{ row.url }} was not executed during the last test</b> </li>
+                    {% endfor %} {% else %}
+                    <b>No any additional info</b> {% endif %}
                 </ul>
             </div>
         </div>
@@ -76,7 +58,7 @@
                 value: ['avg_diff_percent']
             },
             type: 'bar', // specfify type of plot
-            color: function (color, d) {
+            color: function(color, d) {
                 if (d.value > 0) {
                     return d3.rgb(d.value * 30, 0, 0);
                 } else {
@@ -130,5 +112,4 @@
                                     return d3.rgb(0,0,0);
                                 }*/
     });
-
 </script>
