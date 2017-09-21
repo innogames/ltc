@@ -477,12 +477,15 @@ def tests_compare_report(request, test_id_1, test_id_2):
     '''
     Compare current test (test_id_1) with one of the previous
     '''
-    report = {'absense':[],
-            'higher_response_times':[],
-            'lower_response_times':[],
-            'lower_count':[],
+    report = {
+        'absense': [],
+        'higher_response_times': [],
+        'lower_response_times': [],
+        'lower_count': [],
     }
-    sp = int(Configuration.objects.get(name='signifficant_actions_compare_percent').value)
+    sp = int(
+        Configuration.objects.get(name='signifficant_actions_compare_percent')
+        .value)
     test_2_actions = list(
         TestActionAggregateData.objects.annotate(url=F('action__url'))
         .filter(test_id=test_id_2).values('action_id', 'url', 'data'))
@@ -497,7 +500,7 @@ def tests_compare_report(request, test_id_1, test_id_2):
             report['absense'].append({
                 "action": action_url,
                 "severity": "danger",
-                })
+            })
         else:
             action_data_1 = list(
                 TestActionAggregateData.objects.filter(
@@ -506,20 +509,23 @@ def tests_compare_report(request, test_id_1, test_id_2):
             # Student t-criteria
             Xa = action_data_1['mean']
             Xb = action_data_2['mean']
-            Sa = action_data_1['std']
-            Sb = action_data_2['std']
+            Sa = 0 if action_data_1['std'] is None else action_data_1['std']
+            Sb = 0 if action_data_2['std'] is None else action_data_2['std']
             Na = action_data_1['count']
             Nb = action_data_2['count']
             df = Na - 1 + Nb - 1
             t = stats.t.ppf(1 - 0.01, df)
+            logger.debug(
+                'Action: {0} t: {1} Xa: {2} Xb: {3} Sa: {4} Sb: {5} Na: {6} Nb: {7} df: {8}'.
+                format(action_url,
+                       stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb, df))
             Sab = math.sqrt(
                 ((Na - 1) * math.pow(Sa, 2) + (Nb - 1) * math.pow(Sb, 2)) / df)
             Texp = (math.fabs(Xa - Xb)) / (Sab * math.sqrt(1 / Na + 1 / Nb))
+            logger.debug(
+                'Action: {0} Texp: {1} Sab: {2}'.format(action_url, Texp, Sab))
+
             if Texp > t:
-                logger.debug(
-                    'Action: {0} Texp: {1} t: {2} Xa: {3} Xb: {4} Sa: {5} Sb: {6} Na: {7} Nb: {8}'.
-                    format(action_url, Texp,
-                           stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb))
                 diff_percent = abs(100 - 100 * Xa / Xb)
                 print diff_percent
                 if Xa > Xb:
@@ -529,27 +535,39 @@ def tests_compare_report(request, test_id_1, test_id_2):
                         else:
                             severity = "warning"
                         report["higher_response_times"].append({
-                            "action": action_url,
-                            "severity": severity,
-                            "action_data_1": action_data_1,
-                            "action_data_2": action_data_2,
-                            })
+                            "action":
+                            action_url,
+                            "severity":
+                            severity,
+                            "action_data_1":
+                            action_data_1,
+                            "action_data_2":
+                            action_data_2,
+                        })
                 else:
                     if diff_percent > sp:
                         report["lower_response_times"].append({
-                            "action": action_url,
-                            "severity": "success",
-                            "action_data_1": action_data_1,
-                            "action_data_2": action_data_2,
-                            })
-
-                if Na/100*Nb < 90:
-                    report["lower_count"].append({
-                        "action": action_url,
-                        "severity": "warning",
-                        "action_data_1": action_data_1,
-                        "action_data_2": action_data_2,
+                            "action":
+                            action_url,
+                            "severity":
+                            "success",
+                            "action_data_1":
+                            action_data_1,
+                            "action_data_2":
+                            action_data_2,
                         })
+
+                if Na / 100 * Nb < 90:
+                    report["lower_count"].append({
+                        "action":
+                        action_url,
+                        "severity":
+                        "warning",
+                        "action_data_1":
+                        action_data_1,
+                        "action_data_2":
+                        action_data_2,
+                    })
     return render(request, 'compare_report.html', {
         'report': report,
     })
