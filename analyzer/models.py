@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.postgres.fields import JSONField
 from django.contrib import admin
 # Create your models here.
-from administrator.models import JMeterProfile,User
+from administrator.models import JMeterProfile, User
 
 
 class Project(models.Model):
@@ -25,7 +25,7 @@ class Project(models.Model):
         db_table = 'project'
 
     def __str__(self):
-        return self.project_name;
+        return self.project_name
 
 
 class Test(models.Model):
@@ -39,6 +39,7 @@ class Test(models.Model):
     build_number = models.IntegerField(default=0)
     show = models.BooleanField(default=True)
     started_by = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
+
     class Meta:
         db_table = 'test'
 
@@ -113,6 +114,7 @@ class TestActionAggregateData(models.Model):
         index_together = [
             ("test", "action"),
         ]
+
 
 class Server(models.Model):
     server_name = models.CharField(max_length=100)

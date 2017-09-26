@@ -514,60 +514,61 @@ def tests_compare_report(request, test_id_1, test_id_2):
             Na = action_data_1['count']
             Nb = action_data_2['count']
             df = Na - 1 + Nb - 1
-            t = stats.t.ppf(1 - 0.01, df)
-            logger.debug(
-                'Action: {0} t: {1} Xa: {2} Xb: {3} Sa: {4} Sb: {5} Na: {6} Nb: {7} df: {8}'.
-                format(action_url,
-                       stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb, df))
-            Sab = math.sqrt(
-                ((Na - 1) * math.pow(Sa, 2) + (Nb - 1) * math.pow(Sb, 2)) / df)
-            Texp = (math.fabs(Xa - Xb)) / (Sab * math.sqrt(1 / Na + 1 / Nb))
-            logger.debug(
-                'Action: {0} Texp: {1} Sab: {2}'.format(action_url, Texp, Sab))
+            if df > 0:
+                t = stats.t.ppf(1 - 0.01, df)
+                logger.debug(
+                    'Action: {0} t: {1} Xa: {2} Xb: {3} Sa: {4} Sb: {5} Na: {6} Nb: {7} df: {8}'.
+                    format(action_url,
+                        stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb, df))
+                Sab = math.sqrt(
+                    ((Na - 1) * math.pow(Sa, 2) + (Nb - 1) * math.pow(Sb, 2)) / df)
+                Texp = (math.fabs(Xa - Xb)) / (Sab * math.sqrt(1 / Na + 1 / Nb))
+                logger.debug(
+                    'Action: {0} Texp: {1} Sab: {2}'.format(action_url, Texp, Sab))
 
-            if Texp > t:
-                diff_percent = abs(100 - 100 * Xa / Xb)
-                print diff_percent
-                if Xa > Xb:
-                    if diff_percent > sp:
-                        if diff_percent > 10:
-                            severity = "danger"
-                        else:
-                            severity = "warning"
-                        report["higher_response_times"].append({
+                if Texp > t:
+                    diff_percent = abs(100 - 100 * Xa / Xb)
+                    print diff_percent
+                    if Xa > Xb:
+                        if diff_percent > sp:
+                            if diff_percent > 10:
+                                severity = "danger"
+                            else:
+                                severity = "warning"
+                            report["higher_response_times"].append({
+                                "action":
+                                action_url,
+                                "severity":
+                                severity,
+                                "action_data_1":
+                                action_data_1,
+                                "action_data_2":
+                                action_data_2,
+                            })
+                    else:
+                        if diff_percent > sp:
+                            report["lower_response_times"].append({
+                                "action":
+                                action_url,
+                                "severity":
+                                "success",
+                                "action_data_1":
+                                action_data_1,
+                                "action_data_2":
+                                action_data_2,
+                            })
+
+                    if Na / 100 * Nb < 90:
+                        report["lower_count"].append({
                             "action":
                             action_url,
                             "severity":
-                            severity,
+                            "warning",
                             "action_data_1":
                             action_data_1,
                             "action_data_2":
                             action_data_2,
                         })
-                else:
-                    if diff_percent > sp:
-                        report["lower_response_times"].append({
-                            "action":
-                            action_url,
-                            "severity":
-                            "success",
-                            "action_data_1":
-                            action_data_1,
-                            "action_data_2":
-                            action_data_2,
-                        })
-
-                if Na / 100 * Nb < 90:
-                    report["lower_count"].append({
-                        "action":
-                        action_url,
-                        "severity":
-                        "warning",
-                        "action_data_1":
-                        action_data_1,
-                        "action_data_2":
-                        action_data_2,
-                    })
     return render(request, 'compare_report.html', {
         'report': report,
     })
