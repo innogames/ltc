@@ -23,21 +23,21 @@ logger = logging.getLogger()
 db_engine = create_engine(
     'postgresql://postgres:postgres@localhost:5432/postgres')
 db_connection = db_engine.connect()
-meta = sqlalchemy.MetaData(bind=db_connection, reflect=True, schema="jltom")
+meta = sqlalchemy.MetaData(bind=db_connection, reflect=True, schema="jltc")
 insp = reflection.Inspector.from_engine(db_engine)
-schema = 'jltom'
+schema = 'jltc'
 
-project = meta.tables['jltom.project']
-test = meta.tables['jltom.test']
-test_data = meta.tables['jltom.test_data']
-action = meta.tables['jltom.action']
-test_action_data = meta.tables['jltom.test_action_data']
-server = meta.tables['jltom.server']
-aggregate = meta.tables['jltom.aggregate']
-server_monitoring_data = meta.tables['jltom.server_monitoring_data']
-test_aggregate = meta.tables['jltom.test_aggregate']
-test_action_aggregate_data = meta.tables['jltom.test_action_aggregate_data']
-user = meta.tables['jltom.user']
+project = meta.tables['jltc.project']
+test = meta.tables['jltc.test']
+test_data = meta.tables['jltc.test_data']
+action = meta.tables['jltc.action']
+test_action_data = meta.tables['jltc.test_action_data']
+server = meta.tables['jltc.server']
+aggregate = meta.tables['jltc.aggregate']
+server_monitoring_data = meta.tables['jltc.server_monitoring_data']
+test_aggregate = meta.tables['jltc.test_aggregate']
+test_action_aggregate_data = meta.tables['jltc.test_action_aggregate_data']
+user = meta.tables['jltc.user']
 
 Session = sessionmaker(bind=db_engine)
 
@@ -371,7 +371,7 @@ for build_root in build_roots:
                 'maximum', 'minimum', 'count', 'errors', 'weight', 'test_id'
             ]
             agg[file_index].to_sql(
-                "aggregate", schema='jltom', con=db_engine, if_exists='append')
+                "aggregate", schema='jltc', con=db_engine, if_exists='append')
             zip_results_file(jmeter_results_file)
         except ValueError, e:
             logger.error(e)

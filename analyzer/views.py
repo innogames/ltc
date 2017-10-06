@@ -387,9 +387,9 @@ def tests_compare_aggregate(request, test_id_1, test_id_2):
         (((a1.average-a2.average)/a2.average)*100) as "avg_diff_percent",
         a1.median - a2.median as "median_diff",
         (((a1.median-a2.median)/a2.median)*100) as "median_diff_percent" FROM
-        (SELECT action_id, average, median FROM jltom.aggregate WHERE test_id = %s) a1,
-        (SELECT action_id, average, median FROM jltom.aggregate WHERE test_id = %s) a2,
-        jltom.action a
+        (SELECT action_id, average, median FROM jltc.aggregate WHERE test_id = %s) a1,
+        (SELECT action_id, average, median FROM jltc.aggregate WHERE test_id = %s) a2,
+        jltc.action a
         WHERE a1.action_id = a2.action_id and a.id = a1.action_id
         """, [test_id_1, test_id_2])
     response = []
@@ -442,9 +442,9 @@ def tests_compare_report_2(request, test_id_1, test_id_2):
         (((a1.average-a2.average)/a2.average)*100) as "avg_diff_percent",
         a1.median - a2.median as "median_diff",
         (((a1.median-a2.median)/a2.median)*100) as "median_diff_percent" FROM
-        (SELECT action_id, average, median FROM jltom.aggregate WHERE test_id = %s) a1,
-        (SELECT action_id, average, median FROM jltom.aggregate WHERE test_id = %s) a2,
-        jltom.action a
+        (SELECT action_id, average, median FROM jltc.aggregate WHERE test_id = %s) a1,
+        (SELECT action_id, average, median FROM jltc.aggregate WHERE test_id = %s) a2,
+        jltc.action a
         WHERE a1.action_id = a2.action_id and a.id = a1.action_id
         """, [test_id_1, test_id_2])
     reasonable_percent = 3
@@ -590,9 +590,9 @@ def tests_compare_report_experimental(request, test_id_1, test_id_2):
         (((a1.average-a2.average)/a2.average)*100) as "avg_diff_percent",
         a1.median - a2.median as "median_diff",
         (((a1.median-a2.median)/a2.median)*100) as "median_diff_percent" FROM
-        (SELECT action_id, average, median FROM jltom.aggregate WHERE test_id = %s) a1,
-        (SELECT action_id, average, median FROM jltom.aggregate WHERE test_id = %s) a2,
-        jltom.action a
+        (SELECT action_id, average, median FROM jltc.aggregate WHERE test_id = %s) a1,
+        (SELECT action_id, average, median FROM jltc.aggregate WHERE test_id = %s) a2,
+        jltc.action a
         WHERE a1.action_id = a2.action_id and a.id = a1.action_id
         """, [test_id_1, test_id_2])
     reasonable_percent = 3

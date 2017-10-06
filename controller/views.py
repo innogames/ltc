@@ -588,7 +588,7 @@ def start_test(request, project_id):
         # Create dir for new test:
         last_test_id = Test.objects.filter(
             project_id=project_id).order_by("-id")[0]
-        running_test_dir = os.path.join('/tmp/', 'jltom', project.project_name,
+        running_test_dir = os.path.join('/tmp/', 'jltc', project.project_name,
                                         str(last_test_id.id + 1))
         running_test_results_dir = os.path.join(running_test_dir, 'results/')
         running_test_logs_dir = os.path.join(running_test_dir, 'logs/')

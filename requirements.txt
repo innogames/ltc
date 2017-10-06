@@ -6,3 +6,4 @@ paramiko==2.1.2
 psutil==5.2.1
 matplotlib==1.4.3
 scipy==0.19.1
+SQLAlchemy==1.1.3

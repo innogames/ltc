@@ -1,5 +1,5 @@
 # Description
-JMeter Control Center (codename `jltom`) - dashboard/report analyzer for load testing with JMeter (http://jmeter.apache.org/).
+JMeter Load Testing Center (codename `jltc`) - dashboard/report analyzer for load testing with JMeter (http://jmeter.apache.org/).
 
 Developed and used in Innogames GmbH (www.innogames.com) to provide load tests results.
 
@@ -75,9 +75,22 @@ Right there, you will find the *requirements.txt* file that has all tools, djang
 
 `$ pip install -r requirements.txt`
 
+Also probably will be needed to install the next packages:
+
+`$ apt-get install python-matplotlib`
+
+`$ apt-get install python-tk`
+
 ### 3. Initialize the database
-First set the database engine (only PostgreSQL 9.5+) in your settings files; `jltom/settings.py` Of course, remember to install necessary database driver for your engine. Then define your credentials as well.
-Then execute:
+First set the database engine (only PostgreSQL 9.5+) in your settings files; `jltc/settings.py` Of course, remember to install necessary database driver for your engine. Then define your credentials as well.
+By default jltc will use `jltc` schema in database, which needs to be created:
+
+`su - postgres`
+`psql`
+`\c YOUR_DATABASE_NAME`
+`CREATE SCHEMA jltc AUTHORIZATION your_user_name;`
+
+Then execute in jltc folder:
 
 `./manage.py makemigrations`
 `./manage.py migrate`

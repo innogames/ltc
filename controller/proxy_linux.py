@@ -32,7 +32,7 @@ print "PROXY_ID_:" + PROXY_ID_
 db_engine = create_engine(
     'postgresql://postgres:postgres@localhost:5432/postgres')
 db_connection = db_engine.connect()
-meta = sqlalchemy.MetaData(bind=db_connection, reflect=True, schema="jltom")
+meta = sqlalchemy.MetaData(bind=db_connection, reflect=True, schema="jltc")
 insp = reflection.Inspector.from_engine(db_engine)
 Session = sessionmaker(bind=db_engine)
 db_session = Session()
@@ -78,7 +78,7 @@ if not db_engine.dialect.has_table(db_engine.connect(), "delay_table"):
         Column('value', DOUBLE_PRECISION), )
     meta.create_all(db_connection)
 
-proxy = meta.tables['jltom.proxy']
+proxy = meta.tables['jltc.proxy']
 
 
 def get_delay(proxy_id):

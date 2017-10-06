@@ -1,4 +1,4 @@
-"""jltom URL Configuration
+"""jltc URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.10/topics/http/urls/
@@ -20,7 +20,7 @@ from . import settings
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^', include('jltom_web.urls')),
+    url(r'^', include('jltc_web.urls')),
     url(r'^analyzer/', include('analyzer.urls')),
     url(r'^online/', include('online.urls')),
     url(r'^controller/', include('controller.urls', namespace="controller")),

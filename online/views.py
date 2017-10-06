@@ -11,7 +11,7 @@ from django.shortcuts import render
 MONITORING_DIR = ""
 # Create your views here.
 if _platform == "linux" or _platform == "linux2":
-    MONITORING_DIRS = ["/var/lib/jenkins/jobs/", "/tmp/jltom/"]
+    MONITORING_DIRS = ["/var/lib/jenkins/jobs/", "/tmp/jltc/"]
 elif _platform == "win32":
     MONITORING_DIRS = ["C:\work\monitoring"]
 
