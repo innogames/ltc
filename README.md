@@ -86,13 +86,17 @@ First set the database engine (only PostgreSQL 9.5+) in your settings files; `jl
 By default jltc will use `jltc` schema in database, which needs to be created:
 
 `su - postgres`
+
 `psql`
+
 `\c YOUR_DATABASE_NAME`
+
 `CREATE SCHEMA jltc AUTHORIZATION your_user_name;`
 
 Then execute in jltc folder:
 
 `./manage.py makemigrations`
+
 `./manage.py migrate`
 
 ### 4. Go!
