@@ -328,8 +328,8 @@ for build_root in build_roots:
                 result = db_connection.execute(stm)
 
             url_agg_data = dict(json.loads(df_url['response_time'].describe().to_json()))
-            url_agg_data['99%'] = df_url['response_time'].quantile(.99).round(1)
-            url_agg_data['90%'] = df_url['response_time'].quantile(.90).round(1)
+            url_agg_data['99%'] = df_url['response_time'].quantile(.99)
+            url_agg_data['90%'] = df_url['response_time'].quantile(.90)
             url_agg_data['weight'] = float(df_url['response_time'].sum())
             url_agg_data['errors'] = df_url[(df_url['success']==False)]['success'].count()
             stm = test_action_aggregate_data.insert().values(
@@ -340,20 +340,20 @@ for build_root in build_roots:
 
         try:
             by_url = df.groupby('url')
-            agg[file_index] = by_url.aggregate({'response_time': np.mean}).round(1)
-            agg[file_index]['median'] = by_url.response_time.median().round(1)
+            agg[file_index] = by_url.aggregate({'response_time': np.mean})
+            agg[file_index]['median'] = by_url.response_time.median()
             agg[file_index]['percentile_75'] = by_url.response_time.quantile(
-                .75).round(1)
+                .75)
             agg[file_index]['percentile_90'] = by_url.response_time.quantile(
-                .90).round(1)
+                .90)
             agg[file_index]['percentile_99'] = by_url.response_time.quantile(
-                .99).round(1)
-            agg[file_index]['maximum'] = by_url.response_time.max().round(1)
-            agg[file_index]['minimum'] = by_url.response_time.min().round(1)
-            agg[file_index]['count'] = by_url.success.count().round(1)
+                .99)
+            agg[file_index]['maximum'] = by_url.response_time.max()
+            agg[file_index]['minimum'] = by_url.response_time.min()
+            agg[file_index]['count'] = by_url.success.count()
             agg[file_index]['errors'] = (
                 (1 - df[(df.success == True)].groupby('url')['success'].count()
-                 / by_url['success'].count()) * 100).round(1)
+                 / by_url['success'].count()) * 100)
             agg[file_index]['weight'] = by_url.response_time.sum()
             agg[file_index]['test_id'] = test_id
             action_df = pd.read_sql(

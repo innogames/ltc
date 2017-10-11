@@ -18,9 +18,13 @@ from analyzer.confluence.utils import generate_confluence_graph
 from models import (Action, Aggregate, Project, Server, ServerMonitoringData,
                     Test, TestActionAggregateData, TestActionData, TestData)
 from scipy import stats
+from django.db.models import Func
 
 logger = logging.getLogger(__name__)
 
+class Round(Func):
+    function = 'ROUND'
+    template='%(function)s(%(expressions)s, 1)'
 
 def to_dict(result_proxy):
     fieldnames = []
@@ -112,24 +116,8 @@ def prev_test_id(request, test_id):
     #data = db.get_prev_test_id(test_id, 2)
     return JsonResponse([list(t)[1]], safe=False)
 
-
 def test_report(request, test_id):
     test_description = Test.objects.filter(id=test_id).values()
-    aggregate_table = Aggregate.objects.\
-        annotate(url=F('action__url'))\
-        .filter(test_id=test_id). \
-        values('url',
-               'action_id',
-               'average',
-               'median',
-               'weight',
-               'percentile_75',
-               'percentile_90',
-               'percentile_99',
-               'maximum',
-               'minimum',
-               'count',
-               'errors')
     aggregate_table = TestActionAggregateData.objects.annotate(url=F('action__url')).filter(test_id=test_id). \
         values('url',
                'action_id',
@@ -345,11 +333,16 @@ def test_rtot(request, test_id):
 
 
 def test_errors(request, test_id):
-    value = Aggregate.objects.filter(test_id=test_id)\
-        .values('test_id'). \
-        annotate(errors_percentage=100 * Sum(F("count") * F("errors") / 100, output_field=FloatField())
-                 * Decimal('1.0') / Sum(F('count'), output_field=FloatField()))
-    errors_percentage = float(list(value)[0]['errors_percentage'])
+    '''
+    Return overall success/errors percentage 
+    '''
+
+    data = TestActionAggregateData.objects.filter(test_id=test_id). \
+            annotate(errors=RawSQL("((data->>%s)::numeric)", ('errors',))). \
+            annotate(count=RawSQL("((data->>%s)::numeric)", ('count',))). \
+            aggregate(count_sum=Sum(F('count'), output_field=FloatField()),
+             errors_sum=Sum(F('errors'), output_field=FloatField()))
+    errors_percentage = data['errors_sum'] * 100 / data['count_sum']
     response = [{
         "fail_%": errors_percentage,
         "success_%": 100 - errors_percentage
@@ -358,14 +351,26 @@ def test_errors(request, test_id):
 
 
 def test_top_avg(request, test_id, top_number):
-    data = Aggregate.objects.annotate(url=F('action__url')).filter(test_id=test_id) \
-        .order_by('-average').values('url', 'average')[:top_number]
+    '''
+    Return top N actions with highest average response times
+    '''
+
+    data = TestActionAggregateData.objects.filter(test_id=test_id). \
+            annotate(url=F('action__url')). \
+            annotate(average=RawSQL("((data->>%s)::numeric)", ('mean',))). \
+            order_by('-average').values('url', 'average')[:top_number]
     return JsonResponse(list(data), safe=False)
 
 
 def test_top_errors(request, test_id):
-    data = Aggregate.objects.annotate(url=F('action__url')).filter(test_id=test_id) \
-        .order_by('-errors').values('url', 'action_id', 'errors')[:5]
+    '''
+    Return top N actions with highest errors percentage
+    '''
+
+    data = TestActionAggregateData.objects.filter(test_id=test_id). \
+        annotate(url=F('action__url')). \
+        annotate(errors=Round(RawSQL("((data->>%s)::numeric)", ('errors',))*100/RawSQL("((data->>%s)::numeric)", ('count',)))). \
+        order_by('-errors').values('url', 'action_id', 'errors')[:5]
     return JsonResponse(list(data), safe=False)
 
 
