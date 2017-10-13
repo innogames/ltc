@@ -22,9 +22,11 @@ from django.db.models import Func
 
 logger = logging.getLogger(__name__)
 
+
 class Round(Func):
     function = 'ROUND'
-    template='%(function)s(%(expressions)s, 1)'
+    template = '%(function)s(%(expressions)s, 1)'
+
 
 def to_dict(result_proxy):
     fieldnames = []
@@ -115,6 +117,7 @@ def prev_test_id(request, test_id):
         values('id').order_by('-start_time')
     #data = db.get_prev_test_id(test_id, 2)
     return JsonResponse([list(t)[1]], safe=False)
+
 
 def test_report(request, test_id):
     test_description = Test.objects.filter(id=test_id).values()
@@ -524,12 +527,14 @@ def tests_compare_report(request, test_id_1, test_id_2):
                 logger.debug(
                     'Action: {0} t: {1} Xa: {2} Xb: {3} Sa: {4} Sb: {5} Na: {6} Nb: {7} df: {8}'.
                     format(action_url,
-                        stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb, df))
-                Sab = math.sqrt(
-                    ((Na - 1) * math.pow(Sa, 2) + (Nb - 1) * math.pow(Sb, 2)) / df)
-                Texp = (math.fabs(Xa - Xb)) / (Sab * math.sqrt(1 / Na + 1 / Nb))
-                logger.debug(
-                    'Action: {0} Texp: {1} Sab: {2}'.format(action_url, Texp, Sab))
+                           stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb,
+                           df))
+                Sab = math.sqrt(((Na - 1) * math.pow(Sa, 2) +
+                                 (Nb - 1) * math.pow(Sb, 2)) / df)
+                Texp = (math.fabs(Xa - Xb)) / (
+                    Sab * math.sqrt(1 / Na + 1 / Nb))
+                logger.debug('Action: {0} Texp: {1} Sab: {2}'.format(
+                    action_url, Texp, Sab))
 
                 if Texp > t:
                     diff_percent = abs(100 - 100 * Xa / Xb)
@@ -693,17 +698,55 @@ def tests_compare_report_experimental(request, test_id_1, test_id_2):
 
 
 def dashboard(request):
-    last_tests = []
-    s = Test.objects.values('project_id').annotate(
-        latest_time=Max('start_time'))
-    for i in s:
-        r = Test.objects.filter(project_id=i['project_id'], start_time=i['latest_time']).\
-            values('project__project_name', 'display_name', 'id', 'project_id')
-        last_tests.append(list(r)[0])
+    # last_tests = []
+    # s = Test.objects.values('project_id').annotate(
+    #    latest_time=Max('start_time'))
+    # for i in s:
+    #    r = Test.objects.filter(project_id=i['project_id'], start_time=i['latest_time']).\
+    #        values('project__project_name', 'display_name', 'id', 'project_id')
+    #    last_tests.append(list(r)[0])
+    tests = []
+    last_tests = Test.objects.values('project__project_name','project_id', 'display_name',
+                                     'id').order_by('-start_time')[:8]
+    for t in last_tests:
+        test_id = t['id']
+        project_id = t['project_id']
 
+        project_tests = Test.objects.filter(project_id=project_id).order_by('-start_time')
+        prev_test_id = project_tests[1].id
+
+        test_data = TestActionAggregateData.objects.filter(test_id=test_id). \
+        annotate(errors=RawSQL("((data->>%s)::numeric)", ('errors',))). \
+        annotate(count=RawSQL("((data->>%s)::numeric)", ('count',))). \
+        annotate(weight=RawSQL("((data->>%s)::numeric)", ('weight',))). \
+        aggregate(
+            count_sum=Sum(F('count'), output_field=FloatField()),
+            errors_sum=Sum(F('errors'), output_field=FloatField()),
+            overall_avg = Sum(F('weight'))/Sum(F('count'))
+            )
+
+        prev_test_data = TestActionAggregateData.objects.filter(test_id=prev_test_id). \
+        annotate(errors=RawSQL("((data->>%s)::numeric)", ('errors',))). \
+        annotate(count=RawSQL("((data->>%s)::numeric)", ('count',))). \
+        annotate(weight=RawSQL("((data->>%s)::numeric)", ('weight',))). \
+        aggregate(
+            count_sum=Sum(F('count'), output_field=FloatField()),
+            errors_sum=Sum(F('errors'), output_field=FloatField()),
+            overall_avg = Sum(F('weight'))/Sum(F('count'))
+            )
+
+        errors_percentage = test_data['errors_sum'] * 100 / test_data['count_sum']
+        tests.append({
+            'project_name': t['project__project_name'],
+            'display_name': t['display_name'],
+            'success_requests': 100 - errors_percentage,
+            'test_avg_response_times': test_data['overall_avg'],
+            'prev_test_avg_response_times': prev_test_data['overall_avg'],
+            'result': 'success',
+        })
     projects_list = list(Project.objects.values())
     return render(request, 'dashboard.html',
-                  {'last_tests': last_tests,
+                  {'last_tests': tests,
                    'projects_list': projects_list})
 
 

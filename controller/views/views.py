@@ -14,7 +14,7 @@ import select
 
 import shutil
 
-from datagenerator import generate_data, parse_results_in_dir
+from controller.datagenerator import generate_data, parse_results_in_dir
 from administrator.models import JMeterProfile, SSHKey
 
 if _platform == "linux" or _platform == "linux2":
@@ -28,8 +28,10 @@ from analyzer.models import Project, Test
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 
-from models import Proxy, TestRunning, LoadGeneratorServer, JMeterTestPlanParameter, ScriptParameter
+from controller.models import Proxy, TestRunning, LoadGeneratorServer, JMeterTestPlanParameter, ScriptParameter
 from django.db.models import Sum, Avg, Max, Min, FloatField
+
+
 
 logger = logging.getLogger(__name__)
 

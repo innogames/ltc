@@ -8,11 +8,11 @@ from administrator.models import User
 
 class HomePageView(TemplateView):
     def get(self, request, **kwargs):
-        LoginAuth_jltom = request.COOKIES.get('LoginAuth_jltom')
+        LoginAuth_jltom = request.COOKIES.get('LoginAuth_jltc')
         if LoginAuth_jltom is None:
             login_auth = "unknown_user"
         else:
-            login_auth = request.COOKIES.get('LoginAuth_jltom').split(':')[0]
+            login_auth = request.COOKIES.get('LoginAuth_jltc').split(':')[0]
         if not User.objects.filter(login=login_auth).exists():
             u = User(login=login_auth)
             u.save()
@@ -20,7 +20,6 @@ class HomePageView(TemplateView):
         else:
             u = User.objects.get(login=login_auth)
             user_id = u.id
-        return render(request, 'index.html',
-                      {
-                          'user': u,
-                      })
+        return render(request, 'index.html', {
+            'user': u,
+        })

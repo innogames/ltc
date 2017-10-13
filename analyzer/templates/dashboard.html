@@ -1,7 +1,14 @@
+
+
 <hr/>
 <div class="row">
-    <div class="col-xs-4">
-        <div class="panel panel-primary">
+    <div class="col-xs-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                    <h3 class="panel-title">
+                            Last tests:</h3>
+                        <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+                       </div>
             <div class="panel-body">
                 {% if last_tests %}
                 <div class="table-responsive">
@@ -9,17 +16,37 @@
                     <thead>
                         <tr>
                             <th>Project</th>
-                            <th>Last test</th>
+                            <th>Test name</th>
+                            <th>Success requests</th>
+                            <th>Avg. response times</th>
+                            <th>Result</th>
                         </tr>
                     </thead>
                     {% for row in last_tests %}
                     <tr>
 
                             <td>
-                                {{ row.project__project_name }}
+                                {{ row.project_name }}
                             </td>
                             <td>
                                 <b><a href=""  onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
+                            </td>
+                            <td>
+                                    {% if row.success_requests > 98 %}
+                                     <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                    {% else  %}
+                                    <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                    {% endif %}
+                            </td>
+                            <td>
+                                    {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
+                                    {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
+                                    
+                                    {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff < 0 %}<font color="green"></0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs >= 0 %} <font color="red"></0>(<span>&#8593;</span> {{ avg_diff }} %) </font>  {% endif %}
+                            </td>
+                            <td>
+                               <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
+
                             </td>
 
                     </tr>
@@ -32,21 +59,53 @@
 
             </div>
         </div>
-        <div class="panel panel-success">
-            <div class="panel-heading">Running tests:</div>
-            <div class="panel-body">
-                <div id="online_tests_list"></div>
-            </div>
+ 
+    </div>
+
+
+</div>
+<div class="row">
+        <div class="col-xs-3">
+                <div class="panel panel-default">
+                        <div class="panel-heading">
+                                <h3 class="panel-title">
+                                        Running tests:</h3>
+                                    <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+                                 
+                            </div>
+                        <div class="panel-body">
+                            <div id="online_tests_list"></div>
+                        </div>
+                    </div>
         </div>
-    </div>
-    <div class="col-xs-2">
-    </div>
-    <div class="col-xs-6">
-        <div class="panel panel-primary">
+        <div class="col-xs-3">
+                <div class="panel panel-default">
+                        <div class="panel-heading">
+                                <h3 class="panel-title">
+                                        Active load generators</h3>
+                                    <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+                                 
+                           </div>
+                        <div class="panel-body">
+                            <div id="load_generators_list"></div>
+                        </div>
+                    </div>
+        </div>
+     
+</div>
+<div class="row">
+    <div class="col-xs-12">
+        <div class="panel panel-default">
+                <div class="panel-heading">
+                        <h3 class="panel-title">
+                               Graphs:</h3>
+                            <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+                         
+                    </div>
         <div class="panel-body">
 
-            <button id="generate_overall_report_btn" class="btn btn-success btn-small">
-                <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Generate overall report and post to Confluence</button>
+            <!-- <button id="generate_overall_report_btn" class="btn btn-success btn-small">
+                <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Generate overall report and post to Confluence</button> -->
             <hr/>
             {% for project in projects_list %}
             {% if project.show == True %}
