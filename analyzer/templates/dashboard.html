@@ -42,7 +42,7 @@
                                     {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
                                     {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
                                     
-                                    {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff < 0 %}<font color="green"></0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs >= 0 %} <font color="red"></0>(<span>&#8593;</span> {{ avg_diff }} %) </font>  {% endif %}
+                                    {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff <= 0 %}<font color="green"></0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs > 0 %} <font color="red"></0>(<span>&#8593;</span> {{ avg_diff }} %) </font>  {% endif %}
                             </td>
                             <td>
                                <span class="badge alert-{{ row.result }}">{{ row.result }}</span>

@@ -713,8 +713,12 @@ def dashboard(request):
         project_id = t['project_id']
 
         project_tests = Test.objects.filter(project_id=project_id).order_by('-start_time')
-        prev_test_id = project_tests[1].id
-
+        
+        logger.debug(list(project_tests))
+        if project_tests.count() > 1:
+            prev_test_id = project_tests[1].id
+        else:
+            prev_test_id = test_id
         test_data = TestActionAggregateData.objects.filter(test_id=test_id). \
         annotate(errors=RawSQL("((data->>%s)::numeric)", ('errors',))). \
         annotate(count=RawSQL("((data->>%s)::numeric)", ('count',))). \
