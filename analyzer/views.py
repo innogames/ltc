@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import time
 from collections import OrderedDict
 from decimal import Decimal
 
@@ -697,24 +698,15 @@ def tests_compare_report_experimental(request, test_id_1, test_id_2):
     })
 
 
-def dashboard(request):
-    # last_tests = []
-    # s = Test.objects.values('project_id').annotate(
-    #    latest_time=Max('start_time'))
-    # for i in s:
-    #    r = Test.objects.filter(project_id=i['project_id'], start_time=i['latest_time']).\
-    #        values('project__project_name', 'display_name', 'id', 'project_id')
-    #    last_tests.append(list(r)[0])
+def dashboard_compare_tests_list(tests_list):
     tests = []
-    last_tests = Test.objects.values('project__project_name','project_id', 'display_name',
-                                     'id').order_by('-start_time')[:8]
-    for t in last_tests:
+    for t in tests_list:
         test_id = t['id']
         project_id = t['project_id']
 
-        project_tests = Test.objects.filter(project_id=project_id).order_by('-start_time')
-        
-        logger.debug(list(project_tests))
+        project_tests = Test.objects.filter(
+            project_id=project_id).order_by('-start_time')
+
         if project_tests.count() > 1:
             prev_test_id = project_tests[1].id
         else:
@@ -739,19 +731,62 @@ def dashboard(request):
             overall_avg = Sum(F('weight'))/Sum(F('count'))
             )
 
-        errors_percentage = test_data['errors_sum'] * 100 / test_data['count_sum']
+        errors_percentage = test_data['errors_sum'] * 100 / test_data[
+            'count_sum']
+        success_requests =  100 - errors_percentage
+        # TODO: improve this part
+        if success_requests >= 98:
+            result = 'success'
+        elif success_requests < 98 and success_requests >=95:
+            result = 'warning'
+        else:
+            result = 'danger'
         tests.append({
-            'project_name': t['project__project_name'],
-            'display_name': t['display_name'],
-            'success_requests': 100 - errors_percentage,
-            'test_avg_response_times': test_data['overall_avg'],
-            'prev_test_avg_response_times': prev_test_data['overall_avg'],
-            'result': 'success',
+            'project_name':
+            t['project__project_name'],
+            'display_name':
+            t['display_name'],
+            'success_requests':
+            success_requests,
+            'test_avg_response_times':
+            test_data['overall_avg'],
+            'prev_test_avg_response_times':
+            prev_test_data['overall_avg'],
+            'result':
+            result,
         })
-    projects_list = list(Project.objects.values())
-    return render(request, 'dashboard.html',
-                  {'last_tests': tests,
-                   'projects_list': projects_list})
+    return tests
+
+
+def dashboard(request):
+    '''
+    Generate dashboard page
+    '''
+    last_tests_by_project = []
+    projects_list = []
+    s = Test.objects.values('project_id').annotate(
+        latest_time=Max('start_time'))
+    for i in s:
+        project_id = i['project_id']
+        # Only tests executed in last 30 days
+        if int(i['latest_time']) >= int(
+                time.time() * 1000) - 1000 * 1 * 60 * 60 * 24 * 30:
+            r = Test.objects.filter(project_id=project_id, start_time=i['latest_time']).\
+                values('project__project_name', 'display_name', 'id','project_id')
+            last_tests_by_project.append(list(r)[0])
+            projects_list.append(Project.objects.get(id=project_id))
+
+    last_tests = Test.objects.values('project__project_name', 'project_id',
+                                     'display_name',
+                                     'id').order_by('-start_time')[:8]
+    tests = dashboard_compare_tests_list(last_tests)
+    tests_by_project = dashboard_compare_tests_list(last_tests_by_project)
+    logger.debug(projects_list)
+    return render(request, 'dashboard.html', {
+        'last_tests': tests,
+        'last_tests_by_project': tests_by_project,
+        'projects_list': projects_list
+    })
 
 
 class Analyze(TemplateView):

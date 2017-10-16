@@ -50,6 +50,8 @@ urlpatterns = [
         views.jmeter_param_delete),
     url(r'^project/(?P<project_id>\d+)/script_params/(?P<param_id>\d+)/delete/$',
         views.script_param_delete),
+    url(r'^loadgenerator/list/$',
+        views.loadgenerator_list),
     url(r'^running_test/(?P<running_test_id>\d+)/stop_test', views.stop_test),
     url(r'^parse_results', views.parse_results),
 ]

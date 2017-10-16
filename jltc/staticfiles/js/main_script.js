@@ -98,6 +98,8 @@ function selectValueInList(id, value){
 
  $("#main_tabs").tabs();
  $("#analyzer_tabs").tabs();
+ $("#dashboard_tabs").tabs();
+ 
  $("#administrator_tabs").tabs();
  $.ajax({
                           url: "/analyzer/dashboard",
