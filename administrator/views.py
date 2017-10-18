@@ -7,16 +7,20 @@ from django.http import JsonResponse
 from django.shortcuts import render
 
 # Create your views here.
-from administrator.models import JMeterProfile, SSHKey, User
+from administrator.models import JMeterProfile, SSHKey, User, Configuration
 from analyzer.models import Test
 
 logger = logging.getLogger(__name__)
+
+
 def administrator_page(request):
     jds = JMeterProfile.objects.values()
     ssh_keys = SSHKey.objects.values()
+    configuration_params = Configuration.objects.filter(secure=False).values()
     return render(request, 'administrator_page.html', {
+        'configuration_params': configuration_params,
         'jds': jds,
-        'ssh_keys':ssh_keys
+        'ssh_keys': ssh_keys
     })
 
 
@@ -113,6 +117,50 @@ def create_ssh_key(request, ssh_key_id):
         }
     return JsonResponse(response, safe=False)
 
+def new_parameter_page(request):
+    new_parameter = Configuration()
+    new_parameter.save()
+    return render(request, 'new_parameter.html', {
+        'new_parameter': new_parameter,
+    })
+
+
+def create_parameter(request, param_id):
+    param = Configuration.objects.get(id=param_id)
+    response = {}
+    if request.method == 'POST':
+        name = request.POST.get('name', '')
+        description = request.POST.get('description', '')
+        value = request.POST.get('value', '')
+        param.name = name
+        param.description = description
+        param.value = value
+        param.save()
+        response = {
+            "message": {
+                "text": "A new parameter was created",
+                "type": "info",
+                "msg_params": {
+                    "id": param_id
+                }
+            }
+        }
+    return JsonResponse(response, safe=False)
+
+def delete_parameter(request, param_id):
+    param = Configuration.objects.get(id=param_id)
+    param.delete()
+    response = {
+        "message": {
+            "text": "A parameter was deleted",
+            "type": "warning",
+            "msg_params": {
+                "id": param_id
+            }
+        }
+    }
+    return JsonResponse(response, safe=False)
+
 
 def test_data_refresh(request):
     builds_dir = "/var/lib/jenkins/jobs"
@@ -130,8 +178,7 @@ def test_data_refresh(request):
                     description = ""
                     start_time = 0
                     duration = 0
-                    build_xml_path = os.path.join(
-                        root, "build.xml")
+                    build_xml_path = os.path.join(root, "build.xml")
                     if os.path.isfile(build_xml_path):
                         logger.info("Try to parse Jenkins build XML-file: {0}".
                                     format(build_xml_path))
@@ -154,7 +201,8 @@ def test_data_refresh(request):
                                 userId = params.find('.//userId')
                                 if userId is not None:
                                     started_by = userId.text
-                                    if not User.objects.filter(login=started_by).exists():
+                                    if not User.objects.filter(
+                                            login=started_by).exists():
                                         u = User(login=started_by)
                                         u.save()
                                         user_id = u.id
@@ -173,8 +221,8 @@ def test_data_refresh(request):
                                 description = params.text
                         if Test.objects.filter(path=root).exists():
                             test = Test.objects.get(path=root)
-                            logger.info("Updating test, id: {0}".
-                                        format(str(test.id)))
+                            logger.info(
+                                "Updating test, id: {0}".format(str(test.id)))
                             test.display_name = display_name
                             test.start_time = start_time
                             test.end_time = start_time + duration
@@ -186,8 +234,7 @@ def test_data_refresh(request):
         "message": {
             "text": "Tests information was updated.",
             "type": "info",
-            "msg_params":{
-            }
+            "msg_params": {}
         }
     }
 

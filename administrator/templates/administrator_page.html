@@ -1,61 +1,75 @@
 <hr/>
 <article id="administrator_tabs" class="tabs">
     <ul>
-        <li><a href="#config_tab_1">JMeter</a></li>
-        <li><a href="#config_tab_2">GIT</a></li>
-        <li><a href="#config_tab_3">SSH</a></li>
-        <li><a href="#config_tab_4">Other</a></li>
+
+        <li>
+            <a href="#config_tab_1">JMeter</a>
+        </li>
+        <li>
+            <a href="#config_tab_2">GIT</a>
+        </li>
+        <li>
+            <a href="#config_tab_3">SSH</a>
+        </li>
+        <li>
+            <a href="#config_tab_4">Other</a>
+        </li>
+        <li>
+            <a href="#config_tab_5">Configure parameters</a>
+        </li>
     </ul>
     <div id="config_tab_1">
         <div id="config_body_1">
-        <div class="panel panel-primary">
-            <div class="panel-heading">JMeter profiles:</div>
-            <div class="panel-body">
-                <div class="row">
-                {% if jds %}
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                        <tr>
-                            <th>Profile name</th>
-                            <th>Jmeter version</th>
-                            <th>JVM settings (master)</th>
-                            <th>JVM settings (remote instances)</th>
-                            <th>Action</th>
-                        </tr>
-                        </thead>
-                        {% for jd in jds %}
-                        <tr>
-                            <td>
-                                {{ jd.name }}
-                            </td>
-                            <td>
-                                {{ jd.version }}
-                            </td>
-                            <td>
-                                {{ jd.jvm_args_main }}
-                            </td>
-                            <td>
-                                {{ jd.jvm_args_jris }}
-                            </td>
-                            <td>
-                                <button id="delete_jd_btn_{{ jd.id }}" value="{{ jd.id }}" class="btn btn-danger delete_jd_btn btn-xs"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </table>
-                </div>
-                {% endif %}
-                </div>
-                <hr/>
+            <div class="panel panel-default">
+                <div class="panel-heading">JMeter profiles:</div>
+                <div class="panel-body">
                     <div class="row">
-                    <td>
-                        <button id="add_jmeter_distr_btn" value="" type="button" class="btn btn-default btn-lg">
-                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add JMeter profile
-                        </button>
-                    </td>
+                        {% if jds %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Profile name</th>
+                                        <th>Jmeter version</th>
+                                        <th>JVM settings (master)</th>
+                                        <th>JVM settings (remote instances)</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                {% for jd in jds %}
+                                <tr>
+                                    <td>
+                                        {{ jd.name }}
+                                    </td>
+                                    <td>
+                                        {{ jd.version }}
+                                    </td>
+                                    <td>
+                                        {{ jd.jvm_args_main }}
+                                    </td>
+                                    <td>
+                                        {{ jd.jvm_args_jris }}
+                                    </td>
+                                    <td>
+                                        <button id="delete_jd_btn_{{ jd.id }}" value="{{ jd.id }}" class="btn btn-danger delete_jd_btn btn-xs">
+                                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <hr/>
+                    <div class="row">
+                        <td>
+                            <button id="add_jmeter_distr_btn" value="" type="button" class="btn btn-default btn-lg">
+                                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add JMeter profile
+                            </button>
+                        </td>
+                    </div>
                 </div>
-            </div>
             </div>
         </div>
     </div>
@@ -64,7 +78,7 @@
     </div>
     <div id="config_tab_3">
         <div id="config_body_3">
-            <div class="panel panel-primary">
+            <div class="panel panel-default">
                 <div class="panel-heading">JMeter profiles:</div>
                 <div class="panel-body">
                     <div class="row">
@@ -72,10 +86,10 @@
                         <div class="table-responsive">
                             <table class="table">
                                 <thead>
-                                <tr>
-                                    <th>SSH-key path</th>
-                                    <th>Description</th>
-                                </tr>
+                                    <tr>
+                                        <th>SSH-key path</th>
+                                        <th>Description</th>
+                                    </tr>
                                 </thead>
                                 {% for ssh_key in ssh_keys %}
                                 <tr>
@@ -86,7 +100,9 @@
                                         {{ ssh_key.description }}
                                     </td>
                                     <td>
-                                        <button id="delete_ssh_key_btn_{{ ssh_key.id }}" value="{{ ssh_key.id }}" class="btn btn-danger delete_ssh_key_btn btn-xs"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></button>
+                                        <button id="delete_ssh_key_btn_{{ ssh_key.id }}" value="{{ ssh_key.id }}" class="btn btn-danger delete_ssh_key_btn btn-xs">
+                                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                        </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -107,98 +123,185 @@
         </div>
     </div>
     <div id="config_tab_4">
-        <button id="reread_tests_data_btn" class="btn btn-danger btn-xs"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>Re-read tests information from Jenkins</button>
+        <button id="reread_tests_data_btn" class="btn btn-danger btn-xs">
+            <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>Re-read tests information from Jenkins</button>
+    </div>
+    <div id="config_tab_5">
+        <div id="config_body_5">
+            <div class="panel panel-default">
+                <div class="panel-heading">Parameters:</div>
+                <div class="panel-body">
+                    <div class="row">
+                        {% if configuration_params %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter name</th>
+                                        <th>Description</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                {% for param in configuration_params %}
+                                <tr>
+                                    <td>
+                                        {{ param.name }}
+                                    </td>
+                                    <td>
+                                        {{ param.description }}
+                                    </td>
+                                    <td>
+                                        {{ param.value }}
+                                    </td>
+                                    <td>
+                                        <button id="delete_param_btn_{{ param.id }}" value="{{ param.id }}" class="btn btn-danger delete_param_btn btn-xs">
+                                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <hr/>
+                    <div class="row">
+                        <td>
+                            <button id="add_param_btn" value="" type="button" class="btn btn-default btn-lg">
+                                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add new parameter
+                            </button>
+                        </td>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </article>
 
 
 
 <script>
- $("#administrator_tabs").tabs();
+    $("#administrator_tabs").tabs();
 
 
- $('#reread_tests_data_btn').click(function() {
-                 $.ajax({
-                          url: "/administrator/test_data/refresh/",
-                          type: "get",
-                          success: function(response) {
-                            show_alert(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-   });
- $('#add_jmeter_distr_btn').click(function() {
-                 $.ajax({
-                          url: "/administrator/new_jd/",
-                          type: "get",
-                          success: function(response) {
-                            $("#config_body_1").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
+    $('#reread_tests_data_btn').click(function () {
+        $.ajax({
+            url: "/administrator/test_data/refresh/",
+            type: "get",
+            success: function (response) {
+                show_alert(response);
+            },
+            error: function (xhr) {
+                //Do Something to handle error
+            }
         });
+    });
+    $('#add_jmeter_distr_btn').click(function () {
+        $.ajax({
+            url: "/administrator/new_jd/",
+            type: "get",
+            success: function (response) {
+                $("#config_body_1").html(response);
+            },
+            error: function (xhr) {
+                //Do Something to handle error
+            }
+        });
+    });
 
-   $('#add_ssh_key_btn').click(function() {
-                 $.ajax({
-                          url: "/administrator/new_ssh_key/",
-                          type: "get",
-                          success: function(response) {
-                            $("#config_body_3").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
+    $('#add_param_btn').click(function () {
+        $.ajax({
+            url: "/administrator/new_parameter/",
+            type: "get",
+            success: function (response) {
+                $("#config_body_5").html(response);
+            },
+            error: function (xhr) {
+                //Do Something to handle error
+            }
         });
+    });
 
- $('.delete_jd_btn').click(function() {
- var jd_id = $(this).val();
-       $.ajax({
-                          url: "/administrator/jd/"+jd_id+"/delete/",
-                          type: "get",
-                          success: function(response) {
-                          show_alert(response);
-                            $.ajax({
-                          url: "/administrator/",
-                          success: function(response) {
-                            $("#administrator_page").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
+    $('#add_ssh_key_btn').click(function () {
+        $.ajax({
+            url: "/administrator/new_ssh_key/",
+            type: "get",
+            success: function (response) {
+                $("#config_body_3").html(response);
+            },
+            error: function (xhr) {
+                //Do Something to handle error
+            }
         });
-        
- $('.delete_ssh_key_btn').click(function() {
- var ssh_key_id = $(this).val();
-       $.ajax({
-                          url: "/administrator/ssh_key/"+ssh_key_id+"/delete/",
-                          type: "get",
-                          success: function(response) {
-                          show_alert(response);
-                            $.ajax({
-                          url: "/administrator/",
-                          success: function(response) {
-                            $("#administrator_page").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
+    });
+
+    $('.delete_jd_btn').click(function () {
+        var jd_id = $(this).val();
+        $.ajax({
+            url: "/administrator/jd/" + jd_id + "/delete/",
+            type: "get",
+            success: function (response) {
+                show_alert(response);
+                $.ajax({
+                    url: "/administrator/",
+                    success: function (response) {
+                        $("#administrator_page").html(response);
+                    },
+                    error: function (xhr) {
+                        //Do Something to handle error
+                    }
+                });
+            },
+            error: function (xhr) {
+                //Do Something to handle error
+            }
         });
+    });
+
+    $('.delete_param_btn').click(function () {
+        var param_id = $(this).val();
+        $.ajax({
+            url: "/administrator/parameters/" + param_id + "/delete/",
+            type: "get",
+            success: function (response) {
+                show_alert(response);
+                $.ajax({
+                    url: "/administrator/",
+                    success: function (response) {
+                        $("#administrator_page").html(response);
+                    },
+                    error: function (xhr) {
+                        //Do Something to handle error
+                    }
+                });
+            },
+            error: function (xhr) {
+                //Do Something to handle error
+            }
+        });
+    });
+
+    $('.delete_ssh_key_btn').click(function () {
+        var ssh_key_id = $(this).val();
+        $.ajax({
+            url: "/administrator/ssh_key/" + ssh_key_id + "/delete/",
+            type: "get",
+            success: function (response) {
+                show_alert(response);
+                $.ajax({
+                    url: "/administrator/",
+                    success: function (response) {
+                        $("#administrator_page").html(response);
+                    },
+                    error: function (xhr) {
+                        //Do Something to handle error
+                    }
+                });
+            },
+            error: function (xhr) {
+                //Do Something to handle error
+            }
+        });
+    });
 
 </script>

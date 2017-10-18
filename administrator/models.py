@@ -20,6 +20,7 @@ class Configuration(models.Model):
     name = models.CharField(max_length=1000, default="")
     value = models.CharField(max_length=1000, default="")
     description = models.CharField(max_length=1000, default="")
+    secure = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'configuration'

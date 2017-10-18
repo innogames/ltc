@@ -11,8 +11,8 @@ Consist of several modules:
 
 1. Analyzer - build reports, analyze results and compare results with another.
 2. Online - online monitoring for running tests
-3. Controller - central part for configuration and starting tests
-4. Administrator - configurator for different parameters
+3. Controller - configure and run the tests
+4. Administrator - configure different parameters
 
 
 ## [ANALYZER] 
@@ -99,8 +99,51 @@ Then execute in jltc folder:
 
 `./manage.py migrate`
 
+`./manage.py syncdb`
+
+
 ### 4. Go!
 nohup python manage.py runserver 8888 &
+
+### 5. Running tests with Jmeter
+Current implementation of jltc supports only CSV result files. By default to save results from your test you have to add SimpleDataWriter listener with the next parameters:
+
+```
+    <ResultCollector guiclass="SimpleDataWriter" testclass="ResultCollector" testname="results writer"
+                 enabled="true">
+    <boolProp name="ResultCollector.error_logging">false</boolProp>
+    <objProp>
+        <name>saveConfig</name>
+        <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>false</message>
+            <threadName>false</threadName>
+            <dataType>false</dataType>
+            <encoding>false</encoding>
+            <assertions>false</assertions>
+            <subresults>false</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <threadCounts>true</threadCounts>
+        </value>
+    </objProp>
+    <stringProp name="filename">/tmp/file</stringProp>
+    <stringProp name="TestPlan.comments">Added automatically</stringProp>
+    </ResultCollector>
+```
 
 ### 5. Jenkins
 It is possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)

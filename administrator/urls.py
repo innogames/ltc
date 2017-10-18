@@ -10,4 +10,7 @@ urlpatterns = [
     url(r'^new_ssh_key/$', views.new_ssh_key_page),
     url(r'^ssh_key/(?P<ssh_key_id>\d+)/delete/', views.delete_ssh_key),
     url(r'^ssh_key/(?P<ssh_key_id>\d+)/create/$', views.create_ssh_key),
+    url(r'^new_parameter/$', views.new_parameter_page),
+    url(r'^parameters/(?P<param_id>\d+)/delete/', views.delete_parameter),
+    url(r'^parameters/(?P<param_id>\d+)/create/$', views.create_parameter),
 ]
