@@ -74,10 +74,6 @@ TEMPLATES = [
     },
 ]
 
-FIXTURE_DIRS = (
-   './fixtures/',
-)
-
 WSGI_APPLICATION = 'jltc.wsgi.application'
 
 # Database

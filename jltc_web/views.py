@@ -20,6 +20,7 @@ class HomePageView(TemplateView):
         else:
             u = User.objects.get(login=login_auth)
             user_id = u.id
-        return render(request, 'index.html', {
-            'user': u,
-        })
+        return render(request, 'index.html',
+                      {
+                          'user': u,
+                      })
