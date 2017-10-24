@@ -776,9 +776,9 @@ def dashboard(request):
             last_tests_by_project.append(list(r)[0])
             projects_list.append(Project.objects.get(id=project_id))
 
-    last_tests = Test.objects.values('project__project_name', 'project_id',
+    last_tests = Test.objects.filter(project__show=True).values('project__project_name', 'project_id',
                                      'display_name',
-                                     'id').order_by('-start_time')[:8]
+                                     'id').order_by('-start_time')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     tests_by_project = dashboard_compare_tests_list(last_tests_by_project)
     logger.debug(projects_list)

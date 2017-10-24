@@ -9,7 +9,7 @@ import logging
 import re
 from subprocess import call
 from sys import platform as _platform
-
+from django.db.models.expressions import F, RawSQL, Value
 import select
 
 import shutil
@@ -20,7 +20,6 @@ from administrator.models import JMeterProfile, SSHKey
 if _platform == "linux" or _platform == "linux2":
     import resource
 
-
 import paramiko
 import tempfile
 
@@ -29,9 +28,7 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 
 from controller.models import Proxy, TestRunning, LoadGeneratorServer, JMeterTestPlanParameter, ScriptParameter
-from django.db.models import Sum, Avg, Max, Min, FloatField
-
-
+from django.db.models import Sum, Avg, Max, Min, FloatField, IntegerField
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +99,11 @@ def start_proxy(request, proxy_id):
     #	proxy_script = "proxy_linux.py"
     env = dict(os.environ, **{'PYTHONUNBUFFERED': '1'})
     proxy_process = subprocess.Popen(
-        [sys.executable, proxy_script, str(p.port), p.destination,
-         p.destination_port, str(p.id)],
+        [
+            sys.executable, proxy_script,
+            str(p.port), p.destination, p.destination_port,
+            str(p.id)
+        ],
         cwd=os.path.dirname(os.path.realpath(__file__)),
         stdout=out,
         stderr=out,
@@ -128,7 +128,7 @@ def add_proxy(request):
             delay=delay,
             port=port,
             destination=destination,
-            destination_port = destination_port,
+            destination_port=destination_port,
             started=False,
             pid=0)
         p.save()
@@ -144,8 +144,9 @@ def new_proxy_page(request):
 
 def new_jri_page(request, project_id):
     ssh_keys = SSHKey.objects.values()
-    return render(request, "new_jri.html", {'project_id': project_id,
-                                            'ssh_keys': ssh_keys})
+    return render(request, "new_jri.html",
+                  {'project_id': project_id,
+                   'ssh_keys': ssh_keys})
 
 
 def new_jmeter_param_page(request, project_id):
@@ -164,6 +165,15 @@ def jri_list(request, project_id):
     if jris is None:
         jris = []
     return render(request, 'jri.html', {'jris': jris, 'project': project})
+
+
+def get_running_tests(request):
+    running_tests_data = list(
+        TestRunning.objects.annotate(project_name=F('project__project_name'))
+        .annotate(current_time=Value(time.time() * 1000, output_field=IntegerField())).values(
+            'project_name', 'id', 'start_time', 'current_time',
+            'jmeter_remote_instances', 'duration'))
+    return JsonResponse(running_tests_data, safe=False)
 
 
 def jmeter_param_delete(request, project_id, param_id):
@@ -694,7 +704,7 @@ def start_test(request, project_id):
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     ssh.connect(hostname, key_filename=ssh_key)
-                    logger.info( 'Executing SSH commands.')
+                    logger.info('Executing SSH commands.')
                     cmds = [
                         'cd {0}/bin/'.format(jmeter_profile.path),
                         'DIRNAME=`dirname -- $0`'
@@ -714,8 +724,8 @@ def start_test(request, project_id):
                         'hostname': hostname,
                         'pid': pid
                     })
-                    logger.info("Started remote Jmeter instance, pid: " + str(
-                        pid))
+                    logger.info("Started remote Jmeter instance, pid: " +
+                                str(pid))
                     ssh.close()
 
         jris_str = jris_str.rstrip(',')
@@ -723,13 +733,8 @@ def start_test(request, project_id):
         args = [java_exec, '-jar']
         args += splitstring(jmeter_profile.jvm_args_main)
         args += [
-            jmeter_path,
-            "-n",
-            "-t",
-            test_plan_destination,
-            '-j',
-            running_test_log_file_destination,
-            jris_str,
+            jmeter_path, "-n", "-t", test_plan_destination, '-j',
+            running_test_log_file_destination, jris_str,
             test_plan_params_str.lstrip(),
             '-Jjmeter.save.saveservice.default_delimiter=,'
         ]
@@ -753,7 +758,7 @@ def start_test(request, project_id):
                 args,
                 executable=java_exec, )
         pid = jmeter_process.pid
-        start_time = int(time.time()*1000)
+        start_time = int(time.time() * 1000)
         t = TestRunning(
             pid=pid,
             start_time=start_time,
@@ -788,9 +793,12 @@ def wait_for_finished_test(request, t, jmeter_process):
     while t.is_running:
 
         retcode = jmeter_process.poll()
-        logger.info( "Check if JMeter process is still exists, current state: {0}".format(retcode))
+        logger.info(
+            "Check if JMeter process is still exists, current state: {0}".
+            format(retcode))
         if retcode is not None:
-            logger.info( "JMeter process finished with exit code: {0}".format(retcode))
+            logger.info(
+                "JMeter process finished with exit code: {0}".format(retcode))
             t.is_running = False
             stop_test(request, t.id)
             break
@@ -807,7 +815,8 @@ def stop_test(request, running_test_id):
         for jri in jris:
             hostname = jri.get('hostname')
             pid = int(jri.get('pid'))
-            ssh_key_id = int(LoadGeneratorServer.objects.get(address=hostname).ssh_key_id)
+            ssh_key_id = int(
+                LoadGeneratorServer.objects.get(address=hostname).ssh_key_id)
             ssh_key = SSHKey.objects.get(id=ssh_key_id).path
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
