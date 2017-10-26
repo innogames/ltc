@@ -30,7 +30,9 @@ class RunningTestsList(object):
 
     def get_running_test(self, running_test_id):
         running_test = None
+        logger.debug("Try to get running test: {}; list size: ".format(running_test_id, len(self._runningTestsList)))
         for running_test_ in self.runningTestsList:
+            logger.debug("Test id in list: {}".format(running_test_[0]))
             if int(running_test_[0]) == int(running_test_id):
                 running_test = running_test_[2]
         return running_test

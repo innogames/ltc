@@ -5,7 +5,7 @@ from django.db import models
 
 # Create your models here.
 from administrator.models import SSHKey
-
+from online.models import RunningTest
 
 class Proxy(models.Model):
     port = models.IntegerField(default=0)
@@ -33,6 +33,7 @@ class TestRunning(models.Model):
     is_running = models.BooleanField(default=False)
     build_number = models.IntegerField(default=0)
     duration = models.IntegerField(default=0)
+
 
     class Meta:
         db_table = 'test_running'
@@ -64,9 +65,16 @@ class JmeterInstance(models.Model):
     pid = models.IntegerField(default=0)
     port = models.IntegerField(default=0)
     jmeter_dir = models.CharField(max_length=300, default="")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    threads_number = models.IntegerField(default=0)
     class Meta:
         db_table = 'jmeter_instance'
 
+class JmeterInstanceStatistic(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    data = JSONField()
+    class Meta:
+        db_table = 'jmeter_instance_statistic'
 
 class JMeterTestPlanParameter(models.Model):
     p_name = models.CharField(max_length=200, default="")

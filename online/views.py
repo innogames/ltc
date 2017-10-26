@@ -1,13 +1,18 @@
 import fnmatch
 import os
+import re
+import logging
+import time
 from sys import platform as _platform
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import TemplateView
 
 from models import RunningTest, RunningTestsList
+from controller.models import TestRunning
+from analyzer.models import Project
 from django.shortcuts import render
-
+logger = logging.getLogger(__name__)
 MONITORING_DIR = ""
 # Create your views here.
 if _platform == "linux" or _platform == "linux2":
@@ -19,7 +24,6 @@ rtl = RunningTestsList()
 
 
 def tests_list(request):
-    index = 0
     data = []
     running_tests_list = rtl.runningTestsList
     for MONITORING_DIR in MONITORING_DIRS:
@@ -27,27 +31,38 @@ def tests_list(request):
             if "workspace" in root or "results" in root:
                 for f in fnmatch.filter(files, '*.jtl'):
                     if os.stat(os.path.join(root, f)).st_size > 0:
-                        index += 1
-                        if not any(
-                                os.path.join(root, f) in sublist
-                                for sublist in running_tests_list):
-                            if len(running_tests_list) > 0:
-                                # get the index of last element ^___^ and + 1
-                                index = running_tests_list[-1][0] + 1
-                            else:
-                                index = 1
-                            running_test = RunningTest(root, f)
-                            running_tests_list.append(
-                                [index, os.path.join(root, f), running_test])
+                        result_file_dest = os.path.join(root, f)
+                        if not TestRunning.objects.filter(result_file_dest=result_file_dest).exists():
+                            project_name = re.search('/([^/]+)/workspace', root).group(1)
+                            p = Project.objects.get(project_name=project_name)
+                            logger.debug("Adding new running test to database: {}")
+                            t = TestRunning(
+                            result_file_dest=result_file_dest,
+                            project_id=p.id,
+                            is_running=True,
+                            start_time=int(time.time() * 1000) # REMOVE IT SOON
+                            )
+                            t.save()
+                            t_id = t.id
+                        else:
+                            t=TestRunning.objects.get(result_file_dest=result_file_dest)
+                            t_id = t.id
+                        logger.debug("Adding new running object: {}".format(t_id))
+                        running_test = RunningTest(root, f)
+                        running_tests_list.append(
+                            [t_id, os.path.join(root, f), running_test])
                         # delete old tests from list
-    for running_test in running_tests_list:
-        jmeter_results_file = running_test[2].get_jmeter_results_file()
-        if not os.path.exists(jmeter_results_file):
-            rtl.remove(running_test)
+    for test_running in list(TestRunning.objects.values()):
+        result_file_dest = test_running["result_file_dest"]
+        if not os.path.exists(result_file_dest):
+            logger.debug(
+                "Remove running test from database: {}".format(result_file_dest))
+            TestRunning.objects.filter(result_file_dest=result_file_dest).delete()
         else:
             data.append({
-                "id": running_test[0],
-                "result_file_dist": jmeter_results_file
+                "id": test_running["id"],
+                "result_file_dest": result_file_dest,
+                "project": Project.objects.get(id=test_running['project_id']),
             })
     rtl.runningTestsList = running_tests_list
     return JsonResponse(data, safe=False)
@@ -146,3 +161,4 @@ def update(request, running_test_id):
 class OnlinePage(TemplateView):
     def get(self, request, **kwargs):
         return render(request, 'online_page.html', context=None)
+
