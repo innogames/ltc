@@ -180,7 +180,7 @@ function selectValueInList(id, value){
   $(window).trigger('resize');
  });
  updateSelectList('#select_project_menu', "/analyzer/projects_list", "Select project", "project_name", "id");
- updateSelectList('#select_running_test', "/online/tests_list", "Select running test", "result_file_dist", "id");
+ updateSelectList('#select_running_test', "/online/tests_list", "Select running test", "project_name", "id");
 
  handleIncomingAction();
  };

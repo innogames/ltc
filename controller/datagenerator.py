@@ -155,7 +155,7 @@ def generate_data(t_id):
                 jmeter_results_file, sep=',', index_col=0, chunksize=3000000)
             for chunk in chunks:
                 chunk.columns = [
-                    'average', 'url', 'responseCode', 'success', 'threadName',
+                    'response_time', 'url', 'responseCode', 'success', 'threadName',
                     'failureMessage', 'grpThreads', 'allThreads'
                 ]
                 chunk = chunk[~chunk['URL'].str.contains('exclude_')]
@@ -165,19 +165,19 @@ def generate_data(t_id):
             df = pd.read_csv(
                 jmeter_results_file, index_col=0, low_memory=False)
             df.columns = [
-                'average', 'url', 'responseCode', 'success', 'threadName',
+                'response_time', 'url', 'responseCode', 'success', 'threadName',
                 'failureMessage', 'grpThreads', 'allThreads'
             ]
             df = df[~df['url'].str.contains('exclude_', na=False)]
 
         df.columns = [
-            'average', 'url', 'responseCode', 'success', 'threadName',
+            'response_time', 'url', 'responseCode', 'success', 'threadName',
             'failureMessage', 'grpThreads', 'allThreads'
         ]
 
         #convert timestamps to normal date/time
         df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
-        num_lines = df['average'].count()
+        num_lines = df['response_time'].count()
         print "Number of lines in filrue: %d." % num_lines
         unique_urls = df['url'].unique()
         for url in unique_urls:
@@ -196,8 +196,8 @@ def generate_data(t_id):
                 df_url = df[(df.url == url)]
                 url_data = pd.DataFrame()
                 df_url_gr_by_ts = df_url.groupby(pd.TimeGrouper(freq='1Min'))
-                url_data['avg'] = df_url_gr_by_ts.average.mean()
-                url_data['median'] = df_url_gr_by_ts.average.median()
+                url_data['avg'] = df_url_gr_by_ts.response_time.mean()
+                url_data['median'] = df_url_gr_by_ts.response_time.median()
                 url_data['count'] = df_url_gr_by_ts.success.count()
                 df_url_gr_by_ts_only_errors = df_url[(
                     df_url.success == False
@@ -227,17 +227,17 @@ def generate_data(t_id):
         try:
             by_url = df.groupby('url')
             agg = by_url.aggregate({'average': np.mean}).round(1)
-            agg['median'] = by_url.average.median().round(1)
-            agg['percentile_75'] = by_url.average.quantile(.75).round(1)
-            agg['percentile_90'] = by_url.average.quantile(.90).round(1)
-            agg['percentile_99'] = by_url.average.quantile(.99).round(1)
-            agg['maximum'] = by_url.average.max().round(1)
-            agg['minimum'] = by_url.average.min().round(1)
+            agg['median'] = by_url.response_time.median().round(1)
+            agg['percentile_75'] = by_url.response_time.quantile(.75).round(1)
+            agg['percentile_90'] = by_url.response_time.quantile(.90).round(1)
+            agg['percentile_99'] = by_url.response_time.quantile(.99).round(1)
+            agg['maximum'] = by_url.response_time.max().round(1)
+            agg['minimum'] = by_url.response_time.min().round(1)
             agg['cnt'] = by_url.success.count().round(1)
             agg['errors'] = (
                 (1 - df[(df.success == True)].groupby('url')['success'].count()
                  / by_url['success'].count()) * 100).round(1)
-            agg['weight'] = by_url.average.sum()
+            agg['weight'] = by_url.response_time.sum()
             agg['test_id'] = test_id
             action_df = DataFrame(
                 list(
@@ -272,9 +272,9 @@ def generate_data(t_id):
 
         test_overall_data = pd.DataFrame()
         df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
-        test_overall_data['avg'] = df_gr_by_ts.average.mean()
-        test_overall_data['median'] = df_gr_by_ts.average.median()
-        test_overall_data['count'] = df_gr_by_ts.average.count()
+        test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
+        test_overall_data['median'] = df_gr_by_ts.response_time.median()
+        test_overall_data['count'] = df_gr_by_ts.response_time.count()
         test_overall_data['test_id'] = test_id
         output_json = json.loads(
             test_overall_data.to_json(orient='index', date_format='iso'),

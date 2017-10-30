@@ -7,9 +7,9 @@ from sys import platform as _platform
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import TemplateView
-
-from models import RunningTest, RunningTestsList
-from controller.models import TestRunning
+from django.db.models.expressions import F, RawSQL
+from django.db.models import Avg, FloatField, Max, Min, Sum
+from controller.models import TestRunning, TestRunningData
 from analyzer.models import Project
 from django.shortcuts import render
 logger = logging.getLogger(__name__)
@@ -20,145 +20,219 @@ if _platform == "linux" or _platform == "linux2":
 elif _platform == "win32":
     MONITORING_DIRS = ["C:\work\monitoring"]
 
-rtl = RunningTestsList()
-
 
 def tests_list(request):
     data = []
-    running_tests_list = rtl.runningTestsList
     for MONITORING_DIR in MONITORING_DIRS:
         for root, dirs, files in os.walk(MONITORING_DIR):
             if "workspace" in root or "results" in root:
                 for f in fnmatch.filter(files, '*.jtl'):
                     if os.stat(os.path.join(root, f)).st_size > 0:
                         result_file_dest = os.path.join(root, f)
-                        if not TestRunning.objects.filter(result_file_dest=result_file_dest).exists():
+                        if not TestRunning.objects.filter(
+                                result_file_dest=result_file_dest).exists():
+                            #project_name = 'work\reportdata\FoE'
+                            # will be gone soon:
                             project_name = re.search('/([^/]+)/workspace', root).group(1)
                             p = Project.objects.get(project_name=project_name)
-                            logger.debug("Adding new running test to database: {}")
+                            logger.debug(
+                                "Adding new running test to database: {}")
                             t = TestRunning(
-                            result_file_dest=result_file_dest,
-                            project_id=p.id,
-                            is_running=True,
-                            start_time=int(time.time() * 1000) # REMOVE IT SOON
+                                result_file_dest=result_file_dest,
+                                #project_id=272,
+                                project_id=p.id,
+                                is_running=True,
+                                start_time=int(
+                                    time.time() * 1000)  # REMOVE IT SOON
                             )
                             t.save()
                             t_id = t.id
                         else:
-                            t=TestRunning.objects.get(result_file_dest=result_file_dest)
+                            t = TestRunning.objects.get(
+                                result_file_dest=result_file_dest)
                             t_id = t.id
-                        logger.debug("Adding new running object: {}".format(t_id))
-                        running_test = RunningTest(root, f)
-                        running_tests_list.append(
-                            [t_id, os.path.join(root, f), running_test])
                         # delete old tests from list
     for test_running in list(TestRunning.objects.values()):
         result_file_dest = test_running["result_file_dest"]
         if not os.path.exists(result_file_dest):
-            logger.debug(
-                "Remove running test from database: {}".format(result_file_dest))
-            TestRunning.objects.filter(result_file_dest=result_file_dest).delete()
+            logger.debug("Remove running test from database: {}".format(
+                result_file_dest))
+            test_running =   TestRunning.objects.get(result_file_dest=result_file_dest)
+            TestRunningData.objects.filter(
+                test_running_id=test_running.id).delete()
+            test_running.delete()
         else:
             data.append({
-                "id": test_running["id"],
-                "result_file_dest": result_file_dest,
-                "project": Project.objects.get(id=test_running['project_id']),
+                "id":
+                test_running["id"],
+                "result_file_dest":
+                result_file_dest,
+                "project_name":
+                Project.objects.get(
+                    id=test_running['project_id']).project_name,
             })
-    rtl.runningTestsList = running_tests_list
     return JsonResponse(data, safe=False)
 
 
-def online_test_success_rate(request, running_test_id):
-    running_test = rtl.get_running_test(running_test_id)
-    response = []
-    if running_test == None:
-        response.append({
-            "error": "test does not exist",
-            "running_test_id": running_test_id
-        })
+def online_test_success_rate(request, test_running_id):
+    test_running = TestRunning.objects.get(id=test_running_id)
+    if test_running == None:
+        response = {
+            "message": {
+                "text": "Running test with this id does not exists",
+                "type": "danger",
+                "msg_params": {
+                    "test_running_id": test_running_id
+                }
+            }
+        }
+        return JsonResponse(response, safe=False)
     else:
-        data = running_test.successful_requests_percentage()
-        response.append({"success_percentage": data})
+        data = TestRunningData.objects.filter(name='data_over_time', test_running_id=test_running_id). \
+                annotate(errors=RawSQL("((data->>%s)::numeric)", ('errors',))). \
+                annotate(count=RawSQL("((data->>%s)::numeric)", ('count',))). \
+                aggregate(count_sum=Sum(F('count'), output_field=FloatField()),
+                errors_sum=Sum(F('errors'), output_field=FloatField()))
+        errors_percentage = round(data['errors_sum'] * 100 / data['count_sum'],
+                                  1)
+        response = [{
+            "fail_%": errors_percentage,
+            "success_%": 100 - errors_percentage
+        }]
+        return JsonResponse(response, safe=False)
+
+
+def online_test_response_codes(request, test_running_id):
+    test_running = TestRunning.objects.get(id=test_running_id)
+    if test_running == None:
+        response = {
+            "message": {
+                "text": "Running test with this id does not exists",
+                "type": "danger",
+                "msg_params": {
+                    "test_running_id": test_running_id
+                }
+            }
+        }
+        return JsonResponse(response, safe=False)
+    else:
+        response = []
+        test_response_codes = TestRunningData.objects.get(
+            name='response_codes', test_running_id=test_running_id).data
+        for k in test_response_codes:
+            response.append({
+               'response_code': k,
+               'count': test_response_codes.get(k)['count'],
+            })
+        return JsonResponse(response, safe=False)   
+
+
+def online_test_aggregate(request, test_running_id):
+    aggregate = get_test_running_aggregate(test_running_id)
+    return render(request, 'online_aggregate_table.html', {
+        'aggregate_table': aggregate,
+    })
+
+
+def get_test_running_aggregate(test_running_id):
+    test_running = TestRunning.objects.get(id=test_running_id)
+    if test_running == None:
+        response = {
+            "message": {
+                "text": "Running test with this id does not exists",
+                "type": "danger",
+                "msg_params": {
+                    "test_running_id": test_running_id
+                }
+            }
+        }
+        return JsonResponse(response, safe=False)
+    else:
+        test_running_aggregate = TestRunningData.objects.get(
+            name='aggregate_table', test_running_id=test_running_id).data
+
+        return test_running_aggregate
+
+
+def online_test_rps(request, test_running_id):
+    test_running = TestRunning.objects.get(id=test_running_id)
+    if test_running == None:
+        response = {
+            "message": {
+                "text": "Running test with this id does not exists",
+                "type": "danger",
+                "msg_params": {
+                    "test_running_id": test_running_id
+                }
+            }
+        }
+        return JsonResponse(response, safe=False)
+    else:
+        data = list(TestRunningData.objects.filter(name='data_over_time', test_running_id=test_running_id). \
+                annotate(count=RawSQL("((data->>%s)::numeric)", ('count',))).order_by('-id').values('count'))
+
+        response = [{
+            "rps": int(data[1]['count']/60),
+        }]
     return JsonResponse(response, safe=False)
-    #return JsonResponse(running_test.get_rtot_frame(), safe=False)
 
 
-def online_test_response_codes(request, running_test_id):
-    running_test = rtl.get_running_test(running_test_id)
-    response = []
-    if running_test == None:
-        response.append({
-            "error": "test does not exist",
-            "running_test_id": running_test_id
-        })
+def online_test_rtot(request, test_running_id):
+    test_running = TestRunning.objects.get(id=test_running_id)
+    if test_running == None:
+        response = {
+            "message": {
+                "text": "Running test with this id does not exists",
+                "type": "danger",
+                "msg_params": {
+                    "test_running_id": test_running_id
+                }
+            }
+        }
         return JsonResponse(response, safe=False)
     else:
-        df = running_test.get_response_codes()
-        return HttpResponse(df.to_json(orient='records'))
-
-
-def online_test_aggregate(request, running_test_id):
-    running_test = rtl.get_running_test(running_test_id)
-    response = []
-    if running_test == None:
-        response.append({
-            "error": "test does not exist",
-            "running_test_id": running_test_id
-        })
+        response = []
+        test_running_data_over_time = list(
+            TestRunningData.objects.filter(
+                name='data_over_time', test_running_id=test_running_id).values(
+                    'data'))
+        for d in test_running_data_over_time:
+            response.append({
+                'time': d['data']['timestamp'][:19],
+                'rps': d['data']['count'] / 60,
+                'avg': d['data']['avg'],
+                'errors': d['data']['errors'],
+            })
         return JsonResponse(response, safe=False)
+
+
+def update(request, test_running_id):
+    test_running = TestRunning.objects.get(id=test_running_id)
+    response = {}
+    if test_running == None:
+        response = {
+            "message": {
+                "text": "Running test with this id does not exists",
+                "type": "danger",
+                "msg_params": {
+                    "test_running_id": test_running_id
+                }
+            }
+        }
     else:
-        df = running_test.get_aggregate_frame()
-        df = df.set_index('URL')
-        return HttpResponse(df.to_html(classes='table'))
-
-
-def online_test_rps(request, running_test_id):
-    running_test = rtl.get_running_test(running_test_id)
-    response = []
-    if running_test == None:
-        response.append({
-            "error": "test does not exist",
-            "running_test_id": running_test_id
-        })
-    else:
-        data = running_test.last_minute_avg_rps()
-        response.append({"rps": str(data)})
-    return JsonResponse(response, safe=False)
-
-
-def online_test_rtot(request, running_test_id):
-    running_test = rtl.get_running_test(running_test_id)
-    response = []
-    if running_test == None:
-        response.append({
-            "error": "test does not exist",
-            "running_test_id": running_test_id
-        })
-        return JsonResponse(response, safe=False)
-    else:
-        data = running_test.get_rtot_frame().to_json(orient='records')
-        return HttpResponse(data)
-        #return JsonResponse(running_test.get_rtot_frame(), safe=False)
-
-
-def update(request, running_test_id):
-    running_test = rtl.get_running_test(running_test_id)
-    response = []
-    if running_test == None:
-        response.append({
-            "error": "test does not exist",
-            "running_test_id": running_test_id
-        })
-    else:
-        running_test.update_data_frame()
-        response.append({
-            "message": "running test data was updated",
-            "running_test_id": running_test_id
-        })
+        test_running.update_data_frame()
+        response = {
+            "message": {
+                "text": "Running test data was updated",
+                "type": "success",
+                "msg_params": {
+                    "test_running_id": test_running_id
+                }
+            }
+        }
     return JsonResponse(response, safe=False)
 
 
 class OnlinePage(TemplateView):
     def get(self, request, **kwargs):
         return render(request, 'online_page.html', context=None)
-

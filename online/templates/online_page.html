@@ -1,3 +1,9 @@
+<article id="online_tabs" class="tabs">
+        <ul>
+            <li><a href='#graphs'><span class="glyphicon glyphicon-scale" aria-hidden="true"></span> Graphs</a></li>
+            <li><a href='#tables'><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span> Tables</a></li>
+        </ul>
+        <div id="graphs">
 <div class="row">
     <div class="panel panel-default">
         <div class="panel-heading">Online graph:</div>
@@ -34,6 +40,8 @@
         </div>
     </div>
 </div>
+</div>
+<div id="tables">
 <div class="row">
     <div class="panel panel-primary">
         <div class="panel-heading">Aggregate table</div>
@@ -42,23 +50,25 @@
             </div>
         </div>
 </div>
+</div>
 <script>
+     $("#online_tabs").tabs();
     var online_graph = c3.generate({
         data: {
             url: '/online/' + running_test_id + '/rtot/',
             mimeType: 'json',
             keys: {
                 x: 'time',
-                value: ['average', 'rps', 'errors_count']
+                value: ['avg', 'rps', 'errors']
             },
             type: 'line',
-            xFormat: '%Y-%m-%d %H:%M:%S',
+            xFormat: '%Y-%m-%dT%H:%M:%S',
             axes: {
                 rps: 'y2',
-                errors_count: 'y2',
+                errors: 'y2',
             },
             colors: {
-                'errors_count': 'red',
+                'errors': 'red',
                 'fail_%': '#DF6F80'
             },
         },
@@ -89,13 +99,15 @@
         },
         bindto: '#online_graph'
     });
-    var j1 = JSON.parse(httpGet('/online/' + running_test_id + '/success_rate/'));
     var online_successful_requests_percentage_graph = c3.generate({
         data: {
-            columns: [
-                ['Success_%', j1[0].success_percentage]
-            ],
-            type: 'gauge'
+            url: '/online/' + running_test_id + '/success_rate/',
+            mimeType: 'json',
+            type: 'gauge',
+            keys: {
+                value: ['success_%']
+            },
+
         },
         color: {
             pattern: ['#FF0000', '#F6C600', '#60B044'], // the three color levels for the percentage values.
@@ -111,14 +123,14 @@
         },
         bindto: '#online_successful_requests_percentage_graph'
     });
-    var j2 = JSON.parse(httpGet('/online/' + running_test_id + '/rps/'));
-
     var online_rps_graph = c3.generate({
         data: {
-            columns: [
-                ['rps', j2[0].rps]
-            ],
+            url: '/online/' + running_test_id + '/rps/',
+            mimeType: 'json',
             type: 'gauge',
+            keys: {
+                value: ['rps']
+            },
         },
         gauge: {
             label: {
@@ -156,8 +168,18 @@
     });
 
     setInterval(function() {
-        update_data = httpGet('/online/' + running_test_id + '/update/');
-        console.log(update_data);
+        $('#online_aggregate_table').tablesorter();
+        $.ajax({
+            url: '/online/' + running_test_id + '/update/',
+            type: "get",
+            success: function(response) {
+                show_alert(response);
+            },
+            error: function(xhr) {
+                show_alert(response);
+            }
+        });
+
         online_graph.load({
             url: '/online/' + running_test_id + '/rtot/',
             mimeType: 'json',
@@ -166,17 +188,21 @@
                 value: ['average', 'rps', 'errors_count']
             },
         });
-        var j1 = JSON.parse(httpGet('/online/' + running_test_id + '/success_rate/'));
+
         online_successful_requests_percentage_graph.load({
-            columns: [
-                ['Success_%', j1[0].success_percentage]
-            ]
+            url: '/online/' + running_test_id + '/success_rate/',
+            mimeType: 'json',
+            keys: {
+                value: ['success_%']
+            },
         });
-        var j2 = JSON.parse(httpGet('/online/' + running_test_id + '/rps/'));
+
         online_rps_graph.load({
-            columns: [
-                ['rps', j2[0].rps]
-            ]
+            url: '/online/' + running_test_id + '/rps/',
+            mimeType: 'json',
+            keys: {
+                value: ['rps']
+            },
         });
 
         var online_response_codes_graph = c3.generate({
@@ -189,8 +215,20 @@
             },
             }
             });
-    var onlineAggregateTable = httpGet( '/online/' + running_test_id + '/aggregate/');
-    document.getElementById("online_aggregate_table").innerHTML = onlineAggregateTable;
+            
 
-    }, 5000);
+    $.ajax({
+        url: '/online/' + running_test_id + '/aggregate/',
+        type: "get",
+        success: function(response) {
+            document.getElementById("online_aggregate_table").innerHTML = response;
+            $("#online_aggregate_table").tablesorter();
+            $("#online_aggregate_table").trigger('tsUpdate');
+        },
+        error: function(xhr) {
+            show_alert(response);
+        }
+    });
+    
+    }, 10000);
 </script>
