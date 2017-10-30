@@ -52,8 +52,15 @@ def tests_list(request):
                                 result_file_dest=result_file_dest)
                             t_id = t.id
                         # delete old tests from list
-    for test_running in list(TestRunning.objects.values()):
-        result_file_dest = test_running["result_file_dest"]
+    for test_running in TestRunning.objects.all():
+        result_file_dest = test_running.result_file_dest
+        if not result_file_dest:
+            workspace = test_running.workspace
+            for root, dirs, files in os.walk(workspace):
+                for f in fnmatch.filter(files, '*.jtl'):
+                    result_file_dest = os.path.join(root, f)
+                    test_running.result_file_dest = result_file_dest
+                    test_running.save()
         if not os.path.exists(result_file_dest):
             logger.debug("Remove running test from database: {}".format(
                 result_file_dest))
@@ -64,12 +71,12 @@ def tests_list(request):
         else:
             data.append({
                 "id":
-                test_running["id"],
+                test_running.id,
                 "result_file_dest":
                 result_file_dest,
                 "project_name":
                 Project.objects.get(
-                    id=test_running['project_id']).project_name,
+                    id=test_running.project_id).project_name,
             })
     return JsonResponse(data, safe=False)
 
