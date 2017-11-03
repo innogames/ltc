@@ -1,0 +1,125 @@
+<div class="row">
+
+  <div class="col-xs-8">
+    <div id="composite_graph"></div>
+  </div>
+  <div class="col-xs-2">
+    <select name="composite_select_test_1" id="composite_select_test_1" class="selectpicker">
+    </select>
+    <hr/>
+    <div id="composite_test_1_action_list"></div>
+
+  </div>
+  <div class="col-xs-2">
+      <select name="composite_select_test_2" id="composite_select_test_2" class="selectpicker">
+        </select>
+        <hr/>
+  </div>
+</div>
+
+<script>
+  var compositeTestIds = new Array(0,0)
+  var sendActiondIds = [];
+  function generateCompositeGraph(data)
+  {
+  console.log(data);
+  var actions = data[data.length-1]["actions"];
+  console.log(actions);
+  var composite_graph = c3.generate({
+    data: {
+      json: data,
+      type: 'line',
+      keys: {
+        x: 'timestamp',
+        value: actions,
+      },
+      xFormat: '%H:%M:%S',
+    },
+    axis: {
+      x: {
+        type: 'timeseries',
+        tick: {
+          format: '%H:%M:%S'
+        }
+      },
+      y: {
+        padding: {
+          top: 0,
+          bottom: 0
+        },
+        label: 'response times (ms)',
+      },
+    },
+    bindto: '#composite_graph'
+  });
+}
+
+  $('#composite_select_test_1').selectpicker();
+  $('#composite_select_test_2').selectpicker();
+  updateTestsSelectList('#composite_select_test_1', '/analyzer/project/' + selected_project + "/tests_list/", "Select test", "display_name", "id");
+  updateTestsSelectList('#composite_select_test_2', '/analyzer/project/' + selected_project + "/tests_list/", "Select test", "display_name", "id");
+  $('#composite_select_test_1').on('change', function () {
+    composite_test_1 = $(this).find("option:selected").val();
+    compositeTestIds[0] = composite_test_1;
+    $.ajax({
+      url: '/analyzer/test/' + composite_test_1 + "/actions_list/",
+      type: "get",
+      success: function (response) {
+        $("#composite_test_1_action_list").html(response);
+      },
+      error: function (xhr) {
+        //Do Something to handle error
+      }
+    });
+
+    $.getJSON('/analyzer/test/' + composite_test_1 + '/actions_list/',
+      function (json) {
+        $("#composite_test_1_action_list").empty();
+        $.each(json, function (i, obj) {
+
+          $("#composite_test_1_action_list").append('<div class="form-check">');
+          $("#composite_test_1_action_list").append('<label class="form-check-label">');
+          $("#composite_test_1_action_list").append('<input class="form-check-input composite-action-check" type="checkbox" value="' + obj.action_id + '">');
+          $("#composite_test_1_action_list").append('</label>');
+          $("#composite_test_1_action_list").append(obj.action__url);
+          $("#composite_test_1_action_list").append('</div>');
+        });
+
+        $('.composite-action-check').click(function () {
+          var action_id = $(this).val();
+          
+          $('.composite-action-check').each(function (index, item) {
+            console.log(item.checked);
+            if (item.checked) {
+              sendActiondIds.push(item.value);
+            }
+          });
+          console.log(sendActiondIds);
+          $.ajax({
+            url: "/analyzer/composite_data/",
+            type: "post",
+            data: {
+              test_ids: compositeTestIds,
+              action_ids: sendActiondIds,
+              csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function (response) {
+               generateCompositeGraph(response);
+            },
+            error: function (xhr) {
+              //Do Something to handle error
+            }
+          });
+
+        });
+
+      });
+  });
+  // TODO: combine above and this:
+  $('#composite_select_test_2').on('change', function () {
+    composite_test_2 = $(this).find("option:selected").val();
+    compositeTestIds[1] = composite_test_2;
+  });
+
+
+</script>

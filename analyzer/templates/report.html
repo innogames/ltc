@@ -5,6 +5,7 @@
         <li><a href='#aggregate_table_tab'>Aggregate table</a></li>
         <li><a href='#rtot_graphs_tab'>Response times graphs</a></li>
         <li><a href='#monitoring_graphs_tab'>Monitoring graphs</a></li>
+        <li><a href='#composite_graph_tab'>Composite analysis graph</a></li>
     </ul>
     <div id="overview_tab">
         <div class="panel panel-default">
@@ -160,6 +161,9 @@
         </select>
         <div id="test_monitoring_graph"></div>
     </div>
+    <div id="composite_graph_tab">
+        <div id="composite"></div>
+    </div>
 </article>
 
 <script>
@@ -175,6 +179,20 @@
     updateSelectList('#select_test_2', '/analyzer/project/' + selected_project + "/tests_list/", "Select 2nd test", "display_name", "id");
     $("#aggregate_table").tablesorter();
     $("#aggregate_table").trigger('tsUpdate');
+
+    // COMPOSITE GRAPH
+    $.ajax({
+        url: '/analyzer/project/' + selected_project + '/composite/',
+        type: "get",
+        success: function (response) {
+        $("#composite").empty();
+        $("#composite").append(response);
+        },
+        error: function(xhr) {
+            show_alert(response);
+        }
+    });
+
     var test_rtot_graph = c3.generate({
         data: {
             url: '/analyzer/test/' + test_id_1 + '/rtot/',

@@ -9,6 +9,8 @@ urlpatterns = [
     url(r'^generate_overall_report', views.generate_overall_report),
     url(r'^project/(?P<project_id>\d+)/project_history/$',
         views.project_history),
+    url(r'^composite_data/$',
+    views.composite_data),
     url(r'^project/(?P<project_id>\d+)/tests_list/$', views.tests_list),
     url(r'^project/(?P<project_id>\d+)/last_test/$', views.last_test),
     url(r'^project/(?P<project_id>\d+)/'
@@ -17,6 +19,8 @@ urlpatterns = [
     url(r'^project/(?P<project_id>\d+)/configure/$', views.configure_page),
     url(r'^test/(?P<test_id>\d+)/prev_test_id/$', views.prev_test_id),
     url(r'^test/(?P<test_id>\d+)/report/$', views.test_report),
+    url(r'^test/(?P<test_id>\d+)/actions_list/$', views.test_actions_list),
+    url(r'^project/(?P<project_id>\d+)/composite/$', views.composite),
     url(r'^test/(?P<test_id>\d+)/(?P<action_id>\d+)/action_report/$',
         views.action_report),
     url(r'^test/(?P<test_id>\d+)/action/(?P<action_id>\d+)/rtot/$',
