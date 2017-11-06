@@ -44,8 +44,6 @@ class TestRunning(models.Model):
 
     def update_data_frame(self):
         num_lines = sum(1 for line in open(self.result_file_dest))
-        print(self.result_file_dest)
-        print num_lines
         if self.result_start_line < num_lines - 10:
             read_lines = num_lines - self.result_start_line - 10
             df = pd.read_csv(
@@ -84,8 +82,6 @@ class TestRunning(models.Model):
                     name="response_codes",
                     data=new_data)
                 test_running_data.save()
-                print new_data
-                print "Response Codes:new_data"
             else:
                 data = {}
                 test_running_data = TestRunningData.objects.get(
@@ -99,8 +95,6 @@ class TestRunning(models.Model):
                     }
                 test_running_data.data = old_data
                 test_running_data.save()
-                print old_data
-                print "Response Codes:old_data"
 
             ### Aggregate table
             update_df = pd.DataFrame()
@@ -138,8 +132,6 @@ class TestRunning(models.Model):
                     name="aggregate_table",
                     data=new_data)
                 test_running_data.save()
-                print new_data
-                print "AGGREGATE:new_data"
             else:
                 data = {}
                 test_running_data = TestRunningData.objects.get(
@@ -172,14 +164,12 @@ class TestRunning(models.Model):
                         'count':
                         old_data[k]['count'] + new_data[k]['count'],
                         'errors':
-                        old_data[k]['errors'] + new_data[k]['count'],
+                        old_data[k]['errors'] + new_data[k]['errors'],
                         'weight':
                         old_data[k]['weight'] + new_data[k]['weight'],
                     }
                 test_running_data.data = old_data
                 test_running_data.save()
-                print old_data
-                print "AGGREGATE:old_data"
 
             ### Over time data
             update_df = pd.DataFrame()
@@ -229,8 +219,9 @@ class TestRunning(models.Model):
                                 old_data['count'] + new_data['count'])
                         old_data[
                             'count'] = old_data['count'] + new_data['count']
-                        old_data[
-                            'errors'] = old_data['errors'] + new_data['errors']
+                        if new_data['errors'] is not None:
+                            old_data[
+                                'errors'] = old_data['errors'] + new_data['errors']
                         old_data[
                             'weight'] = old_data['weight'] + new_data['weight']
                         test_running_data.data = old_data

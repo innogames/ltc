@@ -76,10 +76,79 @@ def projects_list(request):
     return JsonResponse(project_list, safe=False)
 
 
-def tests_list(request, project_id):
+def get_project_tests_list(project_id):
     t = Test.objects.filter(project__id=project_id).values().\
         order_by('-start_time')
+    return t
+
+
+def get_test_actions_list(test_id):
+    t = TestActionData.objects.filter(
+        test_id=test_id).distinct('action_id').values('action_id','action__url')
+    return t
+
+
+def tests_list(request, project_id):
+    t = get_project_tests_list(project_id)
     return JsonResponse(list(t), safe=False)
+
+
+def test_actions_list(request, test_id):
+    t = get_test_actions_list(test_id)
+    return JsonResponse(list(t), safe=False)
+
+def composite_data(request):
+    '''
+    Return composite data for several actions 
+    '''
+    response = []
+    arr = {}
+    temp_data = [] 
+    action_names = {"actions":[]}
+    if request.method == 'POST':
+        test_ids = request.POST.getlist('test_ids[]')
+        action_ids = request.POST.getlist('action_ids[]')
+        for test_id in test_ids:
+            if test_id != 0:
+                for action_id in action_ids:
+                    action_url = Action.objects.get(id=action_id).url;
+                    action_url = action_url.replace(" ", "_")
+                    an = list(action_names["actions"])
+                    col_name = action_url + "_avg_" + test_id
+                    an.append(col_name)
+                    action_names["actions"] = an
+                    min_timestamp = TestActionData.objects. \
+                        filter(test_id=test_id, action_id=action_id). \
+                        values("test_id", "action_id"). \
+                        aggregate(min_timestamp=Min(
+                            RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
+                
+                    mapping = {col_name : RawSQL("((data->>%s)::numeric)", ('avg', ))}
+                    action_data = list(TestActionData.objects. \
+                        filter(test_id=test_id, action_id=action_id). \
+                        annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
+                        annotate(**mapping). \
+                        values('timestamp', col_name). \
+                        order_by('timestamp'))
+                    data = json.loads(json.dumps(action_data, indent=4, sort_keys=True, default=str))
+                    for d in data:
+                        timestamp = d['timestamp']
+                        if timestamp not in arr:
+                            arr[timestamp] = {col_name: d[col_name]} 
+                        else:
+                            old_data = arr[timestamp]
+                            old_data[col_name] = d[col_name]
+                            arr[timestamp] = old_data
+                    temp_data.append(arr)
+        temp_data = temp_data[0]
+        for timestamp in temp_data:
+            v = temp_data[timestamp]
+            v['timestamp'] = timestamp
+            response.append(v)
+            
+        response.append(action_names)
+    print response
+    return JsonResponse(response, safe=False)
 
 
 def last_test(request, project_id):
@@ -133,6 +202,12 @@ def test_report(request, test_id):
     })
 
 
+def composite(request, project_id):
+    tests_list = Test.objects.filter(project__id=project_id).values().\
+        order_by('-start_time')
+    return render(request, 'composite.html', {'tests_list': tests_list})
+
+
 def action_report(request, test_id, action_id):
     action_aggregate_data = list(
         TestActionAggregateData.objects.annotate(test_name=F(
@@ -169,13 +244,18 @@ def action_report(request, test_id, action_id):
             "max": max,
             "test_name": test_name
         })
+    test_start_time = TestActionData.objects. \
+        filter(test_id=test_id). \
+        aggregate(min_timestamp=Min(
+            RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
     print(action_data)
     return render(
         request,
         'url_report.html', {
             'test_id': test_id,
             'action': Action.objects.get(id=action_id),
-            'action_data': action_data
+            'action_data': action_data,
+            'test_start_time': test_start_time
         })
 
 
@@ -539,7 +619,6 @@ def tests_compare_report(request, test_id_1, test_id_2):
 
                 if Texp > t:
                     diff_percent = abs(100 - 100 * Xa / Xb)
-                    print diff_percent
                     if Xa > Xb:
                         if diff_percent > sp:
                             if diff_percent > 10:
@@ -733,11 +812,11 @@ def dashboard_compare_tests_list(tests_list):
 
         errors_percentage = test_data['errors_sum'] * 100 / test_data[
             'count_sum']
-        success_requests =  100 - errors_percentage
+        success_requests = 100 - errors_percentage
         # TODO: improve this part
         if success_requests >= 98:
             result = 'success'
-        elif success_requests < 98 and success_requests >=95:
+        elif success_requests < 98 and success_requests >= 95:
             result = 'warning'
         else:
             result = 'danger'
@@ -776,9 +855,9 @@ def dashboard(request):
             last_tests_by_project.append(list(r)[0])
             projects_list.append(Project.objects.get(id=project_id))
 
-    last_tests = Test.objects.filter(project__show=True).values('project__project_name', 'project_id',
-                                     'display_name',
-                                     'id').order_by('-start_time')[:10]
+    last_tests = Test.objects.filter(project__show=True).values(
+        'project__project_name', 'project_id', 'display_name',
+        'id').order_by('-start_time')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     tests_by_project = dashboard_compare_tests_list(last_tests_by_project)
     logger.debug(projects_list)
