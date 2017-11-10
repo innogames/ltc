@@ -1,0 +1,51 @@
+<table class="wrapped" style="width: 100.0%;">
+        <colgroup>
+            <col style="width: 25%;"/>
+            <col style="width: 25%;"/>
+            <col style="width: 25%;"/>
+            <col style="width: 25%;"/>
+          </colgroup>
+    <thead>
+        <tr>
+            <th>Test name</th>
+            <th>Success requests</th>
+            <th>Avg. response times</th>
+            <th>Result</th>
+        </tr>
+    </thead>
+    {% for row in last_tests %}
+    <tr>
+            <td>
+                    <strong><ac:link><ri:page ri:content-title="{{ row.display_name }}"/></ac:link></strong>
+            </td>
+            <td>
+                    {% if row.success_requests > 98 %}
+                    <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
+                    {% elif row.success_requests <= 98 and row.success_requests > 95  %}
+                    <font color="yellow"><b>{{ row.success_requests|floatformat }} % </b></font>
+                    {% else %}
+                    <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
+                    {% endif %}
+            </td>
+            <td>
+                    {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
+                    {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
+                    
+                    {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff <= 0 %}<font color="green">(<span>↓</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs > 0 %} <font color="red">(<span>↑</span> {{ avg_diff }} %) </font>  {% endif %}
+            </td>
+            <td>
+                    {% if row.result == "success" %} 
+                    <ac:structured-macro ac:macro-id="9350e8a6-69dd-401d-92bd-67a46023de9b" ac:name="status" ac:schema-version="1">
+                            <ac:parameter ac:name="colour">Green</ac:parameter>
+                            <ac:parameter ac:name="title">Success</ac:parameter>
+                    </ac:structured-macro>
+                    {% elif row.result == "danger" %}
+                    <ac:structured-macro ac:macro-id="9350e8a6-69dd-401d-92bd-67a46023de9b" ac:name="status" ac:schema-version="1">
+                            <ac:parameter ac:name="colour">Red</ac:parameter>
+                            <ac:parameter ac:name="title">Failed</ac:parameter>
+                    </ac:structured-macro>
+                    {% endif %}
+            </td>
+    </tr>
+    {% endfor %}
+</table>

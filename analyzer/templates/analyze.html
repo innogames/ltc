@@ -2,6 +2,8 @@
 <select name="select_test_1" id="select_test_1" class="selectpicker">
 </select>
 <button id="get_last_test_report_button" class="btn btn-success">Get report for the last test</button>
+<button id="generate_project_confluence_report_btn" class="btn btn-success btn-small">
+    <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Generate project report and post to Confluence</button> 
 <div id="test_results"></div>
 
 <script>
@@ -44,6 +46,16 @@ $('#select_test_1').on('change', function(){
   $('#select_test_1').change();
   $('#select_test_1').selectpicker('refresh');
 });
-
+$('#generate_project_confluence_report_btn').click(function() {
+  $.ajax({
+      url: '/analyzer/project/' + selected_project + '/generate_confluence_report/',
+      type: "get",
+      success: function(response) {
+         show_alert(response);
+       },
+      error: function(xhr) {
+      }
+    });
+});
 
 </script>

@@ -14,6 +14,9 @@ Consist of several modules:
 3. Controller - configure and run the tests
 4. Administrator - configure different parameters
 
+## [DASHBOARD] 
+Get tests overview
+![alt tag](https://github.com/v0devil/jltom/blob/master/pics/dashboard.png)
 
 ## [ANALYZER] 
 Create dynamic report for the tests

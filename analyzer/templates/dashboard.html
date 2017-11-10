@@ -115,7 +115,6 @@
         </div>
  
     </div>
-
         <div class="col-xs-3">
          <div class="panel panel-default">
                         <div class="panel-heading">
@@ -159,8 +158,7 @@
                     </div>
         <div class="panel-body">
 
-            <!-- <button id="generate_overall_report_btn" class="btn btn-success btn-small">
-                <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Generate overall report and post to Confluence</button> -->
+           
             <hr/>
             {% for project in projects_list %}
             {% if project.show == True %}
@@ -213,19 +211,7 @@
 </div>
 
 <script>
-        $("#dashboard_tabs").tabs();
-        $('#generate_overall_report_btn').click(function() {
-                      $.ajax({
-                          url: "/analyzer/generate_overall_report",
-                          type: "get",
-                          success: function(response) {
-                             show_alert(response);
-                           },
-                          error: function(xhr) {
-                          }
-                        });
-        });
-     //temporally commented
+$("#dashboard_tabs").tabs();
 function updateLoadGeneratorsTable()
 {
           $.ajax({

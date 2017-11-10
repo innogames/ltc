@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import logging
 import math
@@ -20,6 +21,7 @@ from models import (Action, Aggregate, Project, Server, ServerMonitoringData,
                     Test, TestActionAggregateData, TestActionData, TestData)
 from scipy import stats
 from django.db.models import Func
+from django.template.loader import render_to_string
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +86,8 @@ def get_project_tests_list(project_id):
 
 def get_test_actions_list(test_id):
     t = TestActionData.objects.filter(
-        test_id=test_id).distinct('action_id').values('action_id','action__url')
+        test_id=test_id).distinct('action_id').values('action_id',
+                                                      'action__url')
     return t
 
 
@@ -97,21 +100,22 @@ def test_actions_list(request, test_id):
     t = get_test_actions_list(test_id)
     return JsonResponse(list(t), safe=False)
 
+
 def composite_data(request):
     '''
     Return composite data for several actions 
     '''
     response = []
     arr = {}
-    temp_data = [] 
-    action_names = {"actions":[]}
+    temp_data = []
+    action_names = {"actions": []}
     if request.method == 'POST':
         test_ids = request.POST.getlist('test_ids[]')
         action_ids = request.POST.getlist('action_ids[]')
         for test_id in test_ids:
             if test_id != 0:
                 for action_id in action_ids:
-                    action_url = Action.objects.get(id=action_id).url;
+                    action_url = Action.objects.get(id=action_id).url
                     action_url = action_url.replace(" ", "_")
                     an = list(action_names["actions"])
                     col_name = action_url + "_avg_" + test_id
@@ -122,19 +126,24 @@ def composite_data(request):
                         values("test_id", "action_id"). \
                         aggregate(min_timestamp=Min(
                             RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
-                
-                    mapping = {col_name : RawSQL("((data->>%s)::numeric)", ('avg', ))}
+
+                    mapping = {
+                        col_name: RawSQL("((data->>%s)::numeric)", ('avg', ))
+                    }
                     action_data = list(TestActionData.objects. \
                         filter(test_id=test_id, action_id=action_id). \
                         annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
                         annotate(**mapping). \
                         values('timestamp', col_name). \
                         order_by('timestamp'))
-                    data = json.loads(json.dumps(action_data, indent=4, sort_keys=True, default=str))
+                    data = json.loads(
+                        json.dumps(
+                            action_data, indent=4, sort_keys=True,
+                            default=str))
                     for d in data:
                         timestamp = d['timestamp']
                         if timestamp not in arr:
-                            arr[timestamp] = {col_name: d[col_name]} 
+                            arr[timestamp] = {col_name: d[col_name]}
                         else:
                             old_data = arr[timestamp]
                             old_data[col_name] = d[col_name]
@@ -145,16 +154,25 @@ def composite_data(request):
             v = temp_data[timestamp]
             v['timestamp'] = timestamp
             response.append(v)
-            
+
         response.append(action_names)
     print response
     return JsonResponse(response, safe=False)
 
 
+def get_test_for_project(project_id, n):
+    '''
+    Get first, second, N test for project with project_id
+    '''
+    t = list(Test.objects.filter(project__id=project_id)\
+        .order_by('-start_time').values())[n]
+    return t
+
+
 def last_test(request, project_id):
     t = Test.objects.filter(project__id=project_id)\
         .order_by('-start_time').values()
-    return JsonResponse([list(t)[0]], safe=False)
+    return JsonResponse([get_test_for_project(project_id, 0)], safe=False)
 
 
 def project_history(request, project_id):
@@ -189,13 +207,17 @@ def prev_test_id(request, test_id):
     return JsonResponse([list(t)[1]], safe=False)
 
 
-def test_report(request, test_id):
-    test_description = Test.objects.filter(id=test_id).values()
+def get_test_aggregate_table(test_id):
     aggregate_table = TestActionAggregateData.objects.annotate(url=F('action__url')).filter(test_id=test_id). \
         values('url',
                'action_id',
                'data')
+    return aggregate_table
 
+
+def test_report(request, test_id):
+    test_description = Test.objects.filter(id=test_id).values()
+    aggregate_table = get_test_aggregate_table(test_id)
     return render(request, 'report.html', {
         'test_description': test_description[0],
         'aggregate_table': aggregate_table
@@ -315,7 +337,9 @@ def test_change(request, test_id):
     return JsonResponse(response, safe=False)
 
 
-def compare_tests_cpu(request, test_id, num_of_tests):
+def get_compare_tests_server_monitoring_data(test_id,
+                                             num_of_tests,
+                                             order='-test__start_time'):
     project = Test.objects.filter(id=test_id).values('project_id')
     project_id = project[0]['project_id']
     start_time = Test.objects.filter(
@@ -331,6 +355,11 @@ def compare_tests_cpu(request, test_id, num_of_tests):
                 'CPU_iowait',
                 'CPU_system', ))).annotate(
                     cpu_load=Avg('cpu_load')).order_by('-test__start_time'))
+    return data
+
+
+def compare_tests_cpu(request, test_id, num_of_tests):
+    data = get_compare_tests_server_monitoring_data(test_id, num_of_tests)
     # FUCK YOU DJANGO ORM >_<. DENSE_RANK does not work so:
     current_rank = 1
     counter = 0
@@ -363,20 +392,30 @@ def compare_tests_cpu(request, test_id, num_of_tests):
             object_pairs_hook=OrderedDict))
 
 
-def compare_tests_avg(request, test_id, num_of_tests):
+def get_compare_tests_aggregate_data(test_id,
+                                     num_of_tests,
+                                     order='-test__start_time'):
+    '''
+    Compares given test with test_id against num_of_tests previous
+    '''
     project = Test.objects.filter(id=test_id).values('project_id')
     start_time = Test.objects.filter(
         id=test_id).values('start_time')[0]['start_time']
     project_id = project[0]['project_id']
 
-    data = Aggregate.objects. \
-        annotate(display_name=F('test__display_name')). \
-        annotate(start_time=F('test__start_time')). \
-        filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True).\
-        values('display_name', 'start_time'). \
-        annotate(average=Avg('average')). \
-        annotate(median=Avg('median')). \
-        order_by('-test__start_time')
+    data = TestActionAggregateData.objects. \
+            filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True).\
+            annotate(display_name=F('test__display_name')). \
+            annotate(start_time=F('test__start_time')). \
+            values('display_name', 'start_time'). \
+            annotate(average=Avg(RawSQL("((data->>%s)::numeric)", ('mean',)))). \
+            annotate(median=Avg(RawSQL("((data->>%s)::numeric)", ('50%',)))). \
+            order_by(order)
+    return data
+
+
+def compare_tests_avg(request, test_id, num_of_tests):
+    data = get_compare_tests_aggregate_data(test_id, num_of_tests)
     current_rank = 1
     counter = 0
     arr = []
@@ -878,78 +917,133 @@ class History(TemplateView):
         return render(request, 'history.html', context=None)
 
 
-def generate_overall_report(request):
+def confluence_test_report(test_id):
     content = ""
-    projects_all = list(Project.objects.values())
-    for project in projects_all:
-        if project['show']:
-            project_id = int(project['id'])
-            a = Aggregate.objects.annotate(test_name=F('test__display_name')) \
-                .filter(test__project__id=project_id, test__show=True) \
-                .values('test_name') \
-                .annotate(Average=Avg('average')) \
-                .annotate(Median=Avg('median')) \
-                .order_by('test__start_time')[10:]
-            content += generate_confluence_graph(project, list(a))
-
-    response = post_to_confluence(content)
-    return JsonResponse(response, safe=False)
+    aggregate_table = get_test_aggregate_table(test_id)
+    aggregate_table_html = render_to_string(
+        'confluence/aggregate_table.html',
+        {'aggregate_table': aggregate_table})
+    content += "<h2>Aggregate table</h2>"
+    content += aggregate_table_html
+    return content
 
 
-def post_to_confluence(content):
+def confluence_project_report(project_id):
+    project = Project.objects.get(id=project_id)
+    content = """
+    <h2>Load testing report for: {0}</h2>
+    <hr/>    
+    {1}  
+    <hr/> 
+    """
+    last_test = get_test_for_project(project_id, 0)
+    data = get_compare_tests_aggregate_data(
+        last_test['id'], 10, order='start_time')
+    agg_response_times_graph = generate_confluence_graph(project, list(data))
+    #data = get_compare_tests_server_monitoring_data(last_test['id'], 10, order='start_time')
+    #agg_cpu_util_graph = generate_confluence_graph(project, list(data))
 
+    last_tests = Test.objects.filter(project_id=project_id).values(
+        'project__project_name', 'project_id', 'display_name',
+        'id').order_by('-start_time')[:10]
+    tests = dashboard_compare_tests_list(last_tests)
+    last_tests_table_html = render_to_string(
+        'confluence/last_tests_table.html', {'last_tests': tests})
+
+    content = content.format(project.project_name, agg_response_times_graph)
+    content += last_tests_table_html
+    return content
+
+
+def generate_confluence_project_report(request, project_id):
+    project = Project.objects.get(id=project_id)
+    error = ""
+    successful = True
     wiki_url = Configuration.objects.get(name='wiki_url').value
     wiki_user = Configuration.objects.get(name='wiki_user').value
     wiki_password = Configuration.objects.get(name='wiki_password').value
-    space = "SystemAdministration"
-    target_page = 'Overall performance testing results'
-    target_url = '{}/display/{}/{}'.format(wiki_url, space,
-                                           target_page.replace(' ', '+'))
     cp = confluenceposter.ConfluencePoster(wiki_url, wiki_user, wiki_password)
-    response = {
-        "message": {
-            "text":
-            "Overall report is posted to Confluence: {}".format(target_url),
-            "type":
-            "success",
-            "msg_params": {
-                "link": target_url
-            }
-        }
-    }
     cp.login()
+
+    space = "SystemAdministration"
+    
+    target_page = '{0} Load Testing Reports'.format(
+        project.project_name)
+        
+    target_url = '{}/display/{}/{}'.format(wiki_url, space, target_page)
+
+    # Post parent summary page
     try:
         logger.info('Try to open Confluence page: ' + target_page)
-        page_target = cp.get_page(space, target_page)
+        page_parent = cp.get_page(space, target_page)
     except Exception as e:
+        error = e
         logger.error(e)
-        response = {
-            "message": {
-                "text": e,
-                "type": "danger",
-                "msg_params": {
-                    "link": target_url
-                }
-            }
-        }
-    page_target['content'] = content
+        successful = False
+
+    page_parent['content'] = confluence_project_report(project_id)
     try:
-        cp.post_page(page_target)
+        cp.post_page(page_parent)
     except Exception as e:
+        error = e
         logger.error(e)
-        response = {
-            "message": {
-                "text": e,
-                "type": "danger",
-                "msg_params": {
-                    "link": target_url
-                }
-            }
-        }
+        successful = False
+
+    page_parent_id = page_parent['id']
+    del page_parent['id']
+    del page_parent['url']
+    del page_parent['modified']
+    del page_parent['created']
+    del page_parent['version']
+    del page_parent['contentStatus']
+    # Post reports for all tests
+    for test in Test.objects.filter(project_id=project_id).values():
+        test_id = test['id']
+        test_name = test['display_name']
+        test_report_page_exists = True
+        try:
+            page_test_report = cp.get_page(space, test_name)
+        except Exception as e:
+            test_report_page_exists = False
+            page_test_report = page_parent
+            page_test_report['parentId'] = page_parent_id
+            page_test_report['title'] = test_name
+        if not test_report_page_exists:
+            logger.info('Creating test report page: {}'.format(test_name))
+            page_test_report['content'] = confluence_test_report(test_id)
+            try:
+                cp.post_page(page_test_report)
+            except Exception as e:
+                error = e
+                logger.error(e)
+                successful = False
 
     cp.logout()
+    if successful:
+        response = {
+            "message": {
+                "text":
+                "Project report is posted to Confluence: {}".format(
+                    target_url),
+                "type":
+                "success",
+                "msg_params": {
+                    "link": target_url
+                }
+            }
+        }
+    else:
+        response = {
+            "message": {
+                "text": str(e),
+                "type": "danger",
+                "msg_params": {
+                    "link": target_url
+                }
+            }
+        }
 
-    return response
+    return JsonResponse(response, safe=False)
 
 
 def queryset_to_json(set):
