@@ -87,10 +87,9 @@ def update_load_generators_info():
     env.game = 'loadtest'
     project = get_project(env.game),
     hosts = query(
-        project=Any(project, 'qa'),
-        function=
-        'loadgenerator',  # hostname=Any('loadtest10-qa','loadtest09-qa')
-    )
+        project=Any(project, 'admin'),
+        function='loadgenerator',
+        hostname=Not('generator1.loadtest'))
     for host in hosts:
         t = threading.Thread(
             target=get_host_info, args=(
@@ -159,14 +158,32 @@ def update_load_generators_info():
 
 @kronos.register('*/5 * * * *')
 def gather_jmeter_instances_info():
+    '''
+    Connect and gather JAVA metrics from jmeter remote instances
+    '''
     jmeter_instances = list(
         JmeterInstance.objects.annotate(hostname=F('load_generator__hostname'))
-        .values('hostname', 'pid', 'project_id', 'threads_number'))
+        .values('hostname', 'pid', 'project_id', 'threads_number',
+                'test_running_id'))
     for jmeter_instance in jmeter_instances:
+        current_time = int(time.time() * 1000)
         hostname = jmeter_instance['hostname']
         project_id = jmeter_instance['project_id']
         pid = jmeter_instance['pid']
         threads_number = jmeter_instance['threads_number']
+        test_running_id = jmeter_instance['test_running_id']
+
+        # Estimate number of threads at this moment
+        test_running = TestRunning.objects.get(id=test_running_id)
+        test_rampup = float(test_running.rampup) * 1000
+        test_start_time = float(test_running.start_time)
+        current_time = float(time.time() * 1000)
+        if (test_start_time + test_rampup) > current_time:
+            threads_number = int(
+                threads_number *
+                ((current_time - test_start_time) / test_rampup))
+
+        logger.debug("threads_number: {};".format(threads_number))
         ssh_key = SSHKey.objects.get(default=True).path
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -193,14 +210,15 @@ def gather_jmeter_instances_info():
     return True
 
 
-def get_avg_thread_malloc_for_project(project_id):
-    data = JmeterInstanceStatistic.objects.filter(project_id=project_id). \
+def get_avg_thread_malloc_for_project(project_id, threads_num):
+    data = JmeterInstanceStatistic.objects.filter(project_id=project_id, data__contains=[{'threads_number': threads_num}]). \
         annotate(mem_alloc_for_thread=(RawSQL("((data->>%s)::numeric)", ('S0U',)) + RawSQL("((data->>%s)::numeric)", ('S1U',)) + RawSQL("((data->>%s)::numeric)", ('EU',)) + RawSQL("((data->>%s)::numeric)", ('OU',)))/1024/RawSQL("((data->>%s)::numeric)", ('threads_number',))). \
         aggregate(avg_mem_alloc_for_thread=Avg(F('mem_alloc_for_thread'), output_field=FloatField()))
     logger.debug("test_jmeter_instances_info: {}".format(str(data)))
     v = data['avg_mem_alloc_for_thread']
+    logger.debug("Estimated MB per thread: {}".format(str(v)))
     if v is None:
-        v = 6
+        v = 10
     return v
 
 
@@ -221,9 +239,14 @@ def get_load_generators_data(request):
     return JsonResponse(load_generators_data, safe=False)
 
 
-def prepare_load_generators(project_name, jmeter_dir, threads_num, duration):
+def prepare_load_generators(project_name,
+                            workspace,
+                            jmeter_dir,
+                            threads_num,
+                            duration,
+                            rampup=0,
+                            mb_per_thread=0):
 
-    
     if not Project.objects.filter(project_name=project_name).exists():
         logger.info("Creating a new project: {}".format(project_name))
         p = Project(project_name=project_name)
@@ -237,10 +260,16 @@ def prepare_load_generators(project_name, jmeter_dir, threads_num, duration):
         project_id=project_id,
         start_time=start_time,
         duration=duration,
+        workspace=workspace,
+        rampup=rampup,
         is_running=False)
     t.save()
     test_running_id = t.id
-    mb_per_thread = get_avg_thread_malloc_for_project(project_id)
+
+    # get estimated required memory for one thread
+    if mb_per_thread == 0:
+        mb_per_thread = get_avg_thread_malloc_for_project(
+            project_id, threads_num)
     logger.debug(
         "Threads_num: {}; mb_per_thread: {}; project_name: {}; jmeter_dir: {}; duration: {}".
         format(threads_num, mb_per_thread, project_name, jmeter_dir, duration))
@@ -269,32 +298,16 @@ def prepare_load_generators(project_name, jmeter_dir, threads_num, duration):
         required_memory_for_jri, required_memory_for_jri)
     #update_load_generators_info()
     load_generators_info = list(LoadGenerator.objects.values())
+    load_generators_count = LoadGenerator.objects.count()
+    
     running_test_jris = []
     overall_hosts_amount_jri = 0
 
     threads_per_host = int(float(threads_num) / target_amount_jri)
-    for generator in load_generators_info:
-        hostname = generator['hostname']
-        memory_free = float(generator['memory_free'])
-        status = generator['status']
-        if required_memory_total < memory_free and status == 'success':
-            logger.info(
-                "Found a single load generator: {}; required_memory_total: {}; memory_free: {}".
-                format(hostname, required_memory_total, memory_free))
-            # If first server is mathed ok
-            matched_load_generators.append({
-                'hostname':
-                hostname,
-                'target_amount_jri':
-                target_amount_jri
-            })
-            overall_hosts_amount_jri = target_amount_jri
-            ready = True
-            break
 
     if ready == False:
         logger.info(
-            "Did not a single load generator. Trying to find a combination.")
+            "Trying to find loadgenerators to provide desired load.")
         t_hosts = {}
         # Try to find a combination of load generators:
         for generator in load_generators_info:
@@ -313,13 +326,19 @@ def prepare_load_generators(project_name, jmeter_dir, threads_num, duration):
             t_hosts[hostname] = math.ceil(memory_free /
                                           (required_memory_for_jri * 1.3))
         t_sorted_hosts = sorted(t_hosts, key=t_hosts.get, reverse=True)
-
+        
+        # Try to spread them equally on load generators
+        estimated_jris_for_host = int(math.ceil( float(target_amount_jri)/float(load_generators_count)))
+        logger.debug("estimated_jris_for_host: {};".format(
+                estimated_jris_for_host))
         for h in t_sorted_hosts:
             possible_jris_on_host = t_hosts[h]
-            logger.debug("h: {}; possible_jris_on_host: {};".format(
-                h, possible_jris_on_host))
+            if possible_jris_on_host > estimated_jris_for_host:
+                possible_jris_on_host = estimated_jris_for_host
             if overall_hosts_amount_jri + possible_jris_on_host > target_amount_jri:
                 possible_jris_on_host = target_amount_jri - overall_hosts_amount_jri
+            logger.debug("h: {}; possible_jris_on_host: {};".format(
+                h, possible_jris_on_host))
             matched_load_generators.append({
                 'hostname':
                 h,

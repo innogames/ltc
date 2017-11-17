@@ -38,7 +38,8 @@ class TestRunning(models.Model):
     workspace = models.CharField(max_length=200, default="")
     is_running = models.BooleanField(default=False)
     build_number = models.IntegerField(default=0)
-    duration = models.IntegerField(default=0)
+    rampup = models.IntegerField(default=0) # ramp up test period in seconds
+    duration = models.IntegerField(default=0) # overall test duration (incl. rampup)
     result_start_line = models.IntegerField(default=0)
     result_file_size = models.IntegerField(default=0)
     locked = models.BooleanField(default=False)

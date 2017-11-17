@@ -239,7 +239,6 @@ for build_root in build_roots:
         test.c.id == test_id).scalar()
 
     checksum = -1
-    PARSED_DATA_ROOT = build_root + "/parsed_data/"
     if db_session.query(aggregate.c.test_id).filter(
             aggregate.c.test_id == test_id).count() == 0:
 
@@ -403,7 +402,6 @@ num = 0
 GRAPHS = ""
 for build_root in build_roots:
     uniqueURL = []
-    PARSED_DATA_ROOT = build_root + "/parsed_data/"
 
     rownum = 0
 
