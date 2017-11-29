@@ -233,8 +233,9 @@ def composite(request, project_id):
 def action_report(request, test_id, action_id):
     action_aggregate_data = list(
         TestActionAggregateData.objects.annotate(test_name=F(
-            'test__display_name')).filter(action_id=action_id).values(
-                'test_name', 'data').order_by('-test__start_time'))
+            'test__display_name')).filter(
+                action_id=action_id, test_id__lte=test_id).values(
+                    'test_name', 'data').order_by('-test__start_time'))[:5]
     action_data = []
     for e in action_aggregate_data:
         data = e['data']
@@ -243,6 +244,7 @@ def action_report(request, test_id, action_id):
         max = data['max']
         q3 = data['75%']
         q2 = data['50%']
+        std = data['std']
         if '25%' in data:
             q1 = data['25%']
         else:
@@ -264,13 +266,13 @@ def action_report(request, test_id, action_id):
             "mean": mean,
             "min": min,
             "max": max,
+            "std": std,
             "test_name": test_name
         })
     test_start_time = TestActionData.objects. \
         filter(test_id=test_id). \
         aggregate(min_timestamp=Min(
             RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
-    print(action_data)
     return render(
         request,
         'url_report.html', {
@@ -641,63 +643,68 @@ def tests_compare_report(request, test_id_1, test_id_2):
             Sb = 0 if action_data_2['std'] is None else action_data_2['std']
             Na = action_data_1['count']
             Nb = action_data_2['count']
-            df = Na - 1 + Nb - 1
-            if df > 0:
-                t = stats.t.ppf(1 - 0.01, df)
-                logger.debug(
-                    'Action: {0} t: {1} Xa: {2} Xb: {3} Sa: {4} Sb: {5} Na: {6} Nb: {7} df: {8}'.
-                    format(action_url,
-                           stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb,
-                           df))
-                Sab = math.sqrt(((Na - 1) * math.pow(Sa, 2) +
-                                 (Nb - 1) * math.pow(Sb, 2)) / df)
-                Texp = (math.fabs(Xa - Xb)) / (
-                    Sab * math.sqrt(1 / Na + 1 / Nb))
-                logger.debug('Action: {0} Texp: {1} Sab: {2}'.format(
-                    action_url, Texp, Sab))
+            # df = Na - 1 + Nb - 1
+            # Satterthwaite Formula for Degrees of Freedom
+            if Xa > 10 and Xb > 10 and not Sa == 0 and not Sb == 0:
+                df = math.pow(math.pow(Sa, 2) / Na + math.pow(Sb, 2) / Nb, 2) / (
+                    math.pow(math.pow(Sa, 2) / Na, 2) /
+                    (Na - 1) + math.pow(math.pow(Sb, 2) / Nb, 2) / (Nb - 1))
+                if df > 0:
+                    t = stats.t.ppf(1 - 0.01, df)
+                    logger.debug(
+                        'Action: {0} t: {1} Xa: {2} Xb: {3} Sa: {4} Sb: {5} Na: {6} Nb: {7} df: {8}'.
+                        format(action_url,
+                            stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb,
+                            df))
+                    Sab = math.sqrt(((Na - 1) * math.pow(Sa, 2) +
+                                    (Nb - 1) * math.pow(Sb, 2)) / df)
+                    Texp = (math.fabs(Xa - Xb)) / (
+                        Sab * math.sqrt(1 / Na + 1 / Nb))
+                    logger.debug('Action: {0} Texp: {1} Sab: {2}'.format(
+                        action_url, Texp, Sab))
 
-                if Texp > t:
-                    diff_percent = abs(100 - 100 * Xa / Xb)
-                    if Xa > Xb:
-                        if diff_percent > sp:
-                            if diff_percent > 10:
-                                severity = "danger"
-                            else:
-                                severity = "warning"
-                            report["higher_response_times"].append({
+                    if Texp > t:
+                        diff_percent = abs(100 - 100 * Xa / Xb)
+                        if Xa > Xb:
+                            if diff_percent > sp:
+                                if diff_percent > 10:
+                                    severity = "danger"
+                                else:
+                                    severity = "warning"
+                                report["higher_response_times"].append({
+                                    "action":
+                                    action_url,
+                                    "severity":
+                                    severity,
+                                    "action_data_1":
+                                    action_data_1,
+                                    "action_data_2":
+                                    action_data_2,
+                                })
+                        else:
+                            if diff_percent > sp:
+                                report["lower_response_times"].append({
+                                    "action":
+                                    action_url,
+                                    "severity":
+                                    "success",
+                                    "action_data_1":
+                                    action_data_1,
+                                    "action_data_2":
+                                    action_data_2,
+                                })
+
+                        if Na / 100 * Nb < 90:
+                            report["lower_count"].append({
                                 "action":
                                 action_url,
                                 "severity":
-                                severity,
+                                "warning",
                                 "action_data_1":
                                 action_data_1,
                                 "action_data_2":
                                 action_data_2,
                             })
-                    else:
-                        if diff_percent > sp:
-                            report["lower_response_times"].append({
-                                "action":
-                                action_url,
-                                "severity":
-                                "success",
-                                "action_data_1":
-                                action_data_1,
-                                "action_data_2":
-                                action_data_2,
-                            })
-
-                    if Na / 100 * Nb < 90:
-                        report["lower_count"].append({
-                            "action":
-                            action_url,
-                            "severity":
-                            "warning",
-                            "action_data_1":
-                            action_data_1,
-                            "action_data_2":
-                            action_data_2,
-                        })
     return render(request, 'compare_report.html', {
         'report': report,
     })
@@ -966,10 +973,9 @@ def generate_confluence_project_report(request, project_id):
     cp.login()
 
     space = "SystemAdministration"
-    
-    target_page = '{0} Load Testing Reports'.format(
-        project.project_name)
-        
+
+    target_page = '{0} Load Testing Reports'.format(project.project_name)
+
     target_url = '{}/display/{}/{}'.format(wiki_url, space, target_page)
 
     # Post parent summary page

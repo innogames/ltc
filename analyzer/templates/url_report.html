@@ -62,6 +62,8 @@
                                     <li><b>IQR:</b> {{ action_data.0.IQR }} ms</li>
                                     <li><b>Lower wisker:</b> {{ action_data.0.LW }} ms</li>
                                     <li><b>Upper wisker:</b> {{ action_data.0.UW }} ms</li>
+                                    <li><b>Standart deviation:</b> {{ action_data.0.std }} ms</li>    
+
                                 </div>
                                 <div class="col-xs-6">
                                     <div class="gallery" id="boxplot">
@@ -173,6 +175,7 @@
             Q3: {{ action_data.0.q3 }},
             whisker_low: {{ action_data.0.LW }},
             whisker_high: {{ action_data.0.UW }},
+            outliers: [{{ action_data.0.mean }}], 
           },
         },
       ];
@@ -191,6 +194,7 @@
             Q3: {{ el.q3 }},
             whisker_low: {{ el.LW }},
             whisker_high: {{ el.UW }},
+            outliers: [{{ el.mean }}],
           },
 
         },

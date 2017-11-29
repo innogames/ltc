@@ -89,7 +89,7 @@ def update_load_generators_info():
     hosts = query(
         project=Any(project, 'admin'),
         function='loadgenerator',
-        hostname=Not('generator1.loadtest'))
+        hostname=Not(Any('generator1.loadtest')))
     for host in hosts:
         t = threading.Thread(
             target=get_host_info, args=(
@@ -158,9 +158,9 @@ def update_load_generators_info():
 
 @kronos.register('*/5 * * * *')
 def gather_jmeter_instances_info():
-    '''
-    Connect and gather JAVA metrics from jmeter remote instances
-    '''
+    #
+    #Connect and gather JAVA metrics from jmeter remote instances
+    #
     jmeter_instances = list(
         JmeterInstance.objects.annotate(hostname=F('load_generator__hostname'))
         .values('hostname', 'pid', 'project_id', 'threads_number',
@@ -255,6 +255,13 @@ def prepare_load_generators(project_name,
     else:
         p = Project.objects.get(project_name=project_name)
         project_id = p.id
+        
+    for root, dirs, files in os.walk(workspace):
+        for f in fnmatch.filter(files, '*.jtl'):
+            result_file_dest = os.path.join(root, f)
+        for f in fnmatch.filter(files, '*.data'):
+            monitoring_file_dest = os.path.join(root, f)
+                
     start_time = int(time.time() * 1000)
     t = TestRunning(
         project_id=project_id,
@@ -262,6 +269,8 @@ def prepare_load_generators(project_name,
         duration=duration,
         workspace=workspace,
         rampup=rampup,
+        result_file_dest=result_file_dest,
+        monitoring_file_dest=monitoring_file_dest,
         is_running=False)
     t.save()
     test_running_id = t.id
@@ -281,8 +290,10 @@ def prepare_load_generators(project_name,
         rmt = 400.0
     elif mb_per_thread >= 2 and mb_per_thread < 5:
         rmt = 300.0
-    elif mb_per_thread >= 5:
+    elif mb_per_thread >= 5 and mb_per_thread < 10:
         rmt = 200.0
+    elif mb_per_thread >= 10:
+        rmt = 100.0
 
     logger.debug("rmt: {};".format(rmt))
     logger.debug("ceil1: {};".format(float(threads_num) / rmt))
@@ -307,7 +318,7 @@ def prepare_load_generators(project_name,
 
     if ready == False:
         logger.info(
-            "Trying to find loadgenerators to provide desired load.")
+            "Did not a single load generator. Trying to find a combination.")
         t_hosts = {}
         # Try to find a combination of load generators:
         for generator in load_generators_info:
@@ -360,6 +371,7 @@ def prepare_load_generators(project_name,
         #                    mb_per_thread, duration)
     logger.debug(
         "matched_load_generators: {};".format(str(matched_load_generators)))
+    N = 0 # to separate data pools   
     for load_generator in matched_load_generators:
         hostname = load_generator['hostname']
         possible_jris_on_host = load_generator['possible_jris_on_host']
@@ -397,11 +409,12 @@ def prepare_load_generators(project_name,
                 cmds = [
                     'cd {0}/bin/'.format(jmeter_dir), 'DIRNAME=`dirname -- $0`'
                 ]
+                N += 1
                 stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
                 run_jmeter_server_cmd = 'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "$@" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -Jpoll={4} > /dev/null 2>&1 '.\
-                    format(java_args, jmeter_dir, hostname, str(port), str(i))
+                    format(java_args, jmeter_dir, hostname, str(port), str(N))
                 logger.info('nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "$@" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -Jpoll={4} > /dev/null 2>&1 '.\
-                    format(java_args, jmeter_dir, hostname, str(port), str(i)))
+                    format(java_args, jmeter_dir, hostname, str(port), str(N)))
                 command = 'echo $$; exec ' + run_jmeter_server_cmd
                 stdin, stdout, stderr = ssh.exec_command(command)
                 pid = int(stdout.readline())
@@ -498,4 +511,5 @@ def test_stop_all_tests():
             stop_jmeter_instance(jmeter_instance)
         logger.info('Delete running test: {}'.format(test_running_id))
         TestRunning.objects.get(id=test_running_id).delete()
+
 '''

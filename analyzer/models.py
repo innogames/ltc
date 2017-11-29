@@ -6,7 +6,6 @@ from django.contrib import admin
 # Create your models here.
 from administrator.models import JMeterProfile, User
 
-
 class Project(models.Model):
     project_name = models.CharField(max_length=100)
     jmeter_parameters = JSONField(null=True, blank=True)
@@ -133,4 +132,6 @@ class ServerMonitoringData(models.Model):
         db_table = 'server_monitoring_data'
 
 
-admin.site.register(Project)
+
+
+

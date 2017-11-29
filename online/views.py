@@ -22,7 +22,34 @@ elif _platform == "win32":
 
 
 def tests_list(request):
+    '''
+    Returns list of running tests
+    '''
     data = []
+
+    # Check if running test is still exists and update it`s info if necessary
+    for test_running in TestRunning.objects.all():
+        result_file_dest = test_running.result_file_dest
+        if not result_file_dest:
+            workspace = test_running.workspace
+            for root, dirs, files in os.walk(workspace):
+                for f in fnmatch.filter(files, '*.jtl'):
+                    result_file_dest = os.path.join(root, f)
+                    test_running.result_file_dest = result_file_dest
+                    test_running.save()
+                for f in fnmatch.filter(files, '*.data'):
+                    monitoring_file_dest = os.path.join(root, f)
+                    test_running.monitoring_file_dest = monitoring_file_dest
+                    test_running.save()
+        if result_file_dest and not os.path.exists(result_file_dest):
+            logger.debug("Remove running test from database: {}".format(
+                result_file_dest))
+            test_running =   TestRunning.objects.get(result_file_dest=result_file_dest)
+            TestRunningData.objects.filter(
+                test_running_id=test_running.id).delete()
+            test_running.delete()
+
+    
     for MONITORING_DIR in MONITORING_DIRS:
         for root, dirs, files in os.walk(MONITORING_DIR):
             if "workspace" in root or "results" in root:
@@ -53,31 +80,15 @@ def tests_list(request):
                             t_id = t.id
                         # delete old tests from list
     for test_running in TestRunning.objects.all():
-        result_file_dest = test_running.result_file_dest
-        if not result_file_dest:
-            workspace = test_running.workspace
-            for root, dirs, files in os.walk(workspace):
-                for f in fnmatch.filter(files, '*.jtl'):
-                    result_file_dest = os.path.join(root, f)
-                    test_running.result_file_dest = result_file_dest
-                    test_running.save()
-        if not os.path.exists(result_file_dest):
-            logger.debug("Remove running test from database: {}".format(
-                result_file_dest))
-            test_running =   TestRunning.objects.get(result_file_dest=result_file_dest)
-            TestRunningData.objects.filter(
-                test_running_id=test_running.id).delete()
-            test_running.delete()
-        else:
-            data.append({
-                "id":
-                test_running.id,
-                "result_file_dest":
-                result_file_dest,
-                "project_name":
-                Project.objects.get(
-                    id=test_running.project_id).project_name,
-            })
+        data.append({
+            "id":
+            test_running.id,
+            "result_file_dest":
+            result_file_dest,
+            "project_name":
+            Project.objects.get(
+                id=test_running.project_id).project_name,
+        })
     return JsonResponse(data, safe=False)
 
 

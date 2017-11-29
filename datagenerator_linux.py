@@ -263,6 +263,8 @@ for build_root in build_roots:
                     'failureMessage', 'grpThreads', 'allThreads'
                 ]
                 chunk = chunk[~chunk['url'].str.contains('exclude_')]
+                chunk = chunk[np.abs(chunk['response_time']-chunk['response_time'].mean())<=(3*chunk['response_time'].std())] #keep only the ones that are within +3 to -3 standard deviations
+
                 df = df.append(chunk)
                 logger.info("Parsing a huge file,size: " + str(df.size))
         else:
@@ -273,6 +275,7 @@ for build_root in build_roots:
                 'failureMessage', 'grpThreads', 'allThreads'
             ]
             df = df[~df['url'].str.contains('exclude_')]
+            df = df[np.abs(df['response_time']-df['response_time'].mean())<=(3*df['response_time'].std())] #keep only the ones that are within +3 to -3 standard deviations
 
         df.columns = [
             'response_time', 'url', 'responseCode', 'success', 'threadName',
