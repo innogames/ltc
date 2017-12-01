@@ -47,37 +47,47 @@
                     </div>
                 </div>
                 <h3 class="page-header">Comparison of average response times and CPU utilization (%) <small>with a previous tests</small></h3>
-                <select name="number_of_tests" id="number_of_tests" class="selectpicker">
-                    <option selected value=1>1 (the last one)</option>
-                    <option value=5>5</option>
-                    <option value=10>10</option>
-                    <option value=9999>All</option>
-                </select>
+               
                 <div class="row">
-                    <div class="col-xs-6">
-                        <div class="panel panel-default">
-                            <div class="panel-body">
-                                <div id="compare_avg_graph"></div>
+                        <div class="col-xs-12">
+                    <div class="panel panel-default">
+                        <div class="panel-body">
+                            <div class="row">
+                                <div class="col-xs-6">
+                                <select name="number_of_tests" id="number_of_tests" class="selectpicker">
+                                    <option selected value=1>1 (the last one)</option>
+                                    <option value=5>5</option>
+                                    <option value=10>10</option>
+                                    <option value=9999>All</option>
+                                </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-6">
+                                    <div id="compare_avg_graph"></div>
+                                </div>
+                                <div class="col-xs-6">
+                                    <div id="compare_cpu_graph"></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-xs-6">
-                        <div class="panel panel-default">
-                            <div class="panel-body">
-                                <div id="compare_cpu_graph"></div>
-                            </div>
                         </div>
-
                     </div>
                 </div>
-                <h3 class="page-header">Compare report <small>against one of the tests</small></h3>
+                <div class="row">
+                        <div class="col-xs-12">
+                <h3 class="page-header">Compare report
+                    <small>against one of the tests</small>
+                </h3>
                 <select name="select_test_2" id="select_test_2" class="selectpicker">
                 </select>
                 <button id="get_previous_test_button" class="btn btn-success">Previous</button>
                 <div id="test_compare_results"></div>
+                </div>
             </div>
-        </div>
     </div>
+</div>
+</div>
 
     <div id="aggregate_table_tab">
         <div class="panel panel-default">

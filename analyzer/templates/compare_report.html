@@ -39,13 +39,18 @@
                     {% if report.absense|length > 0 %} 
                         {% for row in report.absense %}
                         <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} was not
-                        executed during the last test</li>
+                        executed during the last test <b>"{{ test_1.display_name }}"</b></li>
                         {% endfor %} 
                     {% elif report.lower_count|length > 0 %}
                         {% for row in report.lower_count %}
                         {% get_percentage_abs row.action_data_1.count row.action_data_2.count as diff_percentage %}
-                        <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} had <b>{{ diff_percentage }}</b> % less executions than before</li>
+                        <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} had <b>{{ diff_percentage }}</b> % less executions than in previous test <b>"{{ test_2.display_name }}"</b></li>
                         {% endfor %} 
+                    {% elif report.new_action_in_test|length > 0 %}
+                        {% for row in report.new_action_in_test %}
+                        <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} was not
+                         executed during the previous test <b>"{{ test_2.display_name }}"</b></li>
+                        {% endfor %}
                     {% else %}
                     <b>No any additional info</b>
                      {% endif %}

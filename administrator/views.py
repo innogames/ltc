@@ -197,7 +197,7 @@ def test_data_refresh(request):
                                     name = parameter.find('name')
                                     value = parameter.find('value')
                                     build_parameters.append(
-                                        [name.text, value.text])
+                                        {name.text: value.text})
                                 userId = params.find('.//userId')
                                 if userId is not None:
                                     started_by = userId.text

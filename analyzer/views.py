@@ -405,19 +405,20 @@ def get_compare_tests_aggregate_data(test_id,
         id=test_id).values('start_time')[0]['start_time']
     project_id = project[0]['project_id']
 
-    data = TestActionAggregateData.objects. \
+    data = TestData.objects. \
             filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True).\
             annotate(display_name=F('test__display_name')). \
             annotate(start_time=F('test__start_time')). \
             values('display_name', 'start_time'). \
-            annotate(average=Avg(RawSQL("((data->>%s)::numeric)", ('mean',)))). \
-            annotate(median=Avg(RawSQL("((data->>%s)::numeric)", ('50%',)))). \
+            annotate(average=Sum(RawSQL("((data->>%s)::numeric)", ('avg',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
+            annotate(median=Sum(RawSQL("((data->>%s)::numeric)", ('median',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
             order_by(order)
     return data
 
 
 def compare_tests_avg(request, test_id, num_of_tests):
     data = get_compare_tests_aggregate_data(test_id, num_of_tests)
+    print data
     current_rank = 1
     counter = 0
     arr = []
@@ -612,13 +613,31 @@ def tests_compare_report(request, test_id_1, test_id_2):
         'higher_response_times': [],
         'lower_response_times': [],
         'lower_count': [],
+        'new_action_in_test': [],
     }
     sp = int(
         Configuration.objects.get(name='signifficant_actions_compare_percent')
         .value)
+    test_1_actions = list(
+        TestActionAggregateData.objects.annotate(url=F('action__url'))
+        .filter(test_id=test_id_1).values('action_id', 'url', 'data'))
     test_2_actions = list(
         TestActionAggregateData.objects.annotate(url=F('action__url'))
         .filter(test_id=test_id_2).values('action_id', 'url', 'data'))
+
+    for action in test_1_actions:
+        # Check for new actions executed during the last test
+        action_id = action['action_id']
+        action_url = action['url']
+        if not TestActionAggregateData.objects.filter(
+                test_id=test_id_2, action_id=action_id).exists(
+                ) and TestActionAggregateData.objects.filter(
+                    test_id=test_id_1, action_id=action_id).exists():
+            report['new_action_in_test'].append({
+                "action": action_url,
+                "severity": "danger",
+            })
+
     for action in test_2_actions:
         action_id = action['action_id']
         action_url = action['url']
@@ -646,18 +665,20 @@ def tests_compare_report(request, test_id_1, test_id_2):
             # df = Na - 1 + Nb - 1
             # Satterthwaite Formula for Degrees of Freedom
             if Xa > 10 and Xb > 10 and not Sa == 0 and not Sb == 0:
-                df = math.pow(math.pow(Sa, 2) / Na + math.pow(Sb, 2) / Nb, 2) / (
-                    math.pow(math.pow(Sa, 2) / Na, 2) /
-                    (Na - 1) + math.pow(math.pow(Sb, 2) / Nb, 2) / (Nb - 1))
+                df = math.pow(
+                    math.pow(Sa, 2) / Na + math.pow(Sb, 2) / Nb, 2) / (
+                        math.pow(math.pow(Sa, 2) / Na, 2) /
+                        (Na - 1) + math.pow(math.pow(Sb, 2) / Nb, 2) /
+                        (Nb - 1))
                 if df > 0:
                     t = stats.t.ppf(1 - 0.01, df)
                     logger.debug(
                         'Action: {0} t: {1} Xa: {2} Xb: {3} Sa: {4} Sb: {5} Na: {6} Nb: {7} df: {8}'.
                         format(action_url,
-                            stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na, Nb,
-                            df))
+                               stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na,
+                               Nb, df))
                     Sab = math.sqrt(((Na - 1) * math.pow(Sa, 2) +
-                                    (Nb - 1) * math.pow(Sb, 2)) / df)
+                                     (Nb - 1) * math.pow(Sb, 2)) / df)
                     Texp = (math.fabs(Xa - Xb)) / (
                         Sab * math.sqrt(1 / Na + 1 / Nb))
                     logger.debug('Action: {0} Texp: {1} Sab: {2}'.format(
@@ -705,9 +726,13 @@ def tests_compare_report(request, test_id_1, test_id_2):
                                 "action_data_2":
                                 action_data_2,
                             })
-    return render(request, 'compare_report.html', {
-        'report': report,
-    })
+    return render(
+        request,
+        'compare_report.html', {
+            'report': report,
+            'test_1': Test.objects.get(id=test_id_1),
+            'test_2': Test.objects.get(id=test_id_2),
+        })
     #return JsonResponse(report, safe=False)
 
 
@@ -855,9 +880,11 @@ def dashboard_compare_tests_list(tests_list):
             errors_sum=Sum(F('errors'), output_field=FloatField()),
             overall_avg = Sum(F('weight'))/Sum(F('count'))
             )
-
-        errors_percentage = test_data['errors_sum'] * 100 / test_data[
+        try:
+            errors_percentage = test_data['errors_sum'] * 100 / test_data[
             'count_sum']
+        except TypeError, ZeroDivisionError:
+            errors_percentage = 0 
         success_requests = 100 - errors_percentage
         # TODO: improve this part
         if success_requests >= 98:
@@ -871,6 +898,10 @@ def dashboard_compare_tests_list(tests_list):
             t['project__project_name'],
             'display_name':
             t['display_name'],
+            'parameters':
+            t['parameters'],
+            'start_time':
+            t['start_time'],
             'success_requests':
             success_requests,
             'test_avg_response_times':
@@ -897,13 +928,13 @@ def dashboard(request):
         if int(i['latest_time']) >= int(
                 time.time() * 1000) - 1000 * 1 * 60 * 60 * 24 * 30:
             r = Test.objects.filter(project_id=project_id, start_time=i['latest_time']).\
-                values('project__project_name', 'display_name', 'id','project_id')
+                values('project__project_name', 'display_name', 'id','project_id','parameters', 'start_time')
             last_tests_by_project.append(list(r)[0])
             projects_list.append(Project.objects.get(id=project_id))
 
     last_tests = Test.objects.filter(project__show=True).values(
-        'project__project_name', 'project_id', 'display_name',
-        'id').order_by('-start_time')[:10]
+        'project__project_name', 'project_id', 'display_name', 'id',
+        'parameters', 'start_time').order_by('-start_time')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     tests_by_project = dashboard_compare_tests_list(last_tests_by_project)
     logger.debug(projects_list)
@@ -952,7 +983,7 @@ def confluence_project_report(project_id):
 
     last_tests = Test.objects.filter(project_id=project_id).values(
         'project__project_name', 'project_id', 'display_name',
-        'id').order_by('-start_time')[:10]
+        'id','parameters', 'start_time').order_by('-start_time')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     last_tests_table_html = render_to_string(
         'confluence/last_tests_table.html', {'last_tests': tests})
@@ -972,7 +1003,7 @@ def generate_confluence_project_report(request, project_id):
     cp = confluenceposter.ConfluencePoster(wiki_url, wiki_user, wiki_password)
     cp.login()
 
-    space = "SystemAdministration"
+    space = project.confluence_space
 
     target_page = '{0} Load Testing Reports'.format(project.project_name)
 

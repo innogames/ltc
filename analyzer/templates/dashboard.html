@@ -21,6 +21,7 @@
                         <tr>
                             <th>Project</th>
                             <th>Test name</th>
+                            <th>Virtual Users #</th>
                             <th>Success requests</th>
                             <th>Avg. response times</th>
                             <th>Result</th>
@@ -34,6 +35,15 @@
                             </td>
                             <td>
                                 <b><a href=""  onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
+                            </td>
+                            <td>
+                                {% for parameter in row.parameters %}     
+                                {% for name, value in parameter.items %}
+                                    {% if name == "THREAD_COUNT" %}
+                                    {{ value }}
+                                    {% endif %}
+                                {% endfor %}
+                                {% endfor %}
                             </td>
                             <td>
                                     {% if row.success_requests > 98 %}

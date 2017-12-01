@@ -7,7 +7,9 @@
           </colgroup>
     <thead>
         <tr>
+            <th>Test`s start time (UTC)</th>
             <th>Test name</th>
+            <th>Virtual Users #</th>
             <th>Success requests</th>
             <th>Avg. response times</th>
             <th>Result</th>
@@ -15,8 +17,18 @@
     </thead>
     {% for row in last_tests %}
     <tr>
+            <td>{{ print_timestamp row.start_time }}</td>
             <td>
                     <strong><ac:link><ri:page ri:content-title="{{ row.display_name }}"/></ac:link></strong>
+            </td>
+            <td>
+                                        {% for parameter in row.parameters %}     
+                                        {% for name, value in parameter.items %}
+                                            {% if name == "THREAD_COUNT" %}
+                                            {{ value }}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% endfor %}
             </td>
             <td>
                     {% if row.success_requests > 98 %}

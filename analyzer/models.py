@@ -19,6 +19,7 @@ class Project(models.Model):
     script_pre = models.TextField(null=True, blank=True)
     script_post = models.TextField(null=True, blank=True)
     show = models.BooleanField(default=True)
+    confluence_space = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'project'

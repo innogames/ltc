@@ -10,13 +10,15 @@ from django.views.generic import TemplateView
 from django.db.models.expressions import F, RawSQL
 from django.db.models import Avg, FloatField, Max, Min, Sum
 from controller.models import TestRunning, TestRunningData
+from administrator.models import Configuration
 from analyzer.models import Project
 from django.shortcuts import render
 logger = logging.getLogger(__name__)
 MONITORING_DIR = ""
 # Create your views here.
 if _platform == "linux" or _platform == "linux2":
-    MONITORING_DIRS = ["/var/lib/jenkins/jobs/", "/tmp/jltc/"]
+    jenkins_path = Configuration.objects.get(name='jenkins_path').value
+    MONITORING_DIRS = [jenkins_path + "jobs/", "/tmp/jltc/"]
 elif _platform == "win32":
     MONITORING_DIRS = ["C:\work\monitoring"]
 
