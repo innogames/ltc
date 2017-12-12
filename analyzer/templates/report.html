@@ -1,3 +1,4 @@
+{% load static %}
 <hr/>
 <article id="tabs_test_results" class="tabs">
     <ul>
@@ -60,7 +61,12 @@
                                     <option value=10>10</option>
                                     <option value=9999>All</option>
                                 </select>
+                                <div class="btn-group" id="compare_avg_switcher" data-toggle="buttons">
+                                    <button type="button" class="btn active" value='default'>Default</button>
+                                    <button type="button" class="btn" value='graphite'>Graphite (Gentime)</button>
+                            </div> 
                                 </div>
+                                
                             </div>
                             <div class="row">
                                 <div class="col-xs-6">
@@ -122,22 +128,6 @@
                                 <td> {{ value|floatformat }} </td>
                                 {% endif %}
                             {% endfor %}
-                        <!--/*{% else %}
-                        {% if k == "errors" %}
-                        {% if v > 10 %}
-                        <td style="background-color:red"> {{ v }} %</td>
-                        {% else %}
-                        {% if v == None %}
-                        <td style="background-color:red"> {{ 100 }} %</td>
-
-                        {% else %}
-                        <td> {{ v }} %</td>
-                        {% endif %}
-                        {% endif %}
-                        {% elif k == "action_id" %}
-                        {% else %}
-                        <td> {{ v }} </td>
-                        {% endif %}-->
                         {% endif %}
                         {% endfor %}
                     </tr>
@@ -149,6 +139,11 @@
 
     <div id="rtot_graphs_tab">
         <h3 class="page-header">Response times <small>during the test</small></h3>
+        <div class="btn-group" id="rtot_switcher" data-toggle="buttons">
+                <button type="button" class="btn active" value='default'>Default</button>
+                <button type="button" class="btn" value='graphite'>Graphite</button>
+        </div> 
+        <hr/>
         <div class="row">
             <div id="test_rtot_graph"></div>
         </div>
@@ -165,31 +160,172 @@
 
     <div id="monitoring_graphs_tab">
         <h3 class="page-header">Monitoring data <small>server`s metrics during the test</small></h3>
+        <div class="btn-group" id="monitoring_switcher" data-toggle="buttons">
+            <button type="button" class="btn active" value='default'>Default</button>
+            <button type="button" class="btn" value='graphite'>Graphite</button>
+        </div> 
         <select name="select_server_1" id="select_server_1" class="selectpicker">
         </select>
         <select name="select_monitoring_metric_1" id="select_monitoring_metric_1" class="selectpicker">
         </select>
+        <hr/>
         <div id="test_monitoring_graph"></div>
     </div>
     <div id="composite_graph_tab">
         <div id="composite"></div>
     </div>
+
 </article>
 
 <script>
     num_of_tests_to_compare = 5;
     top_actions = 5;
+    var monitoring_source, rtot_source = 'default';
+    $('#monitoring_switcher button').click(function() {
+        $(this).addClass('active').siblings().removeClass('active');
+        monitoring_source = $(this).val();
+        if (monitoring_source == 'graphite')
+        {
+            $.ajax({
+                url: "/analyzer/test/" + test_id_1 + "/check_graphite_data/",
+                type: "get",
+                beforeSend: function(){
+                    $('.ajax-loader').css("visibility", "visible");
+                  },
+                
+                success: function(response) {
+                    updateSelectList('#select_server_1', '/analyzer/test/' + monitoring_source + '/' + test_id_1 + '/servers/', "Select server", "server_name", "id");
+                    show_alert(response);
+                },
+                complete: function(){
+                    $('.ajax-loader').css("visibility", "hidden");
+                  },
+                error: function(xhr) {
+                    //Do Something to handle error
+                }
+            });
+        }
+        else
+        {
+            updateSelectList('#select_server_1', '/analyzer/test/' + monitoring_source + '/' + test_id_1 + '/servers/', "Select server", "server_name", "id");
+        }
+    });
+
+    $('#rtot_switcher button').click(function() {
+        $(this).addClass('active').siblings().removeClass('active');
+        rtot_source = $(this).val();
+        if (rtot_source == 'graphite')
+        {
+            $.ajax({
+                url: "/analyzer/test/" + test_id_1 + "/check_graphite_data/",
+                type: "get",
+                beforeSend: function(){
+                    $('.ajax-loader').css("visibility", "visible");
+                  },
+                
+                success: function(response) {
+                     show_alert(response);
+                     draw_rtot_graph(test_id_1, rtot_source);
+                },
+                complete: function(){
+                    $('.ajax-loader').css("visibility", "hidden");
+                  },
+                error: function(xhr) {
+                    //Do Something to handle error
+                }
+            });
+        }
+        else
+        {
+            draw_rtot_graph(test_id_1, rtot_source);
+        }
+    });
+    
     $("#tabs_test_results").tabs();
     $("#number_of_tests").selectpicker('val', num_of_tests_to_compare);
     $("#top_actions_select").selectpicker('val', top_actions);
     update_compare_graphs(num_of_tests_to_compare);
     draw_top_avg_graph(top_actions);
     updateTables();
-    updateSelectList('#select_server_1', '/analyzer/test/' + test_id_1 + '/servers/', "Select server", "server_name", "id");
+    updateSelectList('#select_server_1', '/analyzer/test/' + monitoring_source + '/' + test_id_1 + '/servers/', "Select server", "server_name", "id");
     updateSelectList('#select_test_2', '/analyzer/project/' + selected_project + "/tests_list/", "Select 2nd test", "display_name", "id");
     $("#aggregate_table").tablesorter();
     $("#aggregate_table").trigger('tsUpdate');
-
+    var draw_monitoring_graph = function draw_monitoring_graph(test_id, server, metric, source) {
+        var unit = "";
+        var max_y = 0;
+        var max_metric_value = 0;
+        $.ajax({
+           url: '/analyzer/test/' + test_id + '/' + server + '/'+ metric + '/max_value/',
+           type: "get",
+           success: function (response) {
+               max_metric_value = response.max_value;
+               console.log("max_metric_value="+max_metric_value)
+               if (metric.indexOf("CPU") > -1) {
+                   unit = " %";
+                   max_y = Math.round(max_metric_value);
+               } else if (metric.indexOf("Memory") > -1) {
+                   max_y = Math.round(max_metric_value + max_metric_value * 0.1);
+                   unit = " Mb";
+               } else {
+                   max_y = Math.round(max_metric_value + max_metric_value * 0.1);
+               }
+   
+               $.ajax({
+                   url: "/analyzer/test/"+test_id+"/get_server_monitoring_data/",
+                   type: "post",
+                   data: {
+                   server_id: server,
+                   metric: metric,
+                   source: source,
+                   csrfmiddlewaretoken: '{{ csrf_token }}'
+                   },
+                   success: function(response) {
+                       monitoring_graph = c3.generate({
+                           data: {
+                               json: response,
+                               type: 'line',
+                               keys: {
+                                    x: 'timestamp',
+                                    value: [metric],
+                               },
+                               xFormat: '%H:%M:%S',
+                           },
+                           axis: {
+                               x: {
+                                   type: 'timeseries',
+                                   tick: {
+                                       format: '%H:%M:%S'
+                                   }
+                               },
+                               y: {
+                                   max: max_y,
+                                   min: 0,
+                                   padding: {
+                                       top: 0,
+                                       bottom: 0
+                                   },
+                                   label: metric + " (" + unit + ")",
+                               },
+                           },
+                           title: {
+                               text: metric + ' on ' + server
+                           },
+                           bindto: '#test_monitoring_graph'
+                       });
+                    },
+                   error: function(xhr) {
+                     //Do Something to handle error
+                   }
+               });
+           },
+           error: function(xhr) {
+               show_alert(response);
+           }
+       });
+   
+   
+    }
     // COMPOSITE GRAPH
     $.ajax({
         url: '/analyzer/project/' + selected_project + '/composite/',
@@ -202,11 +338,18 @@
             show_alert(response);
         }
     });
-
+    var draw_rtot_graph = function draw_rtot_graph(test_id, source) {
+        $.ajax({
+            url: "/analyzer/test/"+test_id+"/get_test_rtot_data/",
+            type: "post",
+            data: {
+            source: source,
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
     var test_rtot_graph = c3.generate({
         data: {
-            url: '/analyzer/test/' + test_id_1 + '/rtot/',
-            mimeType: 'json',
+            json: response,
             type: 'line',
             keys: {
                 x: 'timestamp',
@@ -228,6 +371,7 @@
                 }
             },
             y: {
+                min: 0,
                 padding: {
                     top: 0,
                     bottom: 0
@@ -247,53 +391,16 @@
         },
         bindto: '#test_rtot_graph'
     });
+},
+error: function(xhr) {
+  //Do Something to handle error
+}
+});
+}
 
     function update_compare_graphs(num_of_tests_to_compare) {
         var test = JSON.parse(httpGet('/analyzer/project/' + test_id_1 + '/test_info/'));
-        compare_avg_graph = c3.generate({
-            data: {
-                url: '/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_avg',
-                mimeType: 'json',
-                keys: {
-                    x: 'display_name',
-                    value: ['average', 'median'],
-                },
-                type: 'bar',
-
-            },
-            axis: {
-                x: {
-                    type: 'category',
-                },
-                y: {
-                    padding: {
-                        top: 0,
-                        bottom: 0
-                    },
-                    label: 'ms',
-                    min: 0,
-                }
-            },
-            grid: {
-                x: {
-                    lines: [{
-                        value: test[0].display_name,
-                        text: 'Current test',
-                        position: 'end'
-                    }]
-                }
-            },
-            regions: [{
-                axis: 'x',
-                start: 0.5,
-                class: 'regionX'
-            }, ],
-            title: {
-                text: 'Comparison of average and median response times'
-            },
-            bindto: '#compare_avg_graph'
-        });
-
+        draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, 'default');
         var arr = [];
         var graph_values = []; //values for the graph
 
@@ -409,14 +516,110 @@
                     url = '/analyzer/test/' + test_id_1 + '/' + obj.action_id + '/action_report';
                     //cuz in database 100% is null >_<
                     var actionErrors = (obj.errors == null) ? 100 : obj.errors;
-                    $("#top_errors_list").append('<ul class="list-group"><li class="list-group-item"><span class="badge alert-danger">' + actionErrors + ' %</span><div style="word-wrap:break-word;"><b><a href="/analyzer/test/' + test_id_1 + '/' + obj.action_id + '/action_report" onclick="return popitup("/analyzer/test/' + test_id_1 + "/" + obj.action_id + '/action_report")">' + obj.url + '</a></b></div></li></ul>');
+                    $("#top_errors_list").append('<ul class="list-group"><li class="list-group-item"><span class="badge alert-danger">' + actionErrors + ' %</span><div style="word-wrap:break-word;"><b><a href="/analyzer/test/' + test_id_1 + '/' + obj.action_id + '/action_report" onclick="return popitup(\'/analyzer/test/' + test_id_1 + "/" + obj.action_id + '/action_report\')">' + obj.url + '</a></b></div></li></ul>');
                 });
 
             });
 
     }
 
+     $('#compare_avg_switcher button').click(function() {
+        $(this).addClass('active').siblings().removeClass('active');
+        source = $(this).val();
+        if (source == 'graphite')
+        {
+            $.ajax({
+                url: "/analyzer/test/" + test_id_1 + "/check_graphite_data/",
+                type: "get",
+                beforeSend: function(){
+                    $('.ajax-loader').css("visibility", "visible");
+                  },
+                
+                success: function(response) {
+                     show_alert(response);
+                     draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, source);
+                },
+                complete: function(){
+                    $('.ajax-loader').css("visibility", "hidden");
+                  },
+                error: function(xhr) {
+                    //Do Something to handle error
+                }
+            });
+        }
+        else
+        {
+            draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, source);
+        }
+    });
 
+    function draw_compare_avg_graph(test_id, num_of_tests_to_compare, source)
+    {
+         var test = JSON.parse(httpGet('/analyzer/project/' + test_id_1 + '/test_info/'));
+        $.ajax({
+            url: "/analyzer/test/"+test_id+"/get_compare_data/",
+            type: "post",
+            data: {
+            num_of_tests_to_compare: num_of_tests_to_compare,
+            source: source,
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            beforeSend: function(){
+                $('.ajax-loader').css("visibility", "visible");
+              },
+            success: function(response) {
+        compare_avg_graph = c3.generate({
+            data: {
+                json: response,
+                mimeType: 'json',
+                keys: {
+                    x: 'display_name',
+                    value: ['average', 'median'],
+                },
+                type: 'bar',
+
+            },
+            axis: {
+                x: {
+                    type: 'category',
+                },
+                y: {
+                    padding: {
+                        top: 0,
+                        bottom: 0
+                    },
+                    label: 'ms',
+                    min: 0,
+                }
+            },
+            grid: {
+                x: {
+                    lines: [{
+                        value: test[0].display_name,
+                        text: 'Current test',
+                        position: 'end'
+                    }]
+                }
+            },
+            regions: [{
+                axis: 'x',
+                start: 0.5,
+                class: 'regionX'
+            }, ],
+            title: {
+                text: 'Comparison of average and median response times'
+            },
+            bindto: '#compare_avg_graph'
+        });
+    },
+    error: function(xhr) {
+        show_alert(response);
+    },
+    complete: function(){
+        $('.ajax-loader').css("visibility", "hidden");
+      },
+});
+    }
 
     function draw_top_avg_graph(top_N) {
         top_avg_graph = c3.generate({
@@ -456,25 +659,21 @@
     }
 
 
-
     $('#select_server_1').on('change', function() {
         var server_id = $(this).find("option:selected").val();
         selected_server_for_monitoring_data = server_id;
-        updateSelectList('#select_monitoring_metric_1', '/analyzer/test/' + test_id_1 + '/' + server_id + '/monitoring_metrics/', "Select metric", "metric", "metric");
-        //console.log("Selected server_name:" + server_name);
+        updateSelectList('#select_monitoring_metric_1', '/analyzer/test/' + monitoring_source + '/' + test_id_1 + '/' + server_id + '/monitoring_metrics/', "Select metric", "metric", "metric");
         if (selected_monitoring_metric == "") selected_monitoring_metric = "CPU_all";
-        draw_monitoring_graph(test_id_1, selected_server_for_monitoring_data, selected_monitoring_metric);
+        draw_monitoring_graph(test_id_1, selected_server_for_monitoring_data, selected_monitoring_metric, monitoring_source);
     });
 
     $('#select_monitoring_metric_1').on('change', function() {
         var monitoring_metric = $(this).find("option:selected").val();
         selected_monitoring_metric = monitoring_metric;
-        //console.log("Selected monitoring_metric:" + monitoring_metric);
-        draw_monitoring_graph(test_id_1, selected_server_for_monitoring_data, selected_monitoring_metric);
+        draw_monitoring_graph(test_id_1, selected_server_for_monitoring_data, selected_monitoring_metric, monitoring_source);
     });
     $('#number_of_tests').on('change', function() {
         num_of_tests_to_compare = $(this).find("option:selected").val();
-        //console.log("num_of_tests_to_compare:" + num_of_tests_to_compare);
         update_compare_graphs(num_of_tests_to_compare);
     });
     $('#top_actions_select').on('change', function() {

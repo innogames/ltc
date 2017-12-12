@@ -12,7 +12,14 @@ from pylab import np
 
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 
-
+class ProjectGraphiteSettings(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    name =  models.CharField(max_length=1000, default="")
+    value = models.CharField(max_length=10000, default="")
+    class Meta:
+        db_table = 'project_graphite_settings'
+        unique_together = (('project', 'value'))
+        
 class Proxy(models.Model):
     port = models.IntegerField(default=0)
     pid = models.IntegerField(default=0)
@@ -265,7 +272,7 @@ class LoadGeneratorServer(models.Model):
 
 
 class LoadGenerator(models.Model):
-    hostname = models.CharField(max_length=200, default="")
+    hostname = models.CharField(max_length=200, default="", unique=True)
     num_cpu = models.CharField(max_length=200, default="")
     memory = models.CharField(max_length=200, default="")
     memory_free = models.CharField(max_length=200, default="")
@@ -274,6 +281,7 @@ class LoadGenerator(models.Model):
     la_15 = models.CharField(max_length=200, default="")
     status = models.CharField(max_length=200, default="")
     reason = models.CharField(max_length=200, default="")
+    active = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'load_generator'
@@ -287,9 +295,18 @@ class JmeterInstance(models.Model):
     jmeter_dir = models.CharField(max_length=300, default="")
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     threads_number = models.IntegerField(default=0)
-
+    java_args =  models.CharField(max_length=1000, default="")
     class Meta:
         db_table = 'jmeter_instance'
+        
+class ActivityLog(models.Model):
+    date = models.DateTimeField(auto_now_add=True, blank=True)
+    action =  models.CharField(max_length=1000, default="")
+    load_generator = models.ForeignKey(LoadGenerator)
+    data = JSONField()
+   
+    class Meta:
+        db_table = 'activity_log'
 
 
 class JmeterInstanceStatistic(models.Model):

@@ -22,6 +22,7 @@
                             <th>Project</th>
                             <th>Test name</th>
                             <th>Virtual Users #</th>
+                            <th>Duration</th>
                             <th>Success requests</th>
                             <th>Avg. response times</th>
                             <th>Result</th>
@@ -41,6 +42,15 @@
                                 {% for name, value in parameter.items %}
                                     {% if name == "THREAD_COUNT" %}
                                     {{ value }}
+                                    {% endif %}
+                                {% endfor %}
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for parameter in row.parameters %}     
+                                {% for name, value in parameter.items %}
+                                    {% if name == "DURATION" %}
+                                    {% seconds_to_time value %}
                                     {% endif %}
                                 {% endfor %}
                                 {% endfor %}
@@ -240,6 +250,7 @@ function updateLoadGeneratorsTable()
                                     '</tr>' +
                                 '</thead>'
                 $.each(response, function(i, obj) {
+                var host_id = obj['id'];
                 var hostname = obj['hostname'];
                 var status = obj['status'];
                 var reason = obj['reason'];
@@ -249,7 +260,9 @@ function updateLoadGeneratorsTable()
                 if (jmeter_instances_count>=5) jmeter_instances_label = "danger";
                 else if (jmeter_instances_count<5 && jmeter_instances_count > 2) jmeter_instances_label = "warning";
                 var load = obj['la_5'];
-                loadgenerators_table += '<tr><td>'+hostname+'</td>'+ '<td>'+memory_free+'</td>' + '<td>'+load+'</td>' + '<td><span class="label label-'+ jmeter_instances_label + '">' + jmeter_instances_count + '</span></td>' + '<td><span class="label label-'+status+'">' + reason+'</span></td></tr>';
+                loadgenerators_table += '<tr><td><a href="/controller/load_generator/'+ host_id +'/get_data/" onclick="return popitup(\'/controller/load_generator/'+ host_id +'/get_data/\')">'+hostname+'</a></td>'+ '<td>'+memory_free+'</td>' + '<td>'+load+'</td>' + '<td><span class="label label-'+ jmeter_instances_label + '">' + jmeter_instances_count + '</span></td>' + '<td><span class="label label-'+status+'">' + reason+'</span></td></tr>';
+                
+                
                 });
                 loadgenerators_table += '</table></div>';
                 $("#load_generators_list").append(loadgenerators_table);
@@ -303,10 +316,10 @@ function updateRunningTestsTable()
 }   
 updateLoadGeneratorsTable();
 updateRunningTestsTable();
-    setInterval(function() {
-        updateLoadGeneratorsTable();
-        updateRunningTestsTable();
-
-    }, 5000);
+ //  setInterval(function() {
+ ///       updateLoadGeneratorsTable();
+  //      updateRunningTestsTable();
+///
+ // }, 10000);
 
 </script>

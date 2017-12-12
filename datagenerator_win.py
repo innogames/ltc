@@ -37,6 +37,7 @@ aggregate = meta.tables['jltc.aggregate']
 server_monitoring_data = meta.tables['jltc.server_monitoring_data']
 test_aggregate = meta.tables['jltc.test_aggregate']
 test_action_aggregate_data = meta.tables['jltc.test_action_aggregate_data']
+user = meta.tables['jltc.user']
 
 Session = sessionmaker(bind=db_engine)
 
@@ -149,7 +150,19 @@ for root, dirs, files in os.walk(builds_dir):
                                 name = parameter.find('name')
                                 value = parameter.find('value')
                                 build_parameters.append(
-                                    [name.text, value.text])
+                                    {name.text: value.text})
+                                userId = params.find('.//userId')
+                                if userId is not None:
+                                    started_by = userId.text
+                                    if db_session.query(user.c.id).filter(user.c.login == started_by).count() == 0:
+                                        logger.info("Adding new user: {0}".format(started_by))
+                                        stm = user.insert().values(
+                                            login=started_by)
+                                        result = db_connection.execute(stm)
+                                    user_id = db_session.query(user.c.id). \
+                                        filter(user.c.login == started_by).scalar()
+                                else:
+                                    user_id = 0
                         elif params.tag == 'startTime':
                             start_time = int(params.text)
                         elif params.tag == 'displayName':
@@ -190,6 +203,7 @@ for root, dirs, files in os.walk(builds_dir):
                             start_time=start_time,
                             end_time=start_time+duration,
                             build_number=build_number,
+                            started_by_id = user_id,
                             show=True)
                         result = db_connection.execute(stm)
 jtl_files = sorted(jtl_files, key=getIndex, reverse=True)

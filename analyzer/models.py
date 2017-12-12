@@ -42,6 +42,9 @@ class Test(models.Model):
 
     class Meta:
         db_table = 'test'
+        index_together = [
+            ("show", "project", "start_time"),
+        ]
 
     def __str__(self):
         return self.display_name
@@ -49,6 +52,7 @@ class Test(models.Model):
 
 class TestData(models.Model):
     test = models.ForeignKey(Test)
+    source = models.CharField(max_length=100, default='default')
     data = JSONField()
 
     class Meta:
@@ -63,6 +67,8 @@ class Action(models.Model):
     class Meta:
         db_table = 'action'
         unique_together = (('url', 'project'))
+
+
 
 
 class TestActionData(models.Model):
@@ -126,12 +132,15 @@ class Server(models.Model):
 
 class ServerMonitoringData(models.Model):
     test = models.ForeignKey(Test)
+    source = models.CharField(max_length=100, default='default')
     server = models.ForeignKey(Server)
     data = JSONField()
 
     class Meta:
         db_table = 'server_monitoring_data'
-
+        index_together = [
+            ("test", "server", 'source'),
+        ]
 
 
 

@@ -52,7 +52,11 @@ urlpatterns = [
         views.script_param_delete),
     #url(r'^load_generators/get_data/$',
     #    views.get_load_generators_data),
+    #url(r'^load_generator/(?P<load_generator_id>\d+)/get_data/$',
+    #    views.get_load_generator_data),
     url(r'^running_tests/get_data/', views.get_running_tests),
     url(r'^running_test/(?P<running_test_id>\d+)/stop_test', views.stop_test),
+    url(r'^test/(?P<test_id>\d+)/update_graphite_metric/', views.update_graphite_metric),
+    url(r'^test/(?P<test_id>\d+)/get_graphite_gentime/', views.get_graphite_gentime),
     url(r'^parse_results', views.parse_results),
 ]

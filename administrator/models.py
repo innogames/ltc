@@ -5,6 +5,7 @@ from django.db import models
 # Create your models here.
 
 
+
 class JMeterProfile(models.Model):
     name = models.CharField(max_length=1000, default="")
     path = models.CharField(max_length=1000, default="")

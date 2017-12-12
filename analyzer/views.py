@@ -16,6 +16,7 @@ from django.views.generic import TemplateView
 import pandas as pd
 from administrator.models import Configuration
 from analyzer.confluence import confluenceposter
+from controller.views import update_test_graphite_data
 from analyzer.confluence.utils import generate_confluence_graph
 from models import (Action, Aggregate, Project, Server, ServerMonitoringData,
                     Test, TestActionAggregateData, TestActionData, TestData)
@@ -303,9 +304,9 @@ def action_rtot(request, test_id, action_id):
     return JsonResponse(data, safe=False)
 
 
-def available_test_monitoring_metrics(request, test_id, server_id):
+def available_test_monitoring_metrics(request, source, test_id, server_id):
     x = ServerMonitoringData.objects.\
-        filter(test_id=test_id, server_id=server_id).values('data')[:1]
+        filter(test_id=test_id, server_id=server_id, source=source).values('data')[:1]
     data = list(x)[0]["data"]
     metrics = []
     for value in data:
@@ -315,9 +316,9 @@ def available_test_monitoring_metrics(request, test_id, server_id):
     return JsonResponse(metrics, safe=False)
 
 
-def test_servers(request, test_id):
+def test_servers(request, source, test_id):
     servers_list = Server.objects.\
-        filter(servermonitoringdata__test_id=test_id).\
+        filter(servermonitoringdata__test_id=test_id, servermonitoringdata__source=source).\
         values().distinct()
 
     return JsonResponse(list(servers_list), safe=False)
@@ -396,7 +397,8 @@ def compare_tests_cpu(request, test_id, num_of_tests):
 
 def get_compare_tests_aggregate_data(test_id,
                                      num_of_tests,
-                                     order='-test__start_time'):
+                                     order='-test__start_time',
+                                     source='default'):
     '''
     Compares given test with test_id against num_of_tests previous
     '''
@@ -404,58 +406,81 @@ def get_compare_tests_aggregate_data(test_id,
     start_time = Test.objects.filter(
         id=test_id).values('start_time')[0]['start_time']
     project_id = project[0]['project_id']
-
-    data = TestData.objects. \
-            filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True).\
-            annotate(display_name=F('test__display_name')). \
-            annotate(start_time=F('test__start_time')). \
-            values('display_name', 'start_time'). \
-            annotate(average=Sum(RawSQL("((data->>%s)::numeric)", ('avg',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
-            annotate(median=Sum(RawSQL("((data->>%s)::numeric)", ('median',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
-            order_by(order)
+    if source == 'default':
+        data = TestData.objects. \
+                filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True, source=source).\
+                annotate(display_name=F('test__display_name')). \
+                annotate(start_time=F('test__start_time')). \
+                values('display_name', 'start_time'). \
+                annotate(average=Sum(RawSQL("((data->>%s)::numeric)", ('avg',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
+                annotate(median=Sum(RawSQL("((data->>%s)::numeric)", ('median',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
+                order_by(order)
+    elif source == 'graphite':
+        tests = Test.objects.filter(start_time__lte=start_time, project_id=project_id, show=True).values()
+        for t in tests:
+            test_id = t['id']
+            print test_id
+            if not ServerMonitoringData.objects.filter(
+                test_id=test_id,
+                source='graphite').exists() or not TestData.objects.filter(
+                    test_id=test_id, source='graphite').exists():
+                result = update_test_graphite_data(test_id)
+        data = TestData.objects. \
+                filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True, source=source).\
+                annotate(display_name=F('test__display_name')). \
+                annotate(start_time=F('test__start_time')). \
+                values('display_name', 'start_time'). \
+                annotate(average=Avg(RawSQL("((data->>%s)::numeric)", ('avg',)))). \
+                annotate(median=Avg(RawSQL("((data->>%s)::numeric)", ('median',)))). \
+                order_by(order)
     return data
 
 
-def compare_tests_avg(request, test_id, num_of_tests):
-    data = get_compare_tests_aggregate_data(test_id, num_of_tests)
-    print data
-    current_rank = 1
-    counter = 0
-    arr = []
-    for d in data:
-        if counter < 1:
-            d['rank'] = current_rank
-        else:
-            if int(d['start_time']) == int(data[counter - 1]['start_time']):
+def compare_tests_avg(request, test_id):
+    if request.method == 'POST':
+        source = request.POST.get('source', '0')
+        num_of_tests = request.POST.get('num_of_tests_to_compare', '0')
+        data = get_compare_tests_aggregate_data(test_id, num_of_tests, source=source)
+        current_rank = 1
+        counter = 0
+        arr = []
+        for d in data:
+            if counter < 1:
                 d['rank'] = current_rank
             else:
-                current_rank += 1
-                d['rank'] = current_rank
-        # filter by rank >_<
-        if int(d['rank']) <= int(num_of_tests) + 1:
-            arr.append(d)
-        counter += 1
-    response = list(arr)
+                if int(d['start_time']) == int(data[counter - 1]['start_time']):
+                    d['rank'] = current_rank
+                else:
+                    current_rank += 1
+                    d['rank'] = current_rank
+            # filter by rank >_<
+            if int(d['rank']) <= int(num_of_tests) + 1:
+                arr.append(d)
+            counter += 1
+        response = list(arr)
     return JsonResponse(response, safe=False)
 
 
-def test_rtot(request, test_id):
-    min_timestamp = TestData.objects. \
-        filter(test_id=test_id). \
-        values("test_id").\
-        aggregate(min_timestamp=Min(
-            RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
-    x = TestData.objects. \
-        filter(test_id=test_id). \
-        annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
-        annotate(average=RawSQL("((data->>%s)::numeric)", ('avg',))). \
-        annotate(median=RawSQL("((data->>%s)::numeric)", ('median',))). \
-        annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',))) / 60). \
-        values('timestamp', "average", "median", "rps"). \
-        order_by('timestamp')
-    data = json.loads(
-        json.dumps(list(x), indent=4, sort_keys=True, default=str))
-    return JsonResponse(data, safe=False)
+def test_rtot_data(request, test_id):
+    data = []
+    if request.method == 'POST':
+        source = request.POST.get('source', '0')
+        min_timestamp = TestData.objects. \
+            filter(test_id=test_id, source=source). \
+            values("test_id").\
+            aggregate(min_timestamp=Min(
+                RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
+        x = TestData.objects. \
+            filter(test_id=test_id, source=source). \
+            annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
+            annotate(average=RawSQL("((data->>%s)::numeric)", ('avg',))). \
+            annotate(median=RawSQL("((data->>%s)::numeric)", ('median',))). \
+            annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',))) / 60). \
+            values('timestamp', "average", "median", "rps"). \
+            order_by('timestamp')
+        data = json.loads(
+            json.dumps(list(x), indent=4, sort_keys=True, default=str))
+        return JsonResponse(data, safe=False)
 
 
 def test_errors(request, test_id):
@@ -537,33 +562,67 @@ def tests_compare_aggregate(request, test_id_1, test_id_2):
     return JsonResponse(response, safe=False)
 
 
-def metric_data(request, test_id, server_id, metric):
-    min_timestamp = ServerMonitoringData.objects. \
-        filter(test_id=test_id). \
-        values("test_id"). \
-        aggregate(min_timestamp=Min(
-            RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
-
-    if metric == 'CPU_all':
-        metric_mapping = {
-            metric:
-            RawSQL(
-                "(((data->>%s)::numeric)+((data->>%s)::numeric)+((data->>%s)::numeric))",
-                (
-                    'CPU_iowait',
-                    'CPU_user',
-                    'CPU_system', ))
+def check_graphite_data(request, test_id):
+    if not ServerMonitoringData.objects.filter(
+            test_id=test_id,
+            source='graphite').exists() or not TestData.objects.filter(
+                test_id=test_id, source='graphite').exists():
+        result = update_test_graphite_data(test_id)
+        response = {
+            "message": {
+                "text": "Graphite data was updated",
+                "type": "success",
+                "msg_params": {
+                    "result": result
+                }
+            }
         }
     else:
-        metric_mapping = {metric: RawSQL("((data->>%s)::numeric)", (metric, ))}
-    x = ServerMonitoringData.objects. \
-        filter(test_id=test_id, server_id=server_id). \
-        annotate(timestamp=RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp).\
-        annotate(**metric_mapping). \
-        values('timestamp', metric)
-    #annotate(metric=RawSQL("((data->>%s)::numeric)", (metric,)))
-    data = json.loads(
-        json.dumps(list(x), indent=4, sort_keys=True, default=str))
+        response = {
+            "message": {
+                "text": "Graphite data is already exists",
+                "type": "success",
+                "msg_params": {}
+            }
+        }
+    return JsonResponse(response, safe=False)
+
+
+def server_monitoring_data(request, test_id):
+    data = []
+    if request.method == 'POST':
+        server_id = request.POST.get('server_id', '0')
+        metric = request.POST.get('metric', '0')
+        source = request.POST.get('source', '0')
+
+        min_timestamp = ServerMonitoringData.objects. \
+            filter(test_id=test_id, server_id=server_id, source=source). \
+            values("test_id"). \
+            aggregate(min_timestamp=Min(
+                RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
+
+        if metric == 'CPU_all':
+            metric_mapping = {
+                metric:
+                RawSQL(
+                    "(((data->>%s)::numeric)+((data->>%s)::numeric)+((data->>%s)::numeric))",
+                    (
+                        'CPU_iowait',
+                        'CPU_user',
+                        'CPU_system', ))
+            }
+        else:
+            metric_mapping = {
+                metric: RawSQL("((data->>%s)::numeric)", (metric, ))
+            }
+        x = ServerMonitoringData.objects. \
+            filter(test_id=test_id, server_id=server_id, source=source). \
+            annotate(timestamp=RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp).\
+            annotate(**metric_mapping). \
+            values('timestamp', metric)
+        #annotate(metric=RawSQL("((data->>%s)::numeric)", (metric,)))
+        data = json.loads(
+            json.dumps(list(x), indent=4, sort_keys=True, default=str))
     return JsonResponse(data, safe=False)
 
 
@@ -882,9 +941,9 @@ def dashboard_compare_tests_list(tests_list):
             )
         try:
             errors_percentage = test_data['errors_sum'] * 100 / test_data[
-            'count_sum']
+                'count_sum']
         except TypeError, ZeroDivisionError:
-            errors_percentage = 0 
+            errors_percentage = 0
         success_requests = 100 - errors_percentage
         # TODO: improve this part
         if success_requests >= 98:
@@ -982,8 +1041,8 @@ def confluence_project_report(project_id):
     #agg_cpu_util_graph = generate_confluence_graph(project, list(data))
 
     last_tests = Test.objects.filter(project_id=project_id).values(
-        'project__project_name', 'project_id', 'display_name',
-        'id','parameters', 'start_time').order_by('-start_time')[:10]
+        'project__project_name', 'project_id', 'display_name', 'id',
+        'parameters', 'start_time').order_by('-start_time')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     last_tests_table_html = render_to_string(
         'confluence/last_tests_table.html', {'last_tests': tests})
