@@ -911,36 +911,91 @@ def splitstring(string):
 
 
 def update_test_graphite_data(test_id):
-    graphite_url = Configuration.objects.get(name='graphite_url').value
-    graphite_user = Configuration.objects.get(name='graphite_user').value
-    graphite_password = Configuration.objects.get(name='graphite_pass').value
-    gc = graphiteclient.GraphiteClient(
-        graphite_url,
-        graphite_user,
-        str(graphite_password)
-    )
+    if Configuration.objects.filter(name='graphite_url').exists():
+        graphite_url = Configuration.objects.get(name='graphite_url').value
+        graphite_user = Configuration.objects.get(name='graphite_user').value
+        graphite_password = Configuration.objects.get(name='graphite_pass').value
+        gc = graphiteclient.GraphiteClient(
+            graphite_url,
+            graphite_user,
+            str(graphite_password)
+        )
 
-    test = Test.objects.get(id=test_id)
-    world_id = ""
-    for parameter in test.parameters:
-        if 'MONITOR_HOSTS' in parameter:
-            hosts_for_monitoring = parameter['MONITOR_HOSTS'].split(',')
-        if 'WORLD_ID' in parameter:
-            world_id = parameter['WORLD_ID']
-    
-    start_time = datetime.datetime.fromtimestamp(test.start_time/1000 + 3600).strftime("%H:%M_%Y%m%d")
-    end_time = datetime.datetime.fromtimestamp(test.end_time/1000 + 3600).strftime("%H:%M_%Y%m%d")
-    game_short_name = hosts_for_monitoring[0].split(".",1)[1] 
-    for server_name in hosts_for_monitoring:
+        test = Test.objects.get(id=test_id)
+        world_id = ""
+        for parameter in test.parameters:
+            if 'MONITOR_HOSTS' in parameter:
+                hosts_for_monitoring = parameter['MONITOR_HOSTS'].split(',')
+            if 'WORLD_ID' in parameter:
+                world_id = parameter['WORLD_ID']
         
-        server = Server.objects.get(server_name=server_name)
-        logger.info('Try to get monitroing data for: {}'.format(server_name))
-        query = 'aliasSub(stacked(asPercent(nonNegativeDerivative(groupByNode(servers.{' + server_name.replace('.','_') + '}.system.cpu.{user,system,iowait,irq,softirq,nice,steal},4,"sumSeries")),nonNegativeDerivative(sum(servers.' + server_name.replace('.','_') + '.system.cpu.{idle,time})))),".*Derivative\((.*)\),non.*","CPU_\\1")'
+        start_time = datetime.datetime.fromtimestamp(test.start_time/1000 + 3600).strftime("%H:%M_%Y%m%d")
+        end_time = datetime.datetime.fromtimestamp(test.end_time/1000 + 3600).strftime("%H:%M_%Y%m%d")
+        game_short_name = hosts_for_monitoring[0].split(".",1)[1] 
+        for server_name in hosts_for_monitoring:
+            
+            server = Server.objects.get(server_name=server_name)
+            logger.info('Try to get monitroing data for: {}'.format(server_name))
+            query = 'aliasSub(stacked(asPercent(nonNegativeDerivative(groupByNode(servers.{' + server_name.replace('.','_') + '}.system.cpu.{user,system,iowait,irq,softirq,nice,steal},4,"sumSeries")),nonNegativeDerivative(sum(servers.' + server_name.replace('.','_') + '.system.cpu.{idle,time})))),".*Derivative\((.*)\),non.*","CPU_\\1")'
+            results = gc.query(
+                query,
+                start_time,
+                end_time,
+            )
+            data = {}
+            for res in results:
+                metric = res['target']
+                for p in res['datapoints']:
+                    ts = str(datetime.datetime.fromtimestamp(p[1]))
+                    if ts not in data:
+                        t = {}
+                        t['timestamp'] = ts
+                        t[metric] = p[0]
+                        data[ts] = t
+                    else:
+                        t = data[ts]
+                        t[metric] = p[0]
+                        data[ts] = t
+            ServerMonitoringData.objects.filter(server_id=server.id, test_id=test.id, source='graphite').delete()
+            for d in data:
+                server_monitoring_data = ServerMonitoringData(
+                    test_id=test.id, server_id=server.id, data=data[d], source='graphite'
+                )
+                server_monitoring_data.save()
+
+        webservers_mask = '{}w*_{}'.format(world_id, game_short_name)
+        if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_avg_request').exists():
+            query = 'alias(avg(servers.' + webservers_mask + '.software.gentime.TimeSiteAvg),"avg")'
+            ProjectGraphiteSettings(project_id=test.project_id, name='gentime_avg_request',value=query).save()
+        if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_median_request').exists():
+            query = 'alias(avg(servers.' + webservers_mask + '.software.gentime.TimeSiteMed),"median")'
+            ProjectGraphiteSettings(project_id=test.project_id, name='gentime_median_request',value=query).save()
+        if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_req_per_sec_request').exists():
+            query = 'alias(sum(servers.' + webservers_mask + '.software.gentime.SiteReqPerSec),"rps")'
+            ProjectGraphiteSettings(project_id=test.project_id, name='gentime_req_per_sec_request',value=query).save()
+
+        query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_avg_request').value
         results = gc.query(
             query,
             start_time,
             end_time,
         )
+        # Ugly bullshit
+        query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_median_request').value
+        results_median = gc.query(
+            query,
+            start_time,
+            end_time,
+        )
+        results.append(results_median[0])
+
+        query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_req_per_sec_request').value
+        results_rps = gc.query(
+            query,
+            start_time,
+            end_time,
+        )
+        results.append(results_rps[0])
         data = {}
         for res in results:
             metric = res['target']
@@ -955,66 +1010,14 @@ def update_test_graphite_data(test_id):
                     t = data[ts]
                     t[metric] = p[0]
                     data[ts] = t
-        ServerMonitoringData.objects.filter(server_id=server.id, test_id=test.id, source='graphite').delete()
+        TestData.objects.filter(test_id=test.id, source='graphite').delete()
         for d in data:
-            server_monitoring_data = ServerMonitoringData(
-                test_id=test.id, server_id=server.id, data=data[d], source='graphite'
+            test_data = TestData(
+                test_id=test.id, data=data[d], source='graphite'
             )
-            server_monitoring_data.save()
-
-    webservers_mask = '{}w*_{}'.format(world_id, game_short_name)
-    if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_avg_request').exists():
-        query = 'alias(avg(servers.' + webservers_mask + '.software.gentime.TimeSiteAvg),"avg")'
-        ProjectGraphiteSettings(project_id=test.project_id, name='gentime_avg_request',value=query).save()
-    if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_median_request').exists():
-        query = 'alias(avg(servers.' + webservers_mask + '.software.gentime.TimeSiteMed),"median")'
-        ProjectGraphiteSettings(project_id=test.project_id, name='gentime_median_request',value=query).save()
-    if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_req_per_sec_request').exists():
-        query = 'alias(sum(servers.' + webservers_mask + '.software.gentime.SiteReqPerSec),"rps")'
-        ProjectGraphiteSettings(project_id=test.project_id, name='gentime_req_per_sec_request',value=query).save()
-
-    query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_avg_request').value
-    results = gc.query(
-        query,
-        start_time,
-        end_time,
-    )
-    # Ugly bullshit
-    query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_median_request').value
-    results_median = gc.query(
-        query,
-        start_time,
-        end_time,
-    )
-    results.append(results_median[0])
-
-    query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_req_per_sec_request').value
-    results_rps = gc.query(
-        query,
-        start_time,
-        end_time,
-    )
-    results.append(results_rps[0])
-    data = {}
-    for res in results:
-        metric = res['target']
-        for p in res['datapoints']:
-            ts = str(datetime.datetime.fromtimestamp(p[1]))
-            if ts not in data:
-                t = {}
-                t['timestamp'] = ts
-                t[metric] = p[0]
-                data[ts] = t
-            else:
-                t = data[ts]
-                t[metric] = p[0]
-                data[ts] = t
-    TestData.objects.filter(test_id=test.id, source='graphite').delete()
-    for d in data:
-        test_data = TestData(
-            test_id=test.id, data=data[d], source='graphite'
-        )
-        test_data.save()
+            test_data.save()
+    else:
+        logger.info('Skipping update of graphite data')
     return True
 
 
