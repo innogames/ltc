@@ -14,14 +14,7 @@ from administrator.models import Configuration
 from analyzer.models import Project
 from django.shortcuts import render
 logger = logging.getLogger(__name__)
-MONITORING_DIR = ""
 # Create your views here.
-if _platform == "linux" or _platform == "linux2":
-    jenkins_path = Configuration.objects.get(name='jenkins_path').value
-    MONITORING_DIRS = [jenkins_path + "jobs/", "/tmp/jltc/"]
-elif _platform == "win32":
-    MONITORING_DIRS = ["C:\work\monitoring"]
-
 
 def tests_list(request):
     '''
@@ -51,6 +44,11 @@ def tests_list(request):
                 test_running_id=test_running.id).delete()
             test_running.delete()
 
+    if _platform == "linux" or _platform == "linux2":
+        jenkins_path = Configuration.objects.get(name='jenkins_path').value
+        MONITORING_DIRS = [jenkins_path + "jobs/", "/tmp/jltc/"]
+    elif _platform == "win32":
+        MONITORING_DIRS = ["C:\work\monitoring"]
     
     for MONITORING_DIR in MONITORING_DIRS:
         for root, dirs, files in os.walk(MONITORING_DIR):
