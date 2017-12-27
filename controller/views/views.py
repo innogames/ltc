@@ -921,18 +921,20 @@ def update_test_graphite_data(test_id):
     )
 
     test = Test.objects.get(id=test_id)
+    world_id = ""
     for parameter in test.parameters:
         if 'MONITOR_HOSTS' in parameter:
             hosts_for_monitoring = parameter['MONITOR_HOSTS'].split(',')
         if 'WORLD_ID' in parameter:
             world_id = parameter['WORLD_ID']
     
-    start_time = datetime.datetime.fromtimestamp(test.start_time/1000).strftime("%H:%M_%Y%m%d")
-    end_time = datetime.datetime.fromtimestamp(test.end_time/1000).strftime("%H:%M_%Y%m%d")
+    start_time = datetime.datetime.fromtimestamp(test.start_time/1000 + 3600).strftime("%H:%M_%Y%m%d")
+    end_time = datetime.datetime.fromtimestamp(test.end_time/1000 + 3600).strftime("%H:%M_%Y%m%d")
     game_short_name = hosts_for_monitoring[0].split(".",1)[1] 
     for server_name in hosts_for_monitoring:
+        
         server = Server.objects.get(server_name=server_name)
-
+        logger.info('Try to get monitroing data for: {}'.format(server_name))
         query = 'aliasSub(stacked(asPercent(nonNegativeDerivative(groupByNode(servers.{' + server_name.replace('.','_') + '}.system.cpu.{user,system,iowait,irq,softirq,nice,steal},4,"sumSeries")),nonNegativeDerivative(sum(servers.' + server_name.replace('.','_') + '.system.cpu.{idle,time})))),".*Derivative\((.*)\),non.*","CPU_\\1")'
         results = gc.query(
             query,

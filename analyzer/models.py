@@ -68,8 +68,20 @@ class Action(models.Model):
         db_table = 'action'
         unique_together = (('url', 'project'))
 
+class Error(models.Model):
+    text = models.CharField(db_index=True, max_length=4000)
+    code = models.CharField(max_length=400, null=True, blank=True)
+    class Meta:
+        db_table = 'error'
 
 
+class TestError(models.Model):
+    test = models.ForeignKey(Test)
+    action = models.ForeignKey(Action)
+    error = models.ForeignKey(Error)
+    count = models.IntegerField(default=0)
+    class Meta:
+        db_table = 'test_error'
 
 class TestActionData(models.Model):
     test = models.ForeignKey(Test)

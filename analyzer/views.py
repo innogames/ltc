@@ -19,7 +19,8 @@ from analyzer.confluence import confluenceposter
 from controller.views import update_test_graphite_data
 from analyzer.confluence.utils import generate_confluence_graph
 from models import (Action, Aggregate, Project, Server, ServerMonitoringData,
-                    Test, TestActionAggregateData, TestActionData, TestData)
+                    Test, TestActionAggregateData, TestActionData, TestData,
+                    Error, TestError)
 from scipy import stats
 from django.db.models import Func
 from django.template.loader import render_to_string
@@ -274,13 +275,18 @@ def action_report(request, test_id, action_id):
         filter(test_id=test_id). \
         aggregate(min_timestamp=Min(
             RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
+    test_errors = TestError.objects.annotate(
+        text=F('error__text'), code=F('error__code')).filter(
+            test_id=test_id, action_id=action_id).values(
+                'text', 'code', 'count')
     return render(
         request,
-        'url_report.html', {
+        'action_report.html', {
             'test_id': test_id,
             'action': Action.objects.get(id=action_id),
             'action_data': action_data,
-            'test_start_time': test_start_time
+            'test_start_time': test_start_time,
+            'test_errors': test_errors,
         })
 
 
@@ -414,16 +420,18 @@ def get_compare_tests_aggregate_data(test_id,
                 values('display_name', 'start_time'). \
                 annotate(average=Sum(RawSQL("((data->>%s)::numeric)", ('avg',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
                 annotate(median=Sum(RawSQL("((data->>%s)::numeric)", ('median',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
-                order_by(order)
+                order_by(order)[:num_of_tests]
     elif source == 'graphite':
-        tests = Test.objects.filter(start_time__lte=start_time, project_id=project_id, show=True).values()
+        tests = Test.objects.filter(
+            start_time__lte=start_time, project_id=project_id,
+            show=True).values().order_by('-start_time')[:num_of_tests]
+        print tests
         for t in tests:
             test_id = t['id']
-            print test_id
             if not ServerMonitoringData.objects.filter(
-                test_id=test_id,
-                source='graphite').exists() or not TestData.objects.filter(
-                    test_id=test_id, source='graphite').exists():
+                    test_id=test_id,
+                    source='graphite').exists() or not TestData.objects.filter(
+                        test_id=test_id, source='graphite').exists():
                 result = update_test_graphite_data(test_id)
         data = TestData.objects. \
                 filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True, source=source).\
@@ -432,7 +440,7 @@ def get_compare_tests_aggregate_data(test_id,
                 values('display_name', 'start_time'). \
                 annotate(average=Avg(RawSQL("((data->>%s)::numeric)", ('avg',)))). \
                 annotate(median=Avg(RawSQL("((data->>%s)::numeric)", ('median',)))). \
-                order_by(order)
+                order_by(order).order_by(order)[:num_of_tests]
     return data
 
 
@@ -440,7 +448,8 @@ def compare_tests_avg(request, test_id):
     if request.method == 'POST':
         source = request.POST.get('source', '0')
         num_of_tests = request.POST.get('num_of_tests_to_compare', '0')
-        data = get_compare_tests_aggregate_data(test_id, num_of_tests, source=source)
+        data = get_compare_tests_aggregate_data(
+            test_id, num_of_tests, source=source)
         current_rank = 1
         counter = 0
         arr = []
@@ -448,7 +457,8 @@ def compare_tests_avg(request, test_id):
             if counter < 1:
                 d['rank'] = current_rank
             else:
-                if int(d['start_time']) == int(data[counter - 1]['start_time']):
+                if int(d['start_time']) == int(
+                        data[counter - 1]['start_time']):
                     d['rank'] = current_rank
                 else:
                     current_rank += 1
@@ -673,10 +683,34 @@ def tests_compare_report(request, test_id_1, test_id_2):
         'lower_response_times': [],
         'lower_count': [],
         'new_action_in_test': [],
+        'cpu_steal': [],
     }
     sp = int(
         Configuration.objects.get(name='signifficant_actions_compare_percent')
         .value)
+    if not ServerMonitoringData.objects.filter(
+            test_id=test_id_1, source='graphite').exists():
+        result = update_test_graphite_data(test_id_1)
+    if not ServerMonitoringData.objects.filter(
+            test_id=test_id_2, source='graphite').exists():
+        result = update_test_graphite_data(test_id_2)
+
+    cpu_steal_data = ServerMonitoringData.objects.filter(
+        test_id__in=[test_id_1, test_id_2], source='graphite').annotate(
+            server_name=F('server__server_name'),
+            test_name=F('test__display_name')).values(
+                'server_name', 'test_name').annotate(cpu_steal=Avg(
+                    RawSQL("((data->>%s)::float)", ('CPU_steal', ))))
+
+    for d in cpu_steal_data:
+        if d['cpu_steal'] > 0:  # ??
+            report['cpu_steal'].append({
+                'server_name': d['server_name'],
+                'test_name': d['test_name'],
+                'cpu_steal': d['cpu_steal'],
+                "severity": "danger",
+            })
+
     test_1_actions = list(
         TestActionAggregateData.objects.annotate(url=F('action__url'))
         .filter(test_id=test_id_1).values('action_id', 'url', 'data'))

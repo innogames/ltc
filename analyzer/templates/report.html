@@ -180,7 +180,7 @@
 <script>
     num_of_tests_to_compare = 5;
     top_actions = 5;
-    var monitoring_source, rtot_source = 'default';
+    var monitoring_source, rtot_source, compare_source = 'default';
     $('#monitoring_switcher button').click(function() {
         $(this).addClass('active').siblings().removeClass('active');
         monitoring_source = $(this).val();
@@ -400,7 +400,7 @@ error: function(xhr) {
 
     function update_compare_graphs(num_of_tests_to_compare) {
         var test = JSON.parse(httpGet('/analyzer/project/' + test_id_1 + '/test_info/'));
-        draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, 'default');
+        draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, compare_source);
         var arr = [];
         var graph_values = []; //values for the graph
 
@@ -525,8 +525,8 @@ error: function(xhr) {
 
      $('#compare_avg_switcher button').click(function() {
         $(this).addClass('active').siblings().removeClass('active');
-        source = $(this).val();
-        if (source == 'graphite')
+        compare_source = $(this).val();
+        if (compare_source == 'graphite')
         {
             $.ajax({
                 url: "/analyzer/test/" + test_id_1 + "/check_graphite_data/",
@@ -537,7 +537,7 @@ error: function(xhr) {
                 
                 success: function(response) {
                      show_alert(response);
-                     draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, source);
+                     draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, compare_source);
                 },
                 complete: function(){
                     $('.ajax-loader').css("visibility", "hidden");
@@ -549,13 +549,13 @@ error: function(xhr) {
         }
         else
         {
-            draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, source);
+            draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, compare_source);
         }
     });
 
     function draw_compare_avg_graph(test_id, num_of_tests_to_compare, source)
     {
-         var test = JSON.parse(httpGet('/analyzer/project/' + test_id_1 + '/test_info/'));
+       var test = JSON.parse(httpGet('/analyzer/project/' + test_id_1 + '/test_info/'));
         $.ajax({
             url: "/analyzer/test/"+test_id+"/get_compare_data/",
             type: "post",

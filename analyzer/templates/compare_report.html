@@ -19,6 +19,13 @@
             <div class="panel-heading">Negatives:</div>
             <div class="panel-body">
                 <ul>
+                    {% if report.cpu_steal|length > 0 %}
+                    {% for row in report.cpu_steal %} 
+                    <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Server {{ row.server_name }} 
+                            had <b>high cpu_steal ({{ row.cpu_steal|floatformat }} % in average)</b> during the test <b>"{{ row.test_name }}"</b>
+                    </li>
+                    {% endfor %}
+                    {% endif %}
                     {% if report.higher_response_times|length > 0 %} 
                     {% for row in report.higher_response_times %} 
                     {% get_percentage_abs row.action_data_1.mean row.action_data_2.mean as diff_percentage %}
