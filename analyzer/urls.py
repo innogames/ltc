@@ -45,10 +45,8 @@ urlpatterns = [
     url(r'^test/(?P<test_id>\d+)/get_server_monitoring_data', views.server_monitoring_data),
     url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_report/$',
         views.tests_compare_report),
-    url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_report_2/$',
-        views.tests_compare_report_2),
     url(r'^test/(?P<test_id>\d+)/action_graphs/$',
         views.action_graphs),
     url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_aggregate_data/$',
-        views.tests_compare_aggregate),
+        views.tests_compare_aggregate_new),    
 ]

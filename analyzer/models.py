@@ -94,26 +94,6 @@ class TestActionData(models.Model):
             ("test", "action"),
         ]
 
-
-class Aggregate(models.Model):
-    test = models.ForeignKey(Test)
-    action = models.ForeignKey(Action, null=True, blank=True)
-    average = models.FloatField()
-    median = models.FloatField()
-    percentile_75 = models.FloatField()
-    percentile_90 = models.FloatField()
-    percentile_99 = models.FloatField()
-    maximum = models.FloatField()
-    minimum = models.FloatField()
-    count = models.IntegerField(default=0)
-    errors = models.IntegerField(default=0, null=True, blank=True)
-    weight = models.FloatField()
-
-    class Meta:
-        db_table = 'aggregate'
-        unique_together = (('test', 'action'))
-
-
 class TestAggregate(models.Model):
     test = models.ForeignKey(Test)
     data = JSONField()

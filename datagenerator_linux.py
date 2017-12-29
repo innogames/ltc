@@ -34,7 +34,6 @@ test_data = meta.tables['jltc.test_data']
 action = meta.tables['jltc.action']
 test_action_data = meta.tables['jltc.test_action_data']
 server = meta.tables['jltc.server']
-aggregate = meta.tables['jltc.aggregate']
 server_monitoring_data = meta.tables['jltc.server_monitoring_data']
 test_aggregate = meta.tables['jltc.test_aggregate']
 test_action_aggregate_data = meta.tables['jltc.test_action_aggregate_data']
@@ -255,8 +254,8 @@ for build_root in build_roots:
         test.c.id == test_id).scalar()
 
     checksum = -1
-    if db_session.query(aggregate.c.test_id).filter(
-            aggregate.c.test_id == test_id).count() == 0:
+    if db_session.query(test_data.c.test_id).filter(
+            test_data.c.test_id == test_id).count() == 0:
 
         df = pd.DataFrame()
         jmeter_results_file = build_root + "/jmeter.jtl"
@@ -363,45 +362,7 @@ for build_root in build_roots:
                 result = db_connection.execute(stm)
             except sqlalchemy.exc.DataError:
                 logger.error("Cannot add new data for action: {}".format(url))
-        try:
-            by_url = df.groupby('url')
-            agg[file_index] = by_url.aggregate({'response_time': np.mean})
-            agg[file_index]['median'] = by_url.response_time.median()
-            agg[file_index]['percentile_75'] = by_url.response_time.quantile(
-                .75)
-            agg[file_index]['percentile_90'] = by_url.response_time.quantile(
-                .90)
-            agg[file_index]['percentile_99'] = by_url.response_time.quantile(
-                .99)
-            agg[file_index]['maximum'] = by_url.response_time.max()
-            agg[file_index]['minimum'] = by_url.response_time.min()
-            agg[file_index]['count'] = by_url.success.count()
-            agg[file_index]['errors'] = ((1 - df[(df.success == True)].groupby(
-                'url')['success'].count() / by_url['success'].count()) * 100)
-            agg[file_index]['weight'] = by_url.response_time.sum()
-            agg[file_index]['test_id'] = test_id
-            action_df = pd.read_sql(
-                db_session.query(action.c.id, action.c.url).filter(
-                    action.c.project_id == project_id).statement,
-                con=db_session.bind)
-            action_df.columns = ['action_id', 'url']
-            action_df = action_df.set_index('url')
-            agg[file_index].index.names = ['url']
-            agg[file_index] = pd.merge(
-                action_df, agg[file_index], left_index=True, right_index=True)
-            agg[file_index] = agg[file_index].set_index('action_id')
-            agg[file_index].columns = [
-                'average', 'median', 'percentile_75', 'percentile_90',
-                'percentile_99', 'maximum', 'minimum', 'count', 'errors',
-                'weight', 'test_id'
-            ]
-            agg[file_index].to_sql(
-                "aggregate", schema='jltc', con=db_engine, if_exists='append')
-            zip_results_file(jmeter_results_file)
-        except ValueError, e:
-            logger.error(e)
-
-        #print df.groupby(pd.TimeGrouper(freq='1Min')).average.agg(lambda x: x.to_json(orient='records'))
+        zip_results_file(jmeter_results_file)
         test_overall_data = pd.DataFrame()
         df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
         test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
@@ -603,7 +564,6 @@ for q in query_result:
     if not os.path.exists(q.path):
         logger.info(
             "Deleting test_id: {} path: {}".format(str(test_id), test_path))
-        stm1 = aggregate.delete().where(aggregate.c.test_id == test_id)
         stm2 = server_monitoring_data.delete().where(
             server_monitoring_data.c.test_id == test_id)
         stm3 = test_action_data.delete().where(
@@ -613,7 +573,6 @@ for q in query_result:
             test_action_aggregate_data.c.test_id == test_id)
         stm6 = test.delete().where(test.c.id == test_id)
 
-        result1 = db_connection.execute(stm1)
         result2 = db_connection.execute(stm2)
         result3 = db_connection.execute(stm3)
         result4 = db_connection.execute(stm4)

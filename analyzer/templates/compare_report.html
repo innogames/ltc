@@ -84,8 +84,8 @@
             url: '/analyzer/test/' + test_id_1 + '/' + test_id_2 + "/compare_aggregate_data/", // specify that our above json is the data
             mimeType: 'json',
             keys: {
-                x: 'url',
-                value: ['avg_diff_percent']
+                x: 'action_name',
+                value: ['mean_diff_percent']
             },
             type: 'bar', // specfify type of plot
             color: function (color, d) {

@@ -935,8 +935,9 @@ def update_test_graphite_data(test_id):
         for server_name in hosts_for_monitoring:
             
             server = Server.objects.get(server_name=server_name)
+            server_name = server_name.replace('.','_').replace('_ig_local', '')
             logger.info('Try to get monitroing data for: {}'.format(server_name))
-            query = 'aliasSub(stacked(asPercent(nonNegativeDerivative(groupByNode(servers.{' + server_name.replace('.','_') + '}.system.cpu.{user,system,iowait,irq,softirq,nice,steal},4,"sumSeries")),nonNegativeDerivative(sum(servers.' + server_name.replace('.','_') + '.system.cpu.{idle,time})))),".*Derivative\((.*)\),non.*","CPU_\\1")'
+            query = 'aliasSub(stacked(asPercent(nonNegativeDerivative(groupByNode(servers.{' + server_name + '}.system.cpu.{user,system,iowait,irq,softirq,nice,steal},4,"sumSeries")),nonNegativeDerivative(sum(servers.' + server_name + '.system.cpu.{idle,time})))),".*Derivative\((.*)\),non.*","CPU_\\1")'
             results = gc.query(
                 query,
                 start_time,

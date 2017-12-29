@@ -12,7 +12,7 @@ from xml.etree.ElementTree import ElementTree
 from os.path import basename
 from controller.models import TestRunning
 from analyzer.models import Project, Test, Action, \
-    TestActionData, TestAggregate, TestData, Aggregate, \
+    TestActionData, TestAggregate, TestData, \
     Server, ServerMonitoringData
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -224,52 +224,9 @@ def generate_data(t_id):
                         action_id=action_id,
                         data=data)
                     test_action_data.save()
-        try:
-            by_url = df.groupby('url')
-            agg = by_url.aggregate({'average': np.mean}).round(1)
-            agg['median'] = by_url.response_time.median().round(1)
-            agg['percentile_75'] = by_url.response_time.quantile(.75).round(1)
-            agg['percentile_90'] = by_url.response_time.quantile(.90).round(1)
-            agg['percentile_99'] = by_url.response_time.quantile(.99).round(1)
-            agg['maximum'] = by_url.response_time.max().round(1)
-            agg['minimum'] = by_url.response_time.min().round(1)
-            agg['cnt'] = by_url.success.count().round(1)
-            agg['errors'] = (
-                (1 - df[(df.success == True)].groupby('url')['success'].count()
-                 / by_url['success'].count()) * 100).round(1)
-            agg['weight'] = by_url.response_time.sum()
-            agg['test_id'] = test_id
-            action_df = DataFrame(
-                list(
-                    Action.objects.values('id', 'url').filter(
-                        project_id=project_id)))
-            action_df.columns = ['action_id', 'url']
-            action_df = action_df.set_index('url')
-            agg.index.names = ['url']
-            agg = pd.merge(action_df, agg, left_index=True, right_index=True)
-            #agg = agg.set_index('action_id')
-            print agg.columns
-            for index, row in agg.iterrows():
-                print "add row:" + str(row)
-                aggr = Aggregate(
-                    test_id=int(row['test_id']),
-                    action_id=int(row['action_id']),
-                    average=row['average'],
-                    median=row['median'],
-                    percentile_75=row['percentile_75'],
-                    percentile_90=row['percentile_90'],
-                    percentile_99=row['percentile_99'],
-                    maximum=row['maximum'],
-                    minimum=row['minimum'],
-                    count=int(row['cnt']),
-                    errors=int(row['errors']),
-                    weight=row['weight']
-                )
-                aggr.save()
-            zip_results_file(jmeter_results_file)
-        except ValueError, e:
-            print "error", e
-
+        
+        zip_results_file(jmeter_results_file)
+        
         test_overall_data = pd.DataFrame()
         df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
         test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
