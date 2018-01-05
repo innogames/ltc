@@ -10,6 +10,7 @@ import re
 import os
 import zipfile
 import sqlalchemy
+import time
 import shutil
 from xml.etree.ElementTree import ElementTree
 from os.path import basename
@@ -115,7 +116,7 @@ def zip_results_file(file):
 
 
 def zip_dir(dirPath, zipPath):
-    zipf = zipfile.ZipFile(zipPath, mode='w')
+    zipf = zipfile.ZipFile(zipPath, mode='w', allowZip64=True)
     lenDirPath = len(dirPath)
     for root, _, files in os.walk(dirPath):
         for file in files:
@@ -210,7 +211,9 @@ for root, dirs, files in os.walk(builds_dir):
                         logger.info("Was found new test data, adding.")
                         build_number = int(
                             re.search('/builds/(\d+)', root).group(1))
-
+                        end_time=start_time + duration
+                        if start_time == end_time:
+                            end_time = int(time.time() * 1000)
                         stm = test.insert().values(
                             path=root,
                             display_name=display_name,
@@ -218,7 +221,7 @@ for root, dirs, files in os.walk(builds_dir):
                             parameters=build_parameters,
                             project_id=project_id,
                             start_time=start_time,
-                            end_time=start_time + duration,
+                            end_time=end_time,
                             build_number=build_number,
                             started_by_id=user_id,
                             show=True)
@@ -463,94 +466,95 @@ for build_root in build_roots:
     else:
         logger.info("Monitoring data is not exist")
     errors_zip_dest = build_root + "/errors.zip"
-    if not os.path.isdir(
-            jtl_files[num][2]) or not len(os.listdir(jtl_files[num][2])) > 0:
-        if os.path.exists(errors_zip_dest):
-            logger.info("Archive file was found: " + errors_zip_dest)
-            with zipfile.ZipFile(errors_zip_dest, "r") as z:
-                z.extractall(build_root + '/errors/')
-    if os.path.isdir(
-            jtl_files[num][2]) and len(os.listdir(jtl_files[num][2])) > 0:
-        logger.info("Parsing errors data")
-        test_id = db_session.query(test.c.id).filter(
-            test.c.path == build_root).scalar()
-        project_id = db_session.query(test.c.project_id).filter(
-            test.c.id == test_id).scalar()
+    test_id = db_session.query(test.c.id).filter(test.c.path == build_root).scalar()
+    if db_session.query(test_error.c.id).filter(test_error.c.test_id == test_id).count() == 0:
+        logger.info("Errors data is empty for test: {}".format(test_id))
+        if not os.path.isdir(
+                jtl_files[num][2]) or not len(os.listdir(jtl_files[num][2])) > 0:
+            if os.path.exists(errors_zip_dest):
+                logger.info("Archive file was found: " + errors_zip_dest)
+                with zipfile.ZipFile(errors_zip_dest, "r") as z:
+                    z.extractall(build_root + '/errors/')
+        if os.path.isdir(
+                jtl_files[num][2]) and len(os.listdir(jtl_files[num][2])) > 0:
+            logger.info("Parsing errors data")
+            project_id = db_session.query(test.c.project_id).filter(
+                test.c.id == test_id).scalar()
 
-        # Iterate through files in errors folder
-        for root, dirs, files in os.walk(jtl_files[num][2]):
-            for file in files:
-                error_file = os.path.join(root, file)
-                try:
-                    error_text = ""
-                    error_code = 0
-                    action_name = ""
-                    with open(error_file) as fin:
+            # Iterate through files in errors folder
+            for root, dirs, files in os.walk(jtl_files[num][2]):
+                for file in files:
+                    error_file = os.path.join(root, file)
+                    try:
                         error_text = ""
-                        for i, line in enumerate(fin):
+                        error_code = 0
+                        action_name = ""
+                        with open(error_file) as fin:
+                            error_text = ""
+                            for i, line in enumerate(fin):
 
-                            if i == 0:
-                                action_name = line
-                                action_name = re.sub('(\r\n|\r|\n)', '',
-                                                     action_name)
-                            elif i == 1:
-                                error_code = line
-                                error_code = re.sub('(\r\n|\r|\n)', '',
-                                                    error_code)
-                            elif i > 1 and i < 6:  # take first 4 line of error
-                                error_text += line
-                    error_text = re.sub('\d', 'N', error_text)
-                    error_text = re.sub('(\r\n|\r|\n)', '_', error_text)
-                    error_text = re.sub('\s', '_', error_text)
-                    if db_session.query(action.c.id).filter(action.c.url == action_name).\
-                        filter(action.c.project_id == project_id).count() > 0:
-                        action_id = db_session.query(action.c.id).filter(
-                            action.c.url == action_name).filter(
-                                action.c.project_id == project_id).scalar()
-                        if db_session.query(error.c.id).filter(
-                                error.c.text == error_text).count() == 0:
-                            logger.info(
-                                "Adding new error: {}".format(error_text))
-                            stm = error.insert().values(
-                                text=error_text, code=error_code)
-                            result = db_connection.execute(stm)
-                        error_id = db_session.query(error.c.id).filter(
-                            error.c.text == error_text).scalar()
-                        if db_session.query(test_error.c.id).filter(
-                                test_error.c.error_id == error_id).filter(
-                                    test_error.c.test_id == test_id).filter(
-                                        test_error.c.action_id ==
-                                        action_id).count() == 0:
-                            stm = test_error.insert().values(
-                                test_id=test_id,
-                                error_id=error_id,
-                                action_id=action_id,
-                                count=1)
-                            result = db_connection.execute(stm)
-                        else:
-                            prev_count = db_session.query(
-                                test_error.c.count).filter(
+                                if i == 0:
+                                    action_name = line
+                                    action_name = re.sub('(\r\n|\r|\n)', '',
+                                                         action_name)
+                                elif i == 1:
+                                    error_code = line
+                                    error_code = re.sub('(\r\n|\r|\n)', '',
+                                                        error_code)
+                                elif i > 1 and i < 6:  # take first 4 line of error
+                                    error_text += line
+                        error_text = re.sub('\d', 'N', error_text)
+                        error_text = re.sub('(\r\n|\r|\n)', '_', error_text)
+                        error_text = re.sub('\s', '_', error_text)
+                        if db_session.query(action.c.id).filter(action.c.url == action_name).\
+                            filter(action.c.project_id == project_id).count() > 0:
+                            action_id = db_session.query(action.c.id).filter(
+                                action.c.url == action_name).filter(
+                                    action.c.project_id == project_id).scalar()
+                            if db_session.query(error.c.id).filter(
+                                    error.c.text == error_text).count() == 0:
+                                logger.info(
+                                    "Adding new error: {}".format(error_text))
+                                stm = error.insert().values(
+                                    text=error_text, code=error_code)
+                                result = db_connection.execute(stm)
+                            error_id = db_session.query(error.c.id).filter(
+                                error.c.text == error_text).scalar()
+                            if db_session.query(test_error.c.id).filter(
                                     test_error.c.error_id == error_id).filter(
-                                        test_error.c.test_id ==
-                                        test_id).filter(
+                                        test_error.c.test_id == test_id).filter(
                                             test_error.c.action_id ==
-                                            action_id).scalar()
-                            stm = test_error.update().values(
-                                count=prev_count + 1).where(
-                                    test_error.c.error_id == error_id).where(
-                                        test_error.c.test_id == test_id).where(
-                                            test_error.c.action_id ==
-                                            action_id)
-                            result = db_connection.execute(stm)
-                except ValueError:
-                    logger.error("Cannot parse error file for: ")
-    zip_dir(jtl_files[num][2], errors_zip_dest)
-    try:
-        if 'errors' in jtl_files[num][2]:
-            shutil.rmtree(jtl_files[num][2])
-    except OSError, e:
-        logger.error("Error: %s - %s." % (e.filename, e.strerror))
-    logger.error("Errors folder was packed and removed")
+                                            action_id).count() == 0:
+                                stm = test_error.insert().values(
+                                    test_id=test_id,
+                                    error_id=error_id,
+                                    action_id=action_id,
+                                    count=1)
+                                result = db_connection.execute(stm)
+                            else:
+                                prev_count = db_session.query(
+                                    test_error.c.count).filter(
+                                        test_error.c.error_id == error_id).filter(
+                                            test_error.c.test_id ==
+                                            test_id).filter(
+                                                test_error.c.action_id ==
+                                                action_id).scalar()
+                                stm = test_error.update().values(
+                                    count=prev_count + 1).where(
+                                        test_error.c.error_id == error_id).where(
+                                            test_error.c.test_id == test_id).where(
+                                                test_error.c.action_id ==
+                                                action_id)
+                                result = db_connection.execute(stm)
+                    except ValueError:
+                        logger.error("Cannot parse error file for: ")
+        zip_dir(jtl_files[num][2], errors_zip_dest)
+        try:
+            if 'errors' in jtl_files[num][2]:
+                shutil.rmtree(jtl_files[num][2])
+        except OSError, e:
+            logger.error("Error: %s - %s." % (e.filename, e.strerror))
+        logger.error("Errors folder was packed and removed")
     num += 1
 
 stmt = select([test.c.id, test.c.path])

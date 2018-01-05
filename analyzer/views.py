@@ -855,7 +855,7 @@ def dashboard_compare_tests_list(tests_list):
         project_id = t['project_id']
 
         project_tests = Test.objects.filter(
-            project_id=project_id).order_by('-start_time')
+            project_id=project_id, id__lte=test_id).order_by('-start_time')
 
         if project_tests.count() > 1:
             prev_test_id = project_tests[1].id
