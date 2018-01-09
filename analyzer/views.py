@@ -12,15 +12,16 @@ from django.db.models.expressions import F, RawSQL
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.generic import TemplateView
+from django.views import View
 
 import pandas as pd
 from administrator.models import Configuration
 from analyzer.confluence import confluenceposter
 from controller.views import update_test_graphite_data
 from analyzer.confluence.utils import generate_confluence_graph
-from models import (Action, Project, Server, ServerMonitoringData,
-                    Test, TestActionAggregateData, TestActionData, TestData,
-                    Error, TestError)
+from models import (Action, Project, Server, ServerMonitoringData, Test,
+                    TestActionAggregateData, TestActionData, TestData, Error,
+                    TestError, TestResultFile)
 from scipy import stats
 from django.db.models import Func
 from django.template.loader import render_to_string
@@ -60,6 +61,26 @@ def to_pivot(data, a, b, c):
     df = pd.DataFrame(data)
     df_pivot = pd.pivot_table(df, index=a, columns=b, values=c)
     return df_pivot
+
+
+class TestResultFileUploadView(View):
+    def get(self, request):
+        test_result_file_list = TestResultFile.objects.all()
+        return render(self.request, 'test_result_upload/index.html',
+                      {'test_result_files': test_result_file_list})
+
+    def post(self, request):
+        form = TestResultFileUploadForm(self.request.POST, self.request.FILES)
+        if form.is_valid():
+            test_result_file = form.save()
+            data = {
+                'is_valid': True,
+                'name': test_result_file.file.name,
+                'url': test_result_file.file.url
+            }
+        else:
+            data = {'is_valid': False}
+        return JsonResponse(data)
 
 
 def configure_page(request, project_id):
@@ -603,16 +624,21 @@ def tests_compare_aggregate_new(request, test_id_1, test_id_2):
                 'action_id', 'action_name', 'mean')
     for action in action_data_1:
         action_id = action['action_id']
-        action_data_2 = TestActionAggregateData.objects.annotate(
-            action_name=F('action__url')).annotate(mean=RawSQL(
-                "((data->>%s)::numeric)", ('mean', ))).filter(
-                    action_id=action_id, test_id=test_id_2).values(
-                        'action_name', 'mean')[0]
-        mean_1 = action['mean']
-        mean_2 = action_data_2['mean']
+        if TestActionAggregateData.objects.filter(
+                action_id=action_id, test_id=test_id_2).exists():
+            action_data_2 = TestActionAggregateData.objects.annotate(
+                action_name=F('action__url')).annotate(mean=RawSQL(
+                    "((data->>%s)::numeric)", ('mean', ))).filter(
+                        action_id=action_id, test_id=test_id_2).values(
+                            'action_name', 'mean')[0]
+            mean_1 = action['mean']
+            mean_2 = action_data_2['mean']
+            mean_diff_percent = (mean_1 - mean_2) / mean_2 * 100
+        else:
+            mean_diff_percent = 0
         response.append({
             'action_name': action['action_name'],
-            'mean_diff_percent': ((mean_1 - mean_2) / mean_2) * 100
+            'mean_diff_percent': mean_diff_percent
         })
     return JsonResponse(response, safe=False)
 

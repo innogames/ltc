@@ -134,6 +134,16 @@ class ServerMonitoringData(models.Model):
             ("test", "server", 'source'),
         ]
 
+class TestResultFile(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, default=1)
+    test = models.ForeignKey(Test)
+    file = models.FileField(upload_to='test_result_files/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'test_result_file'
+
+
 
 
 

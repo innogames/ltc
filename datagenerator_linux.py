@@ -10,8 +10,8 @@ import re
 import os
 import zipfile
 import sqlalchemy
-import time
 import shutil
+import time
 from xml.etree.ElementTree import ElementTree
 from os.path import basename
 from sqlalchemy import create_engine
@@ -575,10 +575,13 @@ for q in query_result:
         stm4 = test_data.delete().where(test_data.c.test_id == test_id)
         stm5 = test_action_aggregate_data.delete().where(
             test_action_aggregate_data.c.test_id == test_id)
-        stm6 = test.delete().where(test.c.id == test_id)
+        stm6 = test_error.delete().where(
+            test_error.c.test_id == test_id)
+        stm7 = test.delete().where(test.c.id == test_id)
 
         result2 = db_connection.execute(stm2)
         result3 = db_connection.execute(stm3)
         result4 = db_connection.execute(stm4)
         result5 = db_connection.execute(stm5)
         result6 = db_connection.execute(stm6)
+        result6 = db_connection.execute(stm7)

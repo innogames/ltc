@@ -1,6 +1,6 @@
 from django.conf.urls import url
 from . import views
-
+app_name = 'analyzer'
 urlpatterns = [
     url(r'^projects_list', views.projects_list),
     url(r'^analyze$', views.Analyze.as_view()),
@@ -48,5 +48,6 @@ urlpatterns = [
     url(r'^test/(?P<test_id>\d+)/action_graphs/$',
         views.action_graphs),
     url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_aggregate_data/$',
-        views.tests_compare_aggregate_new),    
+        views.tests_compare_aggregate_new),   
+    url(r'^test-result-file-upload/$', views.TestResultFileUploadView.as_view(), name='test_result_file_upload'), 
 ]
