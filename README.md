@@ -15,6 +15,11 @@ Consist of several modules:
 4. Administrator - configure different parameters
 
 ## [DASHBOARD] 
+(!) New feature
+Upload CSV files with your test results data and get immediately report and compare
+it with previous tests:
+![alt tag](https://github.com/v0devil/jltom/blob/master/pics/upload.png)
+
 Get tests overview
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/dashboard.png)
 

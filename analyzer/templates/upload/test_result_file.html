@@ -1,0 +1,66 @@
+<head>
+  <meta charset="UTF-8">
+  <title>Upload test result file</title>
+  {% load static %}
+  <link rel="stylesheet" type="text/css" href="{% static 'css/jquery-ui.min.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap-select.min.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'css/theme.bootstrap_2.min.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'css/my.css' %}" />
+
+
+</head>
+
+<body>
+  <div class="col-xs-5">
+    <div class="panel panel-default">
+      <div class="panel-heading">Upload test result</div>
+      <div class="panel-body">
+        <p class="bg-warning">
+        Currently supports only CSV-result files. 
+        CSV result file mast have 5 mandatory fields:
+        timestamp, response_time, url, responseCode, success.
+        Example:
+        1515027139558,310,Action_name,200,true
+
+        If you file have different amount of columns or different order, place 
+        this data to field in a bottom. Timestamp is mandatory and must be always on the first place
+
+        </p>
+        <form method="POST" enctype="multipart/form-data" class="form-horizontal">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="name" class="control-label">File: </label>
+            <input type="file" name="csv_file" id="csv_file" required="True" class="form-control">
+          </div>
+          <div class="form-group">
+              <label for="csv_file_fields">CSV file fields:</label>
+              <input name="csv_file_fields" type="text" class="form-control" id="csv_file_fields" value="response_time,url,responseCode,success,threadName,failureMessage,grpThreads,allThreads">
+            </div>
+          <div class="form-group">
+            <label for="test_display_name">Test name:</label>
+            <input name="test_name" type="text" class="form-control" id="test_display_name" value="Enter test name">
+          </div>
+          <div class="form-group">
+            <label for="select_project">Select project:</label>
+            <select name="project_id" id="select_project" class="selectpicker">
+              {% for project in projects %}
+              <option value="{{ project.id }}">{{ project.project_name }}</option>
+              {% endfor %}
+              <option value="0">Create new project</option>
+            </select>
+          </div>
+          <div class="form-group">
+              <button class="btn btn-primary">
+                <span class="glyphicon glyphicon-upload"></span>Upload </button>
+          </div>
+      </div>
+    </div>
+  </div>
+  </form>
+</body>
+<script src="{% static 'js/jquery-3.1.1.min.js' %}"></script>
+<script src="{% static 'js/jquery-ui.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/bootstrap-select.min.js' %}"></script>
+<script src="{% static 'js/main_script.js' %}"></script>

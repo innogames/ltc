@@ -3,16 +3,21 @@ import json
 import logging
 import math
 import time
+import os
+
+import numpy as na
+from pylab import *
 from collections import OrderedDict
 from decimal import Decimal
 
 from django import template
 from django.db.models import Avg, FloatField, Max, Min, Sum
 from django.db.models.expressions import F, RawSQL
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views.generic import TemplateView
 from django.views import View
+from django.urls import reverse
 
 import pandas as pd
 from administrator.models import Configuration
@@ -22,11 +27,15 @@ from analyzer.confluence.utils import generate_confluence_graph
 from models import (Action, Project, Server, ServerMonitoringData, Test,
                     TestActionAggregateData, TestActionData, TestData, Error,
                     TestError, TestResultFile)
+from forms import TestResultFileUploadForm
 from scipy import stats
 from django.db.models import Func
 from django.template.loader import render_to_string
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 logger = logging.getLogger(__name__)
+dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 
 
 class Round(Func):
@@ -63,24 +72,136 @@ def to_pivot(data, a, b, c):
     return df_pivot
 
 
-class TestResultFileUploadView(View):
-    def get(self, request):
-        test_result_file_list = TestResultFile.objects.all()
-        return render(self.request, 'test_result_upload/index.html',
-                      {'test_result_files': test_result_file_list})
-
-    def post(self, request):
-        form = TestResultFileUploadForm(self.request.POST, self.request.FILES)
-        if form.is_valid():
-            test_result_file = form.save()
-            data = {
-                'is_valid': True,
-                'name': test_result_file.file.name,
-                'url': test_result_file.file.url
-            }
+def upload_test_result_file(request):
+    if request.method == 'GET':
+        projects = Project.objects.values()
+        return render(request, 'upload/test_result_file.html',
+                      {'projects': projects})
+    csv_file = request.FILES["csv_file"]
+    csv_file_fields = request.POST.get('csv_file_fields', '1')
+    test_name = request.POST.get('test_name', '1')
+    project_id = int(request.POST.get('project_id', '0'))
+    # Create new project
+    if project_id == 0:
+        project = Project(project_name="New project",)
+        project.save()
+        project_id = project.id
+    test = Test(
+        project_id=project_id,
+        display_name=test_name,
+        show=True,
+        start_time=int(time.time() * 1000))
+    test.save()
+    test_id = test.id
+    path = default_storage.save('test_result_data.csv',
+                                ContentFile(csv_file.read()))
+    jmeter_results_file = path
+    if os.path.exists(jmeter_results_file):
+        df = pd.DataFrame()
+        if os.stat(jmeter_results_file).st_size > 1000007777:
+            logger.debug("Executing a parse for a huge file")
+            chunks = pd.read_table(
+                jmeter_results_file, sep=',', index_col=0, chunksize=3000000)
+            for chunk in chunks:
+                chunk.columns = [csv_file_fields.split(',')]
+                chunk = chunk[~chunk['URL'].str.contains('exclude_')]
+                df = df.append(chunk)
         else:
-            data = {'is_valid': False}
-        return JsonResponse(data)
+            df = pd.read_csv(
+                jmeter_results_file, index_col=0, low_memory=False)
+            df.columns = [csv_file_fields.split(',')]
+            df = df[~df['url'].str.contains('exclude_', na=False)]
+
+        df.columns = [csv_file_fields.split(',')]
+
+        df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
+        num_lines = df['response_time'].count()
+        logger.debug('Number of lines in file: {}'.format(num_lines))
+        unique_urls = df['url'].unique()
+        for url in unique_urls:
+            url = str(url)
+            if not Action.objects.filter(
+                    url=url, project_id=project_id).exists():
+                logger.debug("Adding new action: " + str(url) + " project_id: "
+                             + str(project_id))
+                a = Action(url=url, project_id=project_id)
+                a.save()
+            a = Action.objects.get(url=url, project_id=project_id)
+            action_id = a.id
+            if not TestActionData.objects.filter(
+                    action_id=action_id, test_id=test_id).exists():
+                logger.debug("Adding action data: {}".format(url))
+                df_url = df[(df.url == url)]
+                url_data = pd.DataFrame()
+                df_url_gr_by_ts = df_url.groupby(pd.TimeGrouper(freq='1Min'))
+                url_data['avg'] = df_url_gr_by_ts.response_time.mean()
+                url_data['median'] = df_url_gr_by_ts.response_time.median()
+                url_data['count'] = df_url_gr_by_ts.success.count()
+                df_url_gr_by_ts_only_errors = df_url[(
+                    df_url.success == False
+                )].groupby(pd.TimeGrouper(freq='1Min'))
+                url_data[
+                    'errors'] = df_url_gr_by_ts_only_errors.success.count()
+                url_data['test_id'] = test_id
+                url_data['url'] = url
+                output_json = json.loads(
+                    url_data.to_json(orient='index', date_format='iso'),
+                    object_pairs_hook=OrderedDict)
+                for row in output_json:
+                    data = {
+                        'timestamp': row,
+                        'avg': output_json[row]['avg'],
+                        'median': output_json[row]['median'],
+                        'count': output_json[row]['count'],
+                        'url': output_json[row]['url'],
+                        'errors': output_json[row]['errors'],
+                        'test_id': output_json[row]['test_id'],
+                    }
+                    test_action_data = TestActionData(
+                        test_id=output_json[row]['test_id'],
+                        action_id=action_id,
+                        data=data)
+                    test_action_data.save()
+
+                url_agg_data = dict(
+                    json.loads(df_url['response_time'].describe().to_json()))
+                url_agg_data['99%'] = df_url['response_time'].quantile(.99)
+                url_agg_data['90%'] = df_url['response_time'].quantile(.90)
+                url_agg_data['weight'] = float(df_url['response_time'].sum())
+                url_agg_data['errors'] = df_url[(
+                    df_url['success'] == False)]['success'].count()
+                test_action_aggregate_data = TestActionAggregateData(
+                    test_id=test_id, action_id=action_id, data=url_agg_data)
+                test_action_aggregate_data.save()
+
+        # zip_results_file(jmeter_results_file)
+
+        test_overall_data = pd.DataFrame()
+        df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
+        test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
+        test_overall_data['median'] = df_gr_by_ts.response_time.median()
+        test_overall_data['count'] = df_gr_by_ts.response_time.count()
+        test_overall_data['test_id'] = test_id
+        output_json = json.loads(
+            test_overall_data.to_json(orient='index', date_format='iso'),
+            object_pairs_hook=OrderedDict)
+        for row in output_json:
+            data = {
+                'timestamp': row,
+                'avg': output_json[row]['avg'],
+                'median': output_json[row]['median'],
+                'count': output_json[row]['count']
+            }
+            test_data = TestData(
+                test_id=output_json[row]['test_id'], data=data)
+            test_data.save()
+
+    return render(request, "upload/success.html", {
+        'result': 'ok',
+        'test_name': test_name,
+        'project_id': project_id,
+        'num_lines': num_lines
+    })
 
 
 def configure_page(request, project_id):

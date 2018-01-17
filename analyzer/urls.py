@@ -49,5 +49,5 @@ urlpatterns = [
         views.action_graphs),
     url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_aggregate_data/$',
         views.tests_compare_aggregate_new),   
-    url(r'^test-result-file-upload/$', views.TestResultFileUploadView.as_view(), name='test_result_file_upload'), 
+    url(r'^upload/test_result_file/$', views.upload_test_result_file, name='upload_test_result_file'), 
 ]
