@@ -5,6 +5,7 @@ var test_id_1, test_id_2;
 var num_of_tests_to_compare, top_requests = 0;
 var running_test_id = 0;
 
+
  var getUrlParameter = function getUrlParameter(sParam) {
      var sPageURL = decodeURIComponent(window.location.search.substring(1)),
          sURLVariables = sPageURL.split('&'),
@@ -47,9 +48,11 @@ function httpGet(theUrl) {
 
 function updateSelectList(id, url, label, text_tag, value_tag) {
  $.getJSON(url, function(json){
-               //json = JSON.parse(json_string);
                $(id).empty();
+               if(text_tag)
+               {
                $(id).append($('<option disabled selected>').text(label).attr('value', label));
+               }
                $.each(json, function(i, obj){
                        $(id).append($('<option>').text(obj[text_tag]).attr('value', obj[value_tag]));
                });
@@ -135,33 +138,6 @@ function selectValueInList(id, value){
                           }
                         });
 
- $('#select_project_menu').on('change', function(){
-                selected_project = $(this).find("option:selected").val();
-                $.ajax({
-                         url: "/analyzer/history",
-                         type: "get",
-                         success: function(response) {
-                           $("#history_project_page").html(response);
-                         },
-                         error: function(xhr) {
-                           //Do Something to handle error
-                         }
-                       });
-
-                   $.ajax({
-                            url: "/analyzer/analyze",
-                            type: "get",
-                            success: function(response) {
-                              $("#analyze_page").html(response);
-                              console.log(response);
-
-                            },
-                            error: function(xhr) {
-                              //Do Something to handle error
-                            }
-                   });
-  $(window).trigger('resize');
- });
 
  $('#select_running_test').on('change', function(){
                 running_test_id = $(this).find("option:selected").val();
@@ -179,7 +155,6 @@ function selectValueInList(id, value){
                        });
   $(window).trigger('resize');
  });
- updateSelectList('#select_project_menu', "/analyzer/projects_list", "Select project", "project_name", "id");
  updateSelectList('#select_running_test', "/online/tests_list", "Select running test", "project_name", "id");
 
  handleIncomingAction();
@@ -313,7 +288,7 @@ var handleIncomingAction = function handleIncomingAction(){
              });
 			 
          var build_number = getUrlParameter('build_number');
-		 selectValueInList('#select_project_menu', selected_project_id);      
+		 selectValueInList('#analyzer_select_project', selected_project_id);      
          var test = JSON.parse(httpGet('/analyzer/project/' + selected_project_id + '/'+ build_number +'/test_info/'));
          test_id_1 = test[0].id;
          testReport(test_id_1);

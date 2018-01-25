@@ -22,12 +22,13 @@ from django.urls import reverse
 import pandas as pd
 from administrator.models import Configuration
 from analyzer.confluence import confluenceposter
-from controller.views import update_test_graphite_data
+from controller.views import update_test_graphite_data, generate_test_results_data, unpack_test_results_data
 from analyzer.confluence.utils import generate_confluence_graph
-from models import (Action, Project, Server, ServerMonitoringData, Test,
-                    TestActionAggregateData, TestActionData, TestData, Error,
-                    TestError, TestResultFile)
-from forms import TestResultFileUploadForm
+from analyzer.models import (Action, Project, Server, ServerMonitoringData,
+                             Test, TestActionAggregateData, TestActionData,
+                             TestData, Error, TestDataResolution, TestError,
+                             TestResultFile)
+from analyzer.forms import TestResultFileUploadForm
 from scipy import stats
 from django.db.models import Func
 from django.template.loader import render_to_string
@@ -83,7 +84,7 @@ def upload_test_result_file(request):
     project_id = int(request.POST.get('project_id', '0'))
     # Create new project
     if project_id == 0:
-        project = Project(project_name="New project",)
+        project = Project(project_name="New project", )
         project.save()
         project_id = project.id
     test = Test(
@@ -95,112 +96,13 @@ def upload_test_result_file(request):
     test_id = test.id
     path = default_storage.save('test_result_data.csv',
                                 ContentFile(csv_file.read()))
-    jmeter_results_file = path
-    if os.path.exists(jmeter_results_file):
-        df = pd.DataFrame()
-        if os.stat(jmeter_results_file).st_size > 1000007777:
-            logger.debug("Executing a parse for a huge file")
-            chunks = pd.read_table(
-                jmeter_results_file, sep=',', index_col=0, chunksize=3000000)
-            for chunk in chunks:
-                chunk.columns = [csv_file_fields.split(',')]
-                chunk = chunk[~chunk['URL'].str.contains('exclude_')]
-                df = df.append(chunk)
-        else:
-            df = pd.read_csv(
-                jmeter_results_file, index_col=0, low_memory=False)
-            df.columns = [csv_file_fields.split(',')]
-            df = df[~df['url'].str.contains('exclude_', na=False)]
-
-        df.columns = [csv_file_fields.split(',')]
-
-        df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
-        num_lines = df['response_time'].count()
-        logger.debug('Number of lines in file: {}'.format(num_lines))
-        unique_urls = df['url'].unique()
-        for url in unique_urls:
-            url = str(url)
-            if not Action.objects.filter(
-                    url=url, project_id=project_id).exists():
-                logger.debug("Adding new action: " + str(url) + " project_id: "
-                             + str(project_id))
-                a = Action(url=url, project_id=project_id)
-                a.save()
-            a = Action.objects.get(url=url, project_id=project_id)
-            action_id = a.id
-            if not TestActionData.objects.filter(
-                    action_id=action_id, test_id=test_id).exists():
-                logger.debug("Adding action data: {}".format(url))
-                df_url = df[(df.url == url)]
-                url_data = pd.DataFrame()
-                df_url_gr_by_ts = df_url.groupby(pd.TimeGrouper(freq='1Min'))
-                url_data['avg'] = df_url_gr_by_ts.response_time.mean()
-                url_data['median'] = df_url_gr_by_ts.response_time.median()
-                url_data['count'] = df_url_gr_by_ts.success.count()
-                df_url_gr_by_ts_only_errors = df_url[(
-                    df_url.success == False
-                )].groupby(pd.TimeGrouper(freq='1Min'))
-                url_data[
-                    'errors'] = df_url_gr_by_ts_only_errors.success.count()
-                url_data['test_id'] = test_id
-                url_data['url'] = url
-                output_json = json.loads(
-                    url_data.to_json(orient='index', date_format='iso'),
-                    object_pairs_hook=OrderedDict)
-                for row in output_json:
-                    data = {
-                        'timestamp': row,
-                        'avg': output_json[row]['avg'],
-                        'median': output_json[row]['median'],
-                        'count': output_json[row]['count'],
-                        'url': output_json[row]['url'],
-                        'errors': output_json[row]['errors'],
-                        'test_id': output_json[row]['test_id'],
-                    }
-                    test_action_data = TestActionData(
-                        test_id=output_json[row]['test_id'],
-                        action_id=action_id,
-                        data=data)
-                    test_action_data.save()
-
-                url_agg_data = dict(
-                    json.loads(df_url['response_time'].describe().to_json()))
-                url_agg_data['99%'] = df_url['response_time'].quantile(.99)
-                url_agg_data['90%'] = df_url['response_time'].quantile(.90)
-                url_agg_data['weight'] = float(df_url['response_time'].sum())
-                url_agg_data['errors'] = df_url[(
-                    df_url['success'] == False)]['success'].count()
-                test_action_aggregate_data = TestActionAggregateData(
-                    test_id=test_id, action_id=action_id, data=url_agg_data)
-                test_action_aggregate_data.save()
-
-        # zip_results_file(jmeter_results_file)
-
-        test_overall_data = pd.DataFrame()
-        df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
-        test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
-        test_overall_data['median'] = df_gr_by_ts.response_time.median()
-        test_overall_data['count'] = df_gr_by_ts.response_time.count()
-        test_overall_data['test_id'] = test_id
-        output_json = json.loads(
-            test_overall_data.to_json(orient='index', date_format='iso'),
-            object_pairs_hook=OrderedDict)
-        for row in output_json:
-            data = {
-                'timestamp': row,
-                'avg': output_json[row]['avg'],
-                'median': output_json[row]['median'],
-                'count': output_json[row]['count']
-            }
-            test_data = TestData(
-                test_id=output_json[row]['test_id'], data=data)
-            test_data.save()
+    csv_file_fields = csv_file_fields.split(',')
+    generate_test_results_data(test_id, project_id, path, csv_file_fields)
 
     return render(request, "upload/success.html", {
         'result': 'ok',
         'test_name': test_name,
         'project_id': project_id,
-        'num_lines': num_lines
     })
 
 
@@ -226,6 +128,11 @@ def projects_list(request):
     return JsonResponse(project_list, safe=False)
 
 
+def data_resolutions_list(request):
+    '''Return data resolutions list'''
+    return JsonResponse(list(TestDataResolution.objects.values()), safe=False)
+
+
 def get_project_tests_list(project_id):
     '''Return test`s list for some project'''
 
@@ -238,8 +145,8 @@ def get_test_actions_list(test_id):
     '''Return actions list for some test'''
 
     t = TestActionData.objects.filter(
-        test_id=test_id).distinct('action_id').values('action_id',
-                                                      'action__url')
+        test_id=test_id, data_resolution_id=1).distinct('action_id').values(
+            'action_id', 'action__url')
     return t
 
 
@@ -274,7 +181,7 @@ def composite_data(request):
                     an.append(col_name)
                     action_names["actions"] = an
                     min_timestamp = TestActionData.objects. \
-                        filter(test_id=test_id, action_id=action_id). \
+                        filter(test_id=test_id, action_id=action_id, data_resolution_id=1). \
                         values("test_id", "action_id"). \
                         aggregate(min_timestamp=Min(
                             RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
@@ -283,7 +190,7 @@ def composite_data(request):
                         col_name: RawSQL("((data->>%s)::numeric)", ('avg', ))
                     }
                     action_data = list(TestActionData.objects. \
-                        filter(test_id=test_id, action_id=action_id). \
+                        filter(test_id=test_id, action_id=action_id, data_resolution_id=1). \
                         annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
                         annotate(**mapping). \
                         values('timestamp', col_name). \
@@ -334,8 +241,9 @@ def project_history(request, project_id):
     Return whole list of tests with avg and median response times for project_id
     '''
     source = 'default'
+
     data = TestData.objects. \
-        filter(test__project_id=project_id, test__show=True, source=source).\
+        filter(test__project_id=project_id, test__show=True, source=source, data_resolution_id = 1).\
         annotate(test_name=F('test__display_name')). \
         values('test_name'). \
         annotate(mean=Sum(RawSQL("((data->>%s)::numeric)", ('avg',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
@@ -384,13 +292,11 @@ def get_test_aggregate_table(test_id):
 
 def test_report(request, test_id):
     '''Generate HTML page with report for the test'''
-
-    test_description = Test.objects.filter(id=test_id).values()
+    test = Test.objects.get(id=test_id)
     aggregate_table = get_test_aggregate_table(test_id)
-    return render(request, 'report.html', {
-        'test_description': test_description[0],
-        'aggregate_table': aggregate_table
-    })
+    return render(request, 'report.html',
+                  {'test': test,
+                   'aggregate_table': aggregate_table})
 
 
 def composite(request, project_id):
@@ -446,7 +352,7 @@ def action_report(request, test_id, action_id):
             "test_name": test_name
         })
     test_start_time = TestActionData.objects. \
-        filter(test_id=test_id). \
+        filter(test_id=test_id, data_resolution_id=1). \
         aggregate(min_timestamp=Min(
             RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
     test_errors = TestError.objects.annotate(
@@ -467,12 +373,12 @@ def action_report(request, test_id, action_id):
 def action_rtot(request, test_id, action_id):
     '''Return response times over time data for the action'''
     min_timestamp = TestActionData.objects. \
-        filter(test_id=test_id, action_id=action_id). \
+        filter(test_id=test_id, action_id=action_id, data_resolution_id=1). \
         values("test_id", "action_id"). \
         aggregate(min_timestamp=Min(
             RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
     x = TestActionData.objects. \
-        filter(test_id=test_id, action_id=action_id). \
+        filter(test_id=test_id, action_id=action_id, data_resolution_id=1). \
         annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
         annotate(average=RawSQL("((data->>%s)::numeric)", ('avg',))). \
         annotate(median=RawSQL("((data->>%s)::numeric)", ('median',))). \
@@ -488,7 +394,7 @@ def action_rtot(request, test_id, action_id):
 def available_test_monitoring_metrics(request, source, test_id, server_id):
     '''Return list of metrics which are available for the test and server'''
     x = ServerMonitoringData.objects.\
-        filter(test_id=test_id, server_id=server_id, source=source).values('data')[:1]
+        filter(test_id=test_id, server_id=server_id, source=source, data_resolution_id=1).values('data')[:1]
     data = list(x)[0]["data"]
     metrics = []
     for value in data:
@@ -502,27 +408,46 @@ def test_servers(request, source, test_id):
     '''Return server list for the test'''
 
     servers_list = Server.objects.\
-        filter(servermonitoringdata__test_id=test_id, servermonitoringdata__source=source).\
+        filter(servermonitoringdata__test_id=test_id, servermonitoringdata__source=source, servermonitoringdata__data_resolution_id=1).\
         values().distinct()
 
     return JsonResponse(list(servers_list), safe=False)
 
 
+def test_edit_page(request, test_id):
+    '''Generate test edit HTML page '''
+
+    test = Test.objects.filter(id=test_id).values()
+    return render(request, 'test/edit.html', {
+        'test': test[0],
+    })
+
+
 def test_change(request, test_id):
     '''Change test data'''
-
     test = Test.objects.get(id=test_id)
     response = []
     if request.method == 'POST':
-        if 'show' in request.POST:
-            show = request.POST.get('show', '')
-            test.show = True if show == 'true' else False
-            test.save()
-        elif 'display_name' in request.POST:
-            display_name = request.POST.get('display_name', '')
-            test.display_name = display_name
-            test.save()
-        response = [{"message": "Test data was changed"}]
+        if 'edit_param' in request.POST:
+            edit_param = request.POST.get('edit_param', '')
+            edit_val = request.POST.get('edit_val', '')
+            if 'show' in edit_param:
+                edit_val = request.POST.get('edit_val', '')
+                test.show = True if edit_val == 'true' else False
+                test.save()
+            else:
+                setattr(test, edit_param, edit_val)
+                test.save()
+            response = {
+                'message': {
+                    'text': 'Test data was chaged',
+                    'type': 'success',
+                    'msg_params': {
+                        'test_id': test_id,
+                        'edit_param': edit_param,
+                    }
+                }
+            }
     return JsonResponse(response, safe=False)
 
 
@@ -538,7 +463,8 @@ def get_compare_tests_server_monitoring_data(test_id,
     data = (ServerMonitoringData.objects.filter(
         test__start_time__lte=start_time,
         test__project_id=project_id,
-        test__show=True).values(
+        test__show=True,
+        data_resolution_id=1).values(
             'test__display_name', 'server__server_name', 'test__start_time'
         ).annotate(cpu_load=RawSQL(
             "((data->>%s)::float)+((data->>%s)::float)+((data->>%s)::float)", (
@@ -597,7 +523,7 @@ def get_compare_tests_aggregate_data(test_id,
     project_id = project[0]['project_id']
     if source == 'default':
         data = TestData.objects. \
-                filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True, source=source).\
+                filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True, source=source, data_resolution_id = 1).\
                 annotate(display_name=F('test__display_name')). \
                 annotate(start_time=F('test__start_time')). \
                 values('display_name', 'start_time'). \
@@ -608,16 +534,16 @@ def get_compare_tests_aggregate_data(test_id,
         tests = Test.objects.filter(
             start_time__lte=start_time, project_id=project_id,
             show=True).values().order_by('-start_time')[:num_of_tests]
-        print tests
         for t in tests:
             test_id = t['id']
             if not ServerMonitoringData.objects.filter(
-                    test_id=test_id,
-                    source='graphite').exists() or not TestData.objects.filter(
-                        test_id=test_id, source='graphite').exists():
+                    test_id=test_id, source='graphite', data_resolution_id=1
+            ).exists() or not TestData.objects.filter(
+                    test_id=test_id, source='graphite',
+                    data_resolution_id=1).exists():
                 result = update_test_graphite_data(test_id)
         data = TestData.objects. \
-                filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True, source=source).\
+                filter(test__start_time__lte=start_time, test__project_id=project_id, test__show=True, source=source, data_resolution_id = 1).\
                 annotate(display_name=F('test__display_name')). \
                 annotate(start_time=F('test__start_time')). \
                 values('display_name', 'start_time'). \
@@ -661,17 +587,32 @@ def test_rtot_data(request, test_id):
     data = []
     if request.method == 'POST':
         source = request.POST.get('source', '0')
+        data_resolution_id = int(request.POST.get('data_resolution_id', '1'))
+        data_resolution = TestDataResolution.objects.get(id=data_resolution_id)
+        if source == 'default':
+            # If there is no data for required resolution, then re-generate data
+            if not TestData.objects.filter(
+                    test_id=test_id,
+                    source='default',
+                    data_resolution_id=data_resolution_id).exists():
+                jmeter_results_file_dest = unpack_test_results_data(test_id)
+                project_id = Test.objects.get(id=test_id).project_id
+                generate_test_results_data(
+                    test_id,
+                    project_id,
+                    jmeter_results_file_path=jmeter_results_file_dest,
+                    data_resolution=data_resolution.frequency)
         min_timestamp = TestData.objects. \
-            filter(test_id=test_id, source=source). \
+            filter(test_id=test_id, source=source, data_resolution_id=data_resolution_id). \
             values("test_id").\
             aggregate(min_timestamp=Min(
                 RawSQL("((data->>%s)::timestamp)", ('timestamp',))))['min_timestamp']
         x = TestData.objects. \
-            filter(test_id=test_id, source=source). \
+            filter(test_id=test_id, source=source, data_resolution_id=data_resolution_id). \
             annotate(timestamp=(RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp)). \
             annotate(average=RawSQL("((data->>%s)::numeric)", ('avg',))). \
             annotate(median=RawSQL("((data->>%s)::numeric)", ('median',))). \
-            annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',))) / 60). \
+            annotate(rps=(RawSQL("((data->>%s)::numeric)", ('count',))) / data_resolution.per_sec_divider). \
             values('timestamp', "average", "median", "rps"). \
             order_by('timestamp')
         data = json.loads(
@@ -729,7 +670,7 @@ def metric_max_value(request, test_id, server_id, metric):
         max_value = {'max_value': 100}
     else:
         max_value = ServerMonitoringData.objects. \
-            filter(test_id=test_id, server_id=server_id).\
+            filter(test_id=test_id, server_id=server_id, data_resolution_id=1).\
             annotate(val=RawSQL("((data->>%s)::numeric)", (metric,))).\
             aggregate(max_value=Max('val', output_field=FloatField()))
     return JsonResponse(max_value, safe=False)
@@ -766,9 +707,10 @@ def tests_compare_aggregate_new(request, test_id_1, test_id_2):
 
 def check_graphite_data(request, test_id):
     if not ServerMonitoringData.objects.filter(
-            test_id=test_id,
-            source='graphite').exists() or not TestData.objects.filter(
-                test_id=test_id, source='graphite').exists():
+            test_id=test_id, source='graphite',
+            data_resolution_id=1).exists() or not TestData.objects.filter(
+                test_id=test_id, source='graphite',
+                data_resolution_id=1).exists():
         result = update_test_graphite_data(test_id)
         response = {
             "message": {
@@ -819,7 +761,7 @@ def server_monitoring_data(request, test_id):
                 metric: RawSQL("((data->>%s)::numeric)", (metric, ))
             }
         x = ServerMonitoringData.objects. \
-            filter(test_id=test_id, server_id=server_id, source=source). \
+            filter(test_id=test_id, server_id=server_id, source=source, data_resolution_id=1). \
             annotate(timestamp=RawSQL("((data->>%s)::timestamp)", ('timestamp',)) - min_timestamp).\
             annotate(**metric_mapping). \
             values('timestamp', metric)
@@ -845,14 +787,18 @@ def tests_compare_report(request, test_id_1, test_id_2):
         Configuration.objects.get(name='signifficant_actions_compare_percent')
         .value)
     if not ServerMonitoringData.objects.filter(
-            test_id=test_id_1, source='graphite').exists():
+            test_id=test_id_1, source='graphite',
+            data_resolution_id=1).exists():
         result = update_test_graphite_data(test_id_1)
     if not ServerMonitoringData.objects.filter(
-            test_id=test_id_2, source='graphite').exists():
+            test_id=test_id_2, source='graphite',
+            data_resolution_id=1).exists():
         result = update_test_graphite_data(test_id_2)
 
     cpu_steal_data = ServerMonitoringData.objects.filter(
-        test_id__in=[test_id_1, test_id_2], source='graphite').annotate(
+        test_id__in=[test_id_1, test_id_2],
+        source='graphite',
+        data_resolution_id=1).annotate(
             server_name=F('server__server_name'),
             test_name=F('test__display_name')).values(
                 'server_name', 'test_name').annotate(cpu_steal=Avg(

@@ -107,8 +107,7 @@ Then execute in jltc folder:
 
 `./manage.py migrate`
 
-`./manage.py syncdb`
-
+`./manage.py loaddata fixtures/initial_data.json`
 
 ### 4. Go!
 nohup python manage.py runserver 8888 &

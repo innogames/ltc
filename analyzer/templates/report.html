@@ -10,8 +10,19 @@
     </ul>
     <div id="overview_tab">
         <div class="panel panel-default">
-            <div class="panel-heading">Report for test: {{test_description.display_name}}</div>
-            <div class="panel-body">
+            <div class="panel-body" style="padding-top: 0px">
+                <div class="page-header">
+                    <h3 style="color:grey;">
+                        <div class="editable_label">{% if test.display_name != "" %}{{ test.display_name }}{% else %}Empty{% endif %}</div>
+                        <input id="{{ test.id }}" name="display_name" class="clickedit" type="text" />
+                        <div class="clearfix"></div>
+                    </h3>
+                    <h4 style="color:grey;">
+                        <div class="editable_label">{% if test.description  %}{{ test.description }}{% else %}No description{% endif %}</div>
+                        <input id="{{ test.id }}" name="description" class="clickedit" type="text" />
+                        <div class="clearfix"></div>
+                    </h4>
+                </div>
                 <h3 class="page-header">Requests statistic <small>for the current test</small></h3>
                 <div class="row">
                     <div class="col-xs-6">
@@ -97,7 +108,7 @@
 
     <div id="aggregate_table_tab">
         <div class="panel panel-default">
-            <div class="panel-heading">Detailed aggregated table for test: {{test_description.display_name}}</div>
+            <div class="panel-heading">Detailed aggregated table for test: {{test.display_name}}</div>
             <div class="panel-body">
                 <table id="aggregate_table" class="tablesorter">
                     <thead>
@@ -112,7 +123,7 @@
                     <tr>
                         {% for k, v in row.items %}
                         {% if k == "url" %}
-                        <td><b><a href='/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report' onclick="return popitup('/analyzer/test/{{ test_description.id }}/{{ row.action_id }}/action_report')">{{ v }}</a></b></td>
+                        <td><b><a href='/analyzer/test/{{ test.id }}/{{ row.action_id }}/action_report' onclick="return popitup('/analyzer/test/{{ test.id }}/{{ row.action_id }}/action_report')">{{ v }}</a></b></td>
                         {% elif k == "data" %}
                             {% for name, value in v.items %}
                                 {% if name == "errors" %}
@@ -143,6 +154,7 @@
                 <button type="button" class="btn active" value='default'>Default</button>
                 <button type="button" class="btn" value='graphite'>Graphite</button>
         </div> 
+        <select name="select_data_resolution" id="select_data_resolution" class="selectpicker"/>
         <hr/>
         <div class="row">
             <div id="test_rtot_graph"></div>
@@ -178,6 +190,61 @@
 </article>
 
 <script>
+     updateSelectList('#select_data_resolution', "/analyzer/data_resolutions_list", "Data resolution", "frequency", "id");
+        
+       var edit_test_id = 0;
+        function beginEdit(e) {
+            console.log('beginEdit');
+            var input = $(e.target);
+            input.val(input.prev().text());
+        }
+        
+        function endEdit(e) {
+            var input = $(e.target),
+                label = input && input.prev();
+            label.text(input.val() === '' ? 'Empty' : input.val());
+            var edit_val = input.val();
+            var edit_entity_id = input.attr('id');
+            var edit_param = input.attr('name');
+            console.log('edit_val:' + edit_val);
+            console.log('edit_test_id:' + edit_entity_id);
+            console.log('edit_param:' + edit_param);
+            $.ajax({
+                url: "/analyzer/test/" + edit_entity_id + "/change/",
+                type: "post",
+                data: {
+                    edit_param: edit_param,
+                    edit_val: edit_val,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    input.hide();
+                    label.show();
+                },
+                error: function (xhr) {
+                    //Do Something to handle error
+                }
+            });
+        
+        }
+        
+        $('.clickedit').hide()
+        .focusout(endEdit)
+        .keyup(function (e) {
+            if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
+                endEdit(e);
+                return false;
+            } else {
+                return true;
+            }
+        }).focus(beginEdit)
+        .prev().click(function () {
+            console.log('click');
+            console.log($(this));
+            $(this).hide();
+            $(this).next().show().focus();
+        });
+
     num_of_tests_to_compare = 5;
     top_actions = 5;
     var monitoring_source, rtot_source, compare_source = 'default';
@@ -214,6 +281,7 @@
     $('#rtot_switcher button').click(function() {
         $(this).addClass('active').siblings().removeClass('active');
         rtot_source = $(this).val();
+        var data_resolution_id = $("#select_data_resolution").find("option:selected").val();
         if (rtot_source == 'graphite')
         {
             $.ajax({
@@ -225,7 +293,7 @@
                 
                 success: function(response) {
                      show_alert(response);
-                     draw_rtot_graph(test_id_1, rtot_source);
+                     draw_rtot_graph(test_id_1, rtot_source, data_resolution_id);
                 },
                 complete: function(){
                     $('.ajax-loader').css("visibility", "hidden");
@@ -237,7 +305,9 @@
         }
         else
         {
-            draw_rtot_graph(test_id_1, rtot_source);
+            $('.ajax-loader').css("visibility", "visible");
+            draw_rtot_graph(test_id_1, rtot_source, data_resolution_id);
+            $('.ajax-loader').css("visibility", "hidden");
         }
     });
     
@@ -338,12 +408,13 @@
             show_alert(response);
         }
     });
-    var draw_rtot_graph = function draw_rtot_graph(test_id, source) {
+    var draw_rtot_graph = function draw_rtot_graph(test_id, source, data_resolution_id) {
         $.ajax({
             url: "/analyzer/test/"+test_id+"/get_test_rtot_data/",
             type: "post",
             data: {
             source: source,
+            data_resolution_id: data_resolution_id,
             csrfmiddlewaretoken: '{{ csrf_token }}'
             },
             success: function(response) {
@@ -657,6 +728,7 @@ error: function(xhr) {
             bindto: '#top_avg_graph'
         });
     }
+
 
 
     $('#select_server_1').on('change', function() {

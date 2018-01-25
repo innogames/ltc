@@ -3,6 +3,7 @@ from . import views
 app_name = 'analyzer'
 urlpatterns = [
     url(r'^projects_list', views.projects_list),
+    url(r'^data_resolutions_list', views.data_resolutions_list),
     url(r'^analyze$', views.Analyze.as_view()),
     url(r'^history$', views.History.as_view()),
     url(r'^dashboard', views.dashboard),
@@ -27,6 +28,7 @@ urlpatterns = [
     url(r'^test/(?P<test_id>\d+)/action/(?P<action_id>\d+)/rtot/$',
         views.action_rtot),
     url(r'^test/(?P<source>[\w\-]+)/(?P<test_id>\d+)/servers/$', views.test_servers),
+    url(r'^test/(?P<test_id>\d+)/edit/$', views.test_edit_page),
     url(r'^test/(?P<test_id>\d+)/change/$', views.test_change),
     url(r'^test/(?P<test_id>\d+)/get_test_rtot_data/$', views.test_rtot_data),
     url(r'^test/(?P<test_id>\d+)/get_compare_data/$',

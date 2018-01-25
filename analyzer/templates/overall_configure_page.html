@@ -33,11 +33,11 @@
                 </td>
                 <td>
                     <label class="editable_label pull-left">{% if test.display_name != "" %}{{ test.display_name }}{% else %}Empty{% endif %}</label>
-                    <input id={{ test.id }} class="clickedit" type="text" />
+                    <input id={{ test.id }} class="clickedit" name="display_name" type="text" />
                     <div class="clearfix"></div>
                 </td>
                 <td>
-                    <input id="show_{{ test.id }}" type="checkbox" value="{{ test.id }}" name="show_{{ test.id }}" {% if test.show %}checked{% endif %}>
+                    <input id="show_{{ test.id }}" type="checkbox" value="{{ test.id }}" name="show" {% if test.show %}checked{% endif %}>
                 </td>
             </tr>
             {% endfor %}
@@ -69,56 +69,4 @@
             }
         });
     });
-
-
-function beginEdit(e)
-{
-    console.log('beginEdit');
-    var input = $(e.target);
-    input.val(input.prev().text());
-}
-
-function endEdit(e) {
-    var input = $(e.target),
-        label = input && input.prev();
-    label.text(input.val() === '' ? 'Empty' : input.val());
-    var new_display_name = input.val();
-    edit_test_id = input.attr('id');
-    console.log('new_display_name:'+new_display_name);
-    console.log('edit_test_id:'+edit_test_id);
-    $.ajax({
-            url: "/analyzer/test/" + edit_test_id + "/change/",
-            type: "post",
-            data: {
-                display_name: new_display_name,
-                csrfmiddlewaretoken: '{{ csrf_token }}'
-            },
-            success: function(response) {
-                    input.hide();
-                    label.show();
-            },
-            error: function(xhr) {
-                //Do Something to handle error
-            }
-        });
-
-}
-
-$('.clickedit').hide()
-.focusout(endEdit)
-.keyup(function (e) {
-    if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
-        endEdit(e);
-        return false;
-    } else {
-        return true;
-    }
-}).focus(beginEdit)
-.prev().click(function () {
-    console.log('click');
-    console.log($(this));
-    $(this).hide();
-    $(this).next().show().focus();
-});
-
 </script>
