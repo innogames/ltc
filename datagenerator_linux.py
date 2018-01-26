@@ -224,6 +224,7 @@ for root, dirs, files in os.walk(builds_dir):
                             end_time=end_time,
                             build_number=build_number,
                             started_by_id=user_id,
+                            data_resolution = '1Min',
                             show=True)
                         result = db_connection.execute(stm)
 jtl_files = sorted(jtl_files, key=getIndex, reverse=True)
@@ -349,6 +350,7 @@ for build_root in build_roots:
                 stm = test_action_data.insert().values(
                     test_id=output_json[row]['test_id'],
                     action_id=action_id,
+                    data_resolution_id=1,
                     data=data)
                 result = db_connection.execute(stm)
 
@@ -385,6 +387,7 @@ for build_root in build_roots:
             stm = test_data.insert().values(
                 test_id=output_json[row]['test_id'],
                 data=data,
+                data_resolution_id=1,
                 source='default')
             result = db_connection.execute(stm)
 
@@ -460,6 +463,7 @@ for build_root in build_roots:
                         test_id=test_id,
                         server_id=server_id,
                         data=data,
+                        data_resolution_id=1,
                         source='default')
                     result = db_connection.execute(stm)
 
