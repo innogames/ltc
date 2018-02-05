@@ -110,11 +110,11 @@ def add_running_test(root):
                 display_name = params.text
     project_name = re.search('/([^/]+)/builds', root).group(1)
     if not Project.objects.filter(project_name=project_name).exists():
-        print "Adding new project: " + project_name
+        logger.info("Adding new project: {}".format(project_name))
         project = Project(project_name=project_name, show=True)
         project.save()
         project_id = project.id
-    print "Project_id: " + str(project_id)
+    logger.info("Project_id: ".format(project_id))
     build_number = int(re.search('/builds/(\d+)', root).group(1))
     running_test = TestRunning(
         project_id=project_id,

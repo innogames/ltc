@@ -14,8 +14,6 @@ from django.db.models.expressions import F, RawSQL, Value
 import select
 
 import shutil
-
-from controller.datagenerator import generate_data, parse_results_in_dir
 from administrator.models import JMeterProfile, SSHKey
 
 if _platform == "linux" or _platform == "linux2":
@@ -66,8 +64,11 @@ def parse_results(request):
 def stop_proxy(request, proxy_id):
     p = Proxy.objects.get(id=proxy_id)
     if p.pid != 0:
-        proxy_process = psutil.Process(p.pid)
-        proxy_process.terminate()
+        try:
+            proxy_process = psutil.Process(p.pid)
+            proxy_process.terminate()
+        except psutil.NoSuchProcess:
+            logger.info("Process {} is not exists anymore".format(p.pid))
         p.started = False
         p.pid = 0
         p.save()
@@ -95,8 +96,8 @@ def start_proxy(request, proxy_id):
         p.destination_port = destination_port
         p.started = True
         p.save()
-    out = open('/tmp/proxy_output_' + str(proxy_id), 'w')
-    proxy_script = "proxy.py"
+    out = open('/var/lib/jltc/logs/proxy_output_' + str(proxy_id), 'w')
+    proxy_script = "../proxy.py"
     #if _platform == "linux" or _platform == "linux2":
     #	proxy_script = "proxy_linux.py"
     env = dict(os.environ, **{'PYTHONUNBUFFERED': '1'})

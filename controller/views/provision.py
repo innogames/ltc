@@ -18,7 +18,6 @@ import select
 
 import shutil
 
-from controller.datagenerator import generate_data, parse_results_in_dir
 from administrator.models import JMeterProfile, SSHKey
 
 import paramiko
