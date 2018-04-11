@@ -175,7 +175,17 @@ def generate_test_results_data(test_id,
             logger.debug("Executing a parse for a huge file")
             chunks = pd.read_table(
                 jmeter_results_file, sep=',', index_col=0, chunksize=3000000)
+
             for chunk in chunks:
+                for host in hosts:
+                    t = threading.Thread(
+                        target=get_host_info, args=(
+                            host,
+                            load_generators_info, ))
+                    t.start()
+                    threads.append(t)
+                for t in threads:
+                    t.join()
                 chunk.columns = jmeter_results_file_fields.split(',')
                 chunk = chunk[~chunk['URL'].str.contains('exclude_')]
                 df = df.append(chunk)

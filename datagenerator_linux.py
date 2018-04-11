@@ -22,6 +22,8 @@ from itertools import islice
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger()
 
+project_name = sys.argv[1]
+
 db_engine = create_engine(
     'postgresql://postgres:postgres@localhost:5432/postgres')
 db_connection = db_engine.connect()
