@@ -82,7 +82,7 @@ class Action(models.Model):
 
 
 class Error(models.Model):
-    text = models.CharField(db_index=True, max_length=4000)
+    text = models.TextField(db_index=True)
     code = models.CharField(max_length=400, null=True, blank=True)
 
     class Meta:
