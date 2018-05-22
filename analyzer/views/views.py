@@ -112,19 +112,17 @@ def configure_page(request, project_id):
     project = Project.objects.get(id=project_id)
     tests_list = Test.objects.filter(
         project_id=project_id).values().order_by('-start_time')
-    return render(request, 'overall_configure_page.html',
-                  {'tests_list': tests_list,
-                   'project': project})
+    return render(request, 'overall_configure_page.html', {
+        'tests_list': tests_list,
+        'project': project
+    })
 
 
 def projects_list(request):
     '''Return available projects list'''
 
-    project_list = []
-    projects_all = list(Project.objects.values())
-    for project in projects_all:
-        if project['show']:
-            project_list.append(project)
+    project_list = list(
+        Project.objects.filter(show=True).values().order_by('project_name'))
     return JsonResponse(project_list, safe=False)
 
 
@@ -294,9 +292,10 @@ def test_report(request, test_id):
     '''Generate HTML page with report for the test'''
     test = Test.objects.get(id=test_id)
     aggregate_table = get_test_aggregate_table(test_id)
-    return render(request, 'report.html',
-                  {'test': test,
-                   'aggregate_table': aggregate_table})
+    return render(request, 'report.html', {
+        'test': test,
+        'aggregate_table': aggregate_table
+    })
 
 
 def composite(request, project_id):
@@ -314,8 +313,8 @@ def action_report(request, test_id, action_id):
     '''
 
     action_aggregate_data = list(
-        TestActionAggregateData.objects.annotate(test_name=F(
-            'test__display_name')).filter(
+        TestActionAggregateData.objects.annotate(
+            test_name=F('test__display_name')).filter(
                 action_id=action_id, test_id__lte=test_id).values(
                     'test_name', 'data').order_by('-test__start_time'))[:5]
     action_data = []
@@ -464,14 +463,17 @@ def get_compare_tests_server_monitoring_data(test_id,
         test__start_time__lte=start_time,
         test__project_id=project_id,
         test__show=True,
-        data_resolution_id=1).values(
-            'test__display_name', 'server__server_name', 'test__start_time'
-        ).annotate(cpu_load=RawSQL(
+        data_resolution_id=1
+    ).values(
+        'test__display_name', 'server__server_name', 'test__start_time'
+    ).annotate(
+        cpu_load=RawSQL(
             "((data->>%s)::float)+((data->>%s)::float)+((data->>%s)::float)", (
                 'CPU_user',
                 'CPU_iowait',
-                'CPU_system', ))).annotate(
-                    cpu_load=Avg('cpu_load')).order_by('-test__start_time'))
+                'CPU_system',
+            ))).annotate(
+                cpu_load=Avg('cpu_load')).order_by('-test__start_time'))
     return data
 
 
@@ -680,17 +682,17 @@ def tests_compare_aggregate_new(request, test_id_1, test_id_2):
     '''Return comparasion data for all actions in two tests'''
     response = []
     action_data_1 = TestActionAggregateData.objects.annotate(
-        action_name=F('action__url')).annotate(mean=RawSQL(
-            "((data->>%s)::numeric)",
-            ('mean', ))).filter(test_id=test_id_1).values(
-                'action_id', 'action_name', 'mean')
+        action_name=F('action__url')).annotate(
+            mean=RawSQL("((data->>%s)::numeric)", (
+                'mean', ))).filter(test_id=test_id_1).values(
+                    'action_id', 'action_name', 'mean')
     for action in action_data_1:
         action_id = action['action_id']
         if TestActionAggregateData.objects.filter(
                 action_id=action_id, test_id=test_id_2).exists():
             action_data_2 = TestActionAggregateData.objects.annotate(
-                action_name=F('action__url')).annotate(mean=RawSQL(
-                    "((data->>%s)::numeric)", ('mean', ))).filter(
+                action_name=F('action__url')).annotate(
+                    mean=RawSQL("((data->>%s)::numeric)", ('mean', ))).filter(
                         action_id=action_id, test_id=test_id_2).values(
                             'action_name', 'mean')[0]
             mean_1 = action['mean']
@@ -754,7 +756,8 @@ def server_monitoring_data(request, test_id):
                     (
                         'CPU_iowait',
                         'CPU_user',
-                        'CPU_system', ))
+                        'CPU_system',
+                    ))
             }
         else:
             metric_mapping = {
@@ -801,8 +804,9 @@ def tests_compare_report(request, test_id_1, test_id_2):
         data_resolution_id=1).annotate(
             server_name=F('server__server_name'),
             test_name=F('test__display_name')).values(
-                'server_name', 'test_name').annotate(cpu_steal=Avg(
-                    RawSQL("((data->>%s)::float)", ('CPU_steal', ))))
+                'server_name', 'test_name').annotate(
+                    cpu_steal=Avg(
+                        RawSQL("((data->>%s)::float)", ('CPU_steal', ))))
 
     for d in cpu_steal_data:
         if d['cpu_steal'] > 0:  # ??
@@ -848,8 +852,8 @@ def tests_compare_report(request, test_id_1, test_id_2):
         else:
             action_data_1 = list(
                 TestActionAggregateData.objects.filter(
-                    test_id=test_id_1, action_id=action_id).values('data'))[0][
-                        'data']
+                    test_id=test_id_1,
+                    action_id=action_id).values('data'))[0]['data']
             # Student t-criteria
             Xa = action_data_1['mean']
             Xb = action_data_2['mean']
@@ -869,9 +873,8 @@ def tests_compare_report(request, test_id_1, test_id_2):
                     t = stats.t.ppf(1 - 0.01, df)
                     logger.debug(
                         'Action: {0} t: {1} Xa: {2} Xb: {3} Sa: {4} Sb: {5} Na: {6} Nb: {7} df: {8}'.
-                        format(action_url,
-                               stats.t.ppf(1 - 0.025, df), Xa, Xb, Sa, Sb, Na,
-                               Nb, df))
+                        format(action_url, stats.t.ppf(1 - 0.025, df), Xa, Xb,
+                               Sa, Sb, Na, Nb, df))
                     Sab = math.sqrt(((Na - 1) * math.pow(Sa, 2) +
                                      (Nb - 1) * math.pow(Sb, 2)) / df)
                     Texp = (math.fabs(Xa - Xb)) / (
@@ -935,9 +938,10 @@ def action_graphs(request, test_id):
     actions_list = list(
         TestActionAggregateData.objects.annotate(name=F('action__url')).filter(
             test_id=test_id).values('action_id', 'name'))
-    return render(request, 'action_graphs.html',
-                  {'actions_list': actions_list,
-                   'test_id': test_id})
+    return render(request, 'action_graphs.html', {
+        'actions_list': actions_list,
+        'test_id': test_id
+    })
 
 
 def dashboard_compare_tests_list(tests_list):
@@ -1031,11 +1035,12 @@ def dashboard(request):
     tests = dashboard_compare_tests_list(last_tests)
     tests_by_project = dashboard_compare_tests_list(last_tests_by_project)
     logger.debug(projects_list)
-    return render(request, 'dashboard.html', {
-        'last_tests': tests,
-        'last_tests_by_project': tests_by_project,
-        'projects_list': projects_list
-    })
+    return render(
+        request, 'dashboard.html', {
+            'last_tests': tests,
+            'last_tests_by_project': tests_by_project,
+            'projects_list': projects_list
+        })
 
 
 class Analyze(TemplateView):
