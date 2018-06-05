@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from models import Test, Project
+from analyzer.models import Test, Project
 
 
 class TestAdmin(admin.ModelAdmin):

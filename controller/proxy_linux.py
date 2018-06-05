@@ -25,9 +25,9 @@ PORT_ = sys.argv[1]
 DESTINATION_ = sys.argv[2]
 PROXY_ID_ = sys.argv[3]
 
-print "PORT_:" + PORT_
-print "DESTINATION_:" + DESTINATION_
-print "PROXY_ID_:" + PROXY_ID_
+print("PORT_:" + PORT_)
+print("DESTINATION_:" + DESTINATION_)
+print("PROXY_ID_:" + PROXY_ID_)
 
 db_engine = create_engine(
     'postgresql://postgres:postgres@localhost:5432/postgres')
@@ -124,18 +124,18 @@ class Forwarder(threading.Thread):
         self.destination.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.destination.connect((DESTINATION_, 443))
         self.connection_string = str(self.destination.getpeername())
-        print "[+] New forwarder: " + self.connection_string
+        print("[+] New forwarder: " + self.connection_string)
 
     def run(self):
         try:
             while 1:
                 r = wait_to_read_data(self.destination, 1.0)
                 if not r:
-                    print "[<] Timeout to wait the data from destination"
+                    print("[<] Timeout to wait the data from destination")
                 else:
                     data = self.destination.recv(BUFFER_SIZE)
                     if len(data) == BUFFER_SIZE:
-                        print "[<] Trying to get data from destination"
+                        print("[<] Trying to get data from destination")
                         while 1:
                             try:
                                 data += self.destination.recv(
@@ -145,16 +145,16 @@ class Forwarder(threading.Thread):
                     if data == "":
                         self.close_connection()
                         break
-                    print "[<] Received from destination: " + str(len(data))
+                    print("[<] Received from destination: " + str(len(data)))
                     self.source.write_to_source(data)
         except SocketError as e:
             if e.errno != errno.ECONNRESET:
                 raise
             pass
-        print "[-] Closed destination"
+        print("[-] Closed destination"
 
     def write_to_dest(self, data):
-        print "[>] Sending to destination: " + str(len(data))
+        print("[>] Sending to destination: " + str(len(data)))
         wlist = wait_to_write_data(self.destination, 1.0)
         if not wlist:
             raise timeout()
@@ -171,20 +171,20 @@ class Forwarder(threading.Thread):
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         delay = get_delay(PROXY_ID_)
-        print "[**] Delay: " + str(delay)
+        print("[**] Delay: " + str(delay))
         time.sleep(delay)
         self.connection_string = str(self.request.getpeername())
         self.request.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        print "[+] Incoming connection:" + str(self.connection_string)
+        print("[+] Incoming connection:" + str(self.connection_string))
         f = Forwarder(self)
         f.start()
         try:
             while 1:
                 r = wait_to_read_data(self.request, 1.0)
                 if not r:
-                    print "[>] Timeout to wait the data from incoming connection"
+                    print("[>] Timeout to wait the data from incoming connection")
                 else:
-                    print "[>] Trying to get data from incoming connection"
+                    print("[>] Trying to get data from incoming connection")
                     data = self.request.recv(BUFFER_SIZE)
                     if (len(data) == BUFFER_SIZE):
                         while 1:
@@ -197,17 +197,17 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                     if data == "":
                         #f.close_connection()
                         break
-                    print "[>] Data from incoming connection: " + str(
-                        len(data))
+                    print("[>] Data from incoming connection: " + str(
+                        len(data)))
 
         except SocketError as e:
             if e.errno != errno.ECONNRESET:
                 raise
             pass
-        print "[-] Close incoming connection"
+        print("[-] Close incoming connection"
 
     def write_to_source(self, data):
-        print "[<] Sending to incoming connect: " + str(len(data))
+        print("[<] Sending to incoming connect: " + str(len(data)))
         wlist = wait_to_write_data(self.request, 1.0)
         if not wlist:
             raise timeout()
@@ -225,11 +225,11 @@ if __name__ == "__main__":
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
-    print "[*] LINUX Starting proxy on port: ", port
+    print("[*] LINUX Starting proxy on port: ", port)
     try:
         while True:
             sleep(1)
     except:
         pass
-    print "[*] Stopping proxy..."
+    print("[*] Stopping proxy...")
     server.shutdown()

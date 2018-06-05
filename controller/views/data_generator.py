@@ -2,6 +2,7 @@ from collections import defaultdict, OrderedDict
 import json
 
 from pandas import DataFrame
+from matplotlib import pylab
 from pylab import *
 import pandas as pd
 import re
@@ -15,8 +16,6 @@ from controller.models import TestRunning
 from analyzer.models import Project, Test, Action, \
     TestActionData, TestActionAggregateData, TestAggregate, TestData, \
     Server, ServerMonitoringData,TestDataResolution
-reload(sys)
-sys.setdefaultencoding('utf-8')
 logger = logging.getLogger(__name__)
 
 
@@ -312,7 +311,6 @@ def generate_test_results_data(test_id,
         unique_servers = monitoring_df['server_name'].unique()
         for server_ in unique_servers:
             if not Server.objects.filter(server_name=server_).exists():
-                print "Adding new server: " + server_
                 s = Server(server_name=server_)
                 s.save()
             server_id = s.id

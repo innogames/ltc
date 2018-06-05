@@ -482,42 +482,56 @@ def start_jris_on_load_generator(
     p.wait()
     for port in ports:
         used_ports.append(int(port))
+    # ipv6
+    cmd1 = 'netstat -tulpn | grep LISTEN'
+    stdin, stdout, stderr = ssh.exec_command(cmd1)
+    used_ports = []
+    netstat_output = str(stdout.readlines())
+    ports = re.findall('\d+\.\d+\.\d+\.\d+\:(\d+)', netstat_output)
+    ports_ipv6 = re.findall('\:\:\:(\d+)', netstat_output)
+    p.wait()
+    for port in ports:
+        used_ports.append(int(port))
+    for port in ports_ipv6:
+        used_ports.append(int(port))
     ssh.close()
     # Starting Jmeter remote instances on free port
     for i in range(1, possible_jris_on_host + 1):
-        port = 10000 + i
-        if port not in used_ports:
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname, username="root", key_filename=ssh_key)
-            logger.info(
-                'Starting jmeter instance on remote host: {}'.format(hostname))
-            data_pool_index += 1
-            run_jmeter_server_cmd = 'nohup java {0} -Duser.dir={5}/bin/ -jar "{1}/bin/ApacheJMeter.jar" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -j jmeter-server.log -Jpoll={4} {6} > /dev/null 2>&1 '.\
-                format(java_args, jmeter_dir, hostname, str(port), str(data_pool_index), jmeter_dir, additional_args)
-            logger.info('nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "-Djava.rmi.server.hostname={2}" -Duser.dir={5}/bin/ -Dserver_port={3} -s -Jpoll={4} {6} > /dev/null 2>&1 '.\
-                format(java_args, jmeter_dir, hostname, str(port), str(data_pool_index), jmeter_dir, additional_args))
-            command = 'echo $$; exec ' + run_jmeter_server_cmd
-            cmds = ['cd {0}/bin/'.format(jmeter_dir), command]
-            stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
-            pid = int(stdout.readline())
-            running_test_jris.append({'hostname': hostname, 'pid': pid})
-            ActivityLog(action="start_jmeter_instance", load_generator_id=load_generator_id, data={"pid": pid, "port": port, "java_args": java_args}).save()
-            jmeter_instance = JmeterInstance(
-                test_running_id=test_running_id,
-                load_generator_id=load_generator_id,
-                pid=pid,
-                port=port,
-                jmeter_dir=jmeter_dir,
-                project_id=project_id,
-                threads_number=threads_per_host,
-                java_args=java_args, )
+        port = int(random.randint(10000, 20000))
+        while port in used_ports:
+            port = int(random.randint(10000, 20000))
+        logger.info(port)
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname, username="root", key_filename=ssh_key)
+        logger.info(
+            'Starting jmeter instance on remote host: {}'.format(hostname))
+        data_pool_index += 1
+        run_jmeter_server_cmd = 'nohup java {0} -Duser.dir={5}/bin/ -jar "{1}/bin/ApacheJMeter.jar" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -j jmeter-server.log -Jpoll={4} {6} > /dev/null 2>&1 '.\
+            format(java_args, jmeter_dir, hostname, str(port), str(data_pool_index), jmeter_dir, additional_args)
+        logger.info('nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "-Djava.rmi.server.hostname={2}" -Duser.dir={5}/bin/ -Dserver_port={3} -s -Jpoll={4} {6} > /dev/null 2>&1 '.\
+            format(java_args, jmeter_dir, hostname, str(port), str(data_pool_index), jmeter_dir, additional_args))
+        command = 'echo $$; exec ' + run_jmeter_server_cmd
+        cmds = ['cd {0}/bin/'.format(jmeter_dir), command]
+        stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
+        pid = int(stdout.readline())
+        running_test_jris.append({'hostname': hostname, 'pid': pid})
+        ActivityLog(action="start_jmeter_instance", load_generator_id=load_generator_id, data={"pid": pid, "port": port, "java_args": java_args}).save()
+        jmeter_instance = JmeterInstance(
+            test_running_id=test_running_id,
+            load_generator_id=load_generator_id,
+            pid=pid,
+            port=port,
+            jmeter_dir=jmeter_dir,
+            project_id=project_id,
+            threads_number=threads_per_host,
+            java_args=java_args, )
 
-            jmeter_instance.save()
-            logger.info(
-                'New jmeter instance was added to database, pid: {}, port: {}'.
-                format(pid, port))
-            ssh.close()
+        jmeter_instance.save()
+        logger.info(
+            'New jmeter instance was added to database, pid: {}, port: {}'.
+            format(pid, port))
+        ssh.close()
 
 
 def stop_jmeter_instance(jmeter_instance):

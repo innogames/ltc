@@ -8,7 +8,8 @@ import pandas as pd
 from collections import defaultdict, OrderedDict
 # Create your models here.
 from administrator.models import SSHKey
-from pylab import np
+from matplotlib import pylab
+from pylab import *
 
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 

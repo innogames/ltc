@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 import logging
+from matplotlib import pylab
 from pylab import *
 import numpy as na
 import pandas as pd

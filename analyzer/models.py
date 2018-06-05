@@ -33,7 +33,7 @@ class Project(models.Model):
 class TestDataResolution(models.Model):
     frequency = models.CharField(max_length=100)
     per_sec_divider = models.IntegerField(default=60)
-        
+
     class Meta:
         db_table = 'test_data_resolution'
 

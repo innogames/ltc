@@ -85,7 +85,7 @@ DATABASES = {
         'OPTIONS': {
             'options': '-c search_path=jltc'
         },
-        'NAME': 'postgres',
+        'NAME': 'ltc',
         'USER': 'postgres',
         'PASSWORD': 'postgres',
         'HOST': 'localhost',

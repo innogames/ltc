@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 import logging
+from matplotlib import pylab
 from pylab import *
 import numpy as na
 import pandas as pd
@@ -403,7 +404,6 @@ for build_root in build_roots:
         except ValueError, e:
             logger.error(e)
 
-        #print df.groupby(pd.TimeGrouper(freq='1Min')).average.agg(lambda x: x.to_json(orient='records'))
         test_overall_data = pd.DataFrame()
         df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
         test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
