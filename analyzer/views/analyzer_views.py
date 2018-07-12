@@ -1069,20 +1069,20 @@ def confluence_project_report(project_id):
     project = Project.objects.get(id=project_id)
     content = """
     <h2>Load testing report for: {0}</h2>
-    <hr/>    
-    {1}  
-    <hr/> 
+    <hr/>
+    {1}
+    <hr/>
     """
     last_test = get_test_for_project(project_id, 0)
     data = get_compare_tests_aggregate_data(
-        last_test['id'], 10, order='start_time')
+        last_test['id'], 10, order='-start_time')
     agg_response_times_graph = generate_confluence_graph(project, list(data))
     #data = get_compare_tests_server_monitoring_data(last_test['id'], 10, order='start_time')
     #agg_cpu_util_graph = generate_confluence_graph(project, list(data))
 
     last_tests = Test.objects.filter(project_id=project_id).values(
         'project__project_name', 'project_id', 'display_name', 'id',
-        'parameters', 'start_time').order_by('-start_time')[:10]
+        'parameters', 'start_time').order_by('start_time')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     last_tests_table_html = render_to_string(
         'confluence/last_tests_table.html', {'last_tests': tests})
