@@ -586,7 +586,7 @@ for build_root in build_roots:
                     'count': output_json[row]['count']
                 }
                 stm = test_data.insert().values(
-                    test_id=output_json[row]['test_id'],
+                    test_id=test_id,
                     data=data,
                     data_resolution_id=1,
                     source='default')

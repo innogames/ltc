@@ -1,7 +1,6 @@
 from collections import OrderedDict
 import json
 import logging
-from matplotlib import pylab
 from pylab import *
 import numpy as na
 import pandas as pd
@@ -23,7 +22,6 @@ from itertools import islice
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger()
 
-project_name = sys.argv[1]
 
 db_engine = create_engine(
     'postgresql://postgres:postgres@localhost:5432/postgres')
@@ -135,7 +133,11 @@ releases = []
 
 build_xml = ElementTree()
 
-rx = re.compile(r'/var/lib/jenkins/jobs/.+?/builds/\d+?/jmeter\.jtl')
+project_name = '.+?'
+if len(sys.argv) >= 2:
+    project_name = sys.argv[1]
+
+rx = re.compile(r'/var/lib/jenkins/jobs/{}/builds/\d+?/jmeter\.jtl'.format(project_name))
 for root, dirs, files in os.walk(builds_dir):
     for file in files:
         if re.match(rx, os.path.join(root, file)):
@@ -323,7 +325,8 @@ for build_root in build_roots:
             logger.info("Adding data for action: {}".format(url))
             df_url = df[(df.url == url)]
             n = df_url.shape[0]
-            if n > 10:
+            if n > 10 and n < 10000000:
+                logger.info('Size of the data set for action {}:{}'.format(url, n))
                 df_url = df_url[np.abs(df_url['response_time'] -
                                        df_url['response_time'].mean()) <=
                                 (3 * df_url['response_time'].std())]
@@ -372,28 +375,35 @@ for build_root in build_roots:
                 logger.error("Cannot add new data for action: {}".format(url))
         zip_results_file(jmeter_results_file)
         test_overall_data = pd.DataFrame()
-        df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
-        test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
-        test_overall_data['median'] = df_gr_by_ts.response_time.median()
-        test_overall_data['count'] = df_gr_by_ts.response_time.count()
+        logger.info('Grouping overall data')
+        df_gr_by_ts = df.groupby(pd.Grouper(freq='1Min'))
         test_overall_data['test_id'] = test_id
+        test_overall_data['median'] = df_gr_by_ts.response_time.median()
+        test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
+        test_overall_data['count'] = df_gr_by_ts.response_time.count()
+        logger.info('Creating overall JSON data')
         output_json = json.loads(
             test_overall_data.to_json(orient='index', date_format='iso'),
             object_pairs_hook=OrderedDict)
+        logger.info('Inserting overall data to the Database, test_id: {}'.format(test_id))
         for row in output_json:
-            data = {
-                'timestamp': row,
-                'avg': output_json[row]['avg'],
-                'median': output_json[row]['median'],
-                'count': output_json[row]['count']
-            }
-            stm = test_data.insert().values(
-                test_id=output_json[row]['test_id'],
-                data=data,
-                data_resolution_id=1,
-                source='default')
-            result = db_connection.execute(stm)
-
+            try:
+                data = {
+                    'timestamp': row,
+                    'avg': output_json[row]['avg'],
+                    'median': output_json[row]['median'],
+                    'count': output_json[row]['count']
+                }
+                stm = test_data.insert().values(
+                    test_id=test_id,
+                    data=data,
+                    data_resolution_id=1,
+                    source='default')
+                result = db_connection.execute(stm)
+            except (sqlalchemy.exc.DataError, sqlalchemy.exc.StatementError, TypeError) as e:
+                logger.error("Data: {}".format(data))
+                logger.error("Exception {}".format(e))
+        logger.info('Inserting is done')
     file_index += 1
 
 num = 0
@@ -407,6 +417,7 @@ for build_root in build_roots:
             jtl_files[num][1]) and os.stat(jtl_files[num][1]).st_size != 0:
         test_id = db_session.query(test.c.id).filter(
             test.c.path == build_root).scalar()
+        logger.info('Starting to work with monitoring data')
         f = open(jtl_files[num][1], "r")
         lines = f.readlines()
         f.close()
@@ -474,6 +485,7 @@ for build_root in build_roots:
         logger.info("Monitoring data is not exist")
     errors_zip_dest = build_root + "/errors.zip"
     test_id = db_session.query(test.c.id).filter(test.c.path == build_root).scalar()
+    logger.info('Starting to work with error data')
     if db_session.query(test_error.c.id).filter(test_error.c.test_id == test_id).count() == 0:
         logger.info("Errors data is empty for test: {}".format(test_id))
         if not os.path.isdir(
@@ -525,6 +537,7 @@ for build_root in build_roots:
                                 stm = error.insert().values(
                                     text=error_text, code=error_code)
                                 result = db_connection.execute(stm)
+                            error_text = error_text[:2000]
                             error_id = db_session.query(error.c.id).filter(
                                 error.c.text == error_text).scalar()
                             if db_session.query(test_error.c.id).filter(
@@ -553,8 +566,8 @@ for build_root in build_roots:
                                                 test_error.c.action_id ==
                                                 action_id)
                                 result = db_connection.execute(stm)
-                    except ValueError:
-                        logger.error("Cannot parse error file for: ")
+                    except (ValueError, sqlalchemy.exc.IntegrityError), e:
+                        logger.error(e)
         zip_dir(jtl_files[num][2], errors_zip_dest)
         try:
             if 'errors' in jtl_files[num][2]:
@@ -564,31 +577,31 @@ for build_root in build_roots:
         logger.error("Errors folder was packed and removed")
     num += 1
 
-stmt = select([test.c.id, test.c.path])
-query_result = db_engine.execute(stmt)
+#stmt = select([test.c.id, test.c.path])
+#query_result = db_engine.execute(stmt)
 
-logger.info("Cleanup obsolete test results")
-for q in query_result:
-    test_id = q.id
-    test_path = q.path
-    logger.info("Check data in directory: {}".format(test_path))
-    if not os.path.exists(q.path):
-        logger.info(
-            "Deleting test_id: {} path: {}".format(str(test_id), test_path))
-        stm2 = server_monitoring_data.delete().where(
-            server_monitoring_data.c.test_id == test_id)
-        stm3 = test_action_data.delete().where(
-            test_action_data.c.test_id == test_id)
-        stm4 = test_data.delete().where(test_data.c.test_id == test_id)
-        stm5 = test_action_aggregate_data.delete().where(
-            test_action_aggregate_data.c.test_id == test_id)
-        stm6 = test_error.delete().where(
-            test_error.c.test_id == test_id)
-        stm7 = test.delete().where(test.c.id == test_id)
-
-        result2 = db_connection.execute(stm2)
-        result3 = db_connection.execute(stm3)
-        result4 = db_connection.execute(stm4)
-        result5 = db_connection.execute(stm5)
-        result6 = db_connection.execute(stm6)
-        result6 = db_connection.execute(stm7)
+#logger.info("Cleanup obsolete test results")
+#for q in query_result:
+#    test_id = q.id
+#    test_path = q.path
+#    logger.info("Check data in directory: {}".format(test_path))
+#    if not os.path.exists(q.path):
+#        logger.info(
+#            "Deleting test_id: {} path: {}".format(str(test_id), test_path))
+#        stm2 = server_monitoring_data.delete().where(
+#            server_monitoring_data.c.test_id == test_id)
+#        stm3 = test_action_data.delete().where(
+#            test_action_data.c.test_id == test_id)
+#        stm4 = test_data.delete().where(test_data.c.test_id == test_id)
+#        stm5 = test_action_aggregate_data.delete().where(
+#            test_action_aggregate_data.c.test_id == test_id)
+#        stm6 = test_error.delete().where(
+#            test_error.c.test_id == test_id)
+#        stm7 = test.delete().where(test.c.id == test_id)
+#
+#        result2 = db_connection.execute(stm2)
+#        result3 = db_connection.execute(stm3)
+#        result4 = db_connection.execute(stm4)
+#        result5 = db_connection.execute(stm5)
+#        result6 = db_connection.execute(stm6)
+#        result6 = db_connection.execute(stm7)
