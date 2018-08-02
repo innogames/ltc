@@ -68,7 +68,7 @@ function updateTestsSelectList(id, url, label, text_tag, value_tag) {
                $(id).append($('<option disabled selected>').text(label).attr('value', label));
                $.each(json, function(i, obj){
                        console.log(obj["description"]);
-                       $(id).append($('<option>').text(obj[text_tag]).attr('value', obj[value_tag]).attr('data-subtext', obj["description"]));
+                       $(id).append($('<option>').text(obj[text_tag]).attr('value', obj[value_tag]).attr('data-subtext', obj['description']+obj['start_time']+obj['parameters']));
                });
                $(id).selectpicker('refresh');
 });
