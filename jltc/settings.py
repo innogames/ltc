@@ -173,7 +173,7 @@ LOGGING = {
             'formatter': 'main_formatter',
             'filters': ['require_debug_false'],
         },
-         'debug_file': {
+        'debug_file': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': 'logs/main_debug.log',

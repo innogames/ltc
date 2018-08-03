@@ -49,7 +49,7 @@ def tests_list(request):
         MONITORING_DIRS = [jenkins_path + "jobs/", "/tmp/jltc/"]
     elif _platform == "win32":
         MONITORING_DIRS = ["C:\work\monitoring"]
-    
+
     for MONITORING_DIR in MONITORING_DIRS:
         for root, dirs, files in os.walk(MONITORING_DIR):
             if "workspace" in root or "results" in root:
@@ -142,7 +142,7 @@ def online_test_response_codes(request, test_running_id):
                'response_code': k,
                'count': test_response_codes.get(k)['count'],
             })
-        return JsonResponse(response, safe=False)   
+        return JsonResponse(response, safe=False)
 
 
 def online_test_aggregate(request, test_running_id):

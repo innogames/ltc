@@ -237,7 +237,7 @@ var handleIncomingAction = function handleIncomingAction() {
                 if (obj['project_name'] == project_name) {
                     selected_project_id = obj['id']
                     var build_number = getUrlParameter('build_number');
-                    selectValueInList('#analyzer_select_project', selected_project_id);
+                    selectValueInList('#analyzer-select-project', selected_project_id);
                     $.getJSON('/analyzer/project/' + selected_project_id + '/' + build_number + '/test_info/',
                     function(json) {
                         testReport(json[0].id);

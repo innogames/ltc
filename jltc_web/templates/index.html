@@ -84,7 +84,11 @@
         </div>
         <div id="analyzer">
             <hr/>
-            <select name="analyzer_select_project" id="analyzer_select_project" class="selectpicker">
+            <select name="analyzer-select-project" id="analyzer-select-project" class="selectpicker">
+                <option disabled selected value="Select project">Select project</option>
+                {% for project in projects %}
+                    <option value="{{ project.id }}">{{ project.project_name }}</option>
+                {% endfor %}
             </select>
             <hr/>
             <article id="analyzer_tabs" class="tabs">
@@ -149,12 +153,7 @@
 
         $('.greeting').append(themessage).append("<b>{{ user.login }}</b>");
 
-        $('#analyzer_select_project').on('shown.bs.select', function() {
-            updateSelectList($(this), "/analyzer/projects_list", "Select project", "project_name", "id");
-            $(this).unbind('focus');
-        });
-
-        $('#analyzer_select_project').on('change', function () {
+        $('#analyzer-select-project').on('change', function () {
             selected_project = $(this).find("option:selected").val();
             $.ajax({
                 url: "/analyzer/history",
@@ -166,7 +165,6 @@
                     //Do Something to handle error
                 }
             });
-
             $.ajax({
                 url: "/analyzer/analyze",
                 type: "get",
