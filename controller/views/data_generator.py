@@ -342,7 +342,7 @@ def generate_test_results_data(test_id,
                     server_monitoring_data = ServerMonitoringData(
                         test_id=test_id,
                         data_resolution_id=data_resolution_id,
-                        server_id=server_id, 
+                        server_id=server_id,
                         data=data)
                     server_monitoring_data.save()
     else:

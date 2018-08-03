@@ -12,6 +12,7 @@ import sqlalchemy
 import shutil
 import time
 import datetime
+import argparse
 from xml.etree.ElementTree import ElementTree
 from os.path import basename
 from sqlalchemy import create_engine
@@ -23,12 +24,10 @@ from itertools import islice
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger()
 
-db_engine = create_engine(
-    'postgresql://postgres:postgres@localhost:5432/postgres')
+db_engine = create_engine('postgresql://postgres:postgres@localhost:5432/ltc')
 db_connection = db_engine.connect()
 meta = sqlalchemy.MetaData(bind=db_connection, reflect=True, schema="jltc")
 insp = reflection.Inspector.from_engine(db_engine)
-schema = 'jltc'
 
 project_name = sys.argv[1]
 
@@ -49,28 +48,37 @@ test_error = meta.tables['jltc.test_error']
 Session = sessionmaker(bind=db_engine)
 
 db_session = Session()
-# stm = server_monitoring_data.delete()
-# result = db_session.execute(stm)
-# stm = test_aggregate.delete()
-# result = db_session.execute(stm)
-# stm = test_action_data.delete()
-# result = db_session.execute(stm)
-# stm = test_data.delete()
-# result = db_session.execute(stm)
-# stm = aggregate.delete()
-# result = db_session.execute(stm)
-# stm = test.delete()
-# result = db_session.execute(stm)
-# stm = action.delete()
-# result = db_session.execute(stm)
-# stm = server.delete()
-# result = db_session.execute(stm)
-# stm = project.delete()
-# result = db_session.execute(stm)
-# stm = test_action_aggregate_data.delete()
-# result = db_session.execute(stm)
-# db_session.commit()
+""" stm = test_error.delete()
+result = db_session.execute(stm)
+stm = error.delete()
+result = db_session.execute(stm)
+stm = server_monitoring_data.delete()
+result = db_session.execute(stm)
+stm = test_aggregate.delete()
+result = db_session.execute(stm)
+stm = test_action_data.delete()
+result = db_session.execute(stm)
+stm = test_data.delete()
+result = db_session.execute(stm)
+stm = test.delete()
+result = db_session.execute(stm)
+stm = action.delete()
+result = db_session.execute(stm)
+stm = server.delete()
+result = db_session.execute(stm)
+stm = project.delete()
+result = db_session.execute(stm)
+stm = test_action_aggregate_data.delete()
+result = db_session.execute(stm)
+db_session.commit() """
 logger.info("Starting data generating script.")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--project-name', default='test')
+    parser.add_argument('--jenkins-base-dir', default='/var/lib/jenkins/')
+    return parser.parse_args()
 
 
 def percentile(n):
@@ -86,7 +94,7 @@ def mask(df, f):
 
 
 def getIndex(item):
-    return int(re.search('(\d+)/', item[0]).group(1))
+    return int(re.search('(\d+)/', item[0].replace('\\', '/')).group(1))
 
 
 def ord_to_char(v, p=None):
@@ -137,19 +145,25 @@ def execute_db_stmt(stm, data):
     return result
 
 
-builds_dir = "/var/lib/jenkins/jobs"
-
 jtl_files = []
 releases = []
 
 build_xml = ElementTree()
 
-rx = re.compile(
-    r'/var/lib/jenkins/jobs/{}/builds/\d+?/jmeter\.jtl'.format(project_name))
+args = parse_args()
+if args.project_name:
+    project_name = args.project_name
+if args.jenkins_base_dir:
+    jenkins_base_dir = args.jenkins_base_dir
+builds_dir = os.path.join(jenkins_base_dir, 'jobs', project_name,
+                          'builds').replace('\\', '/')
+rx = re.compile(r'{builds_dir}/\d+?/jmeter.jtl'.format(builds_dir=builds_dir))
+
 for root, dirs, files in os.walk(builds_dir):
     for file in files:
-        if re.match(rx, os.path.join(root, file)):
+        if re.match(rx, os.path.join(root, file).replace('\\', '/')):
             if os.stat(os.path.join(root, file)).st_size > 0:
+                root = root.replace('\\', '/')
                 build_parameters = []
                 display_name = "unknown"
                 description = ""
@@ -195,7 +209,7 @@ for root, dirs, files in os.walk(builds_dir):
                                     user_id = db_session.query(user.c.id). \
                                         filter(user.c.login == started_by).scalar()
                                 else:
-                                    user_id = 0
+                                    user_id = 1
                         elif params.tag == 'startTime':
                             start_time = int(params.text)
                         elif params.tag == 'displayName':
@@ -224,6 +238,7 @@ for root, dirs, files in os.walk(builds_dir):
                     if db_session.query(test.c.path).filter(
                             test.c.path == root).count() == 0:
                         logger.info("Was found new test data, adding.")
+                        print(root)
                         build_number = int(
                             re.search('/builds/(\d+)', root).group(1))
                         end_time = start_time + duration
@@ -308,7 +323,8 @@ for build_root in build_roots:
                 logger.info("Number of lines in chunk: %d." % num_lines)
 
                 unique_urls = chunk['url'].unique()
-                logger.info("Actions in the chunk: {}".format(str(unique_urls)))
+                logger.info("Actions in the chunk: {}".format(
+                    str(unique_urls)))
                 for url in unique_urls:
                     if db_session.query(action.c.id).filter(action.c.url == url).\
                             filter(action.c.project_id == project_id).count() == 0:
@@ -340,12 +356,10 @@ for build_root in build_roots:
                         df_url.success == False)].groupby(
                             pd.Grouper(freq=freq))
                     try:
-                        url_data[
-                            'errors'] = float(df_url_gr_by_ts_only_errors.success.count(
-                            ))
+                        url_data['errors'] = float(
+                            df_url_gr_by_ts_only_errors.success.count())
                     except (ValueError, TypeError) as e:
-                        url_data[
-                            'errors'] = 0
+                        url_data['errors'] = 0
 
                     url_data['test_id'] = test_id
                     url_data['url'] = url
@@ -358,10 +372,10 @@ for build_root in build_roots:
                             'timestamp': row,
                             'avg': float(output_json[row]['avg']),
                             'median': float(output_json[row]['median']),
-                            'count': output_json[row]['count'],
+                            'count': int(output_json[row]['count']),
                             'url': output_json[row]['url'],
-                            'errors': output_json[row]['errors'],
-                            'test_id': output_json[row]['test_id'],
+                            'errors': int(output_json[row]['errors']),
+                            'test_id': int(output_json[row]['test_id']),
                         }
                         stm = test_action_data.insert().values(
                             test_id=output_json[row]['test_id'],
@@ -380,7 +394,8 @@ for build_root in build_roots:
                     url_agg_data['errors'] = float(df_url[(
                         df_url['success'] == False)]['success'].count())
 
-                    logger.info("Check aggregate data: {} {}".format(test_id, action_id))
+                    logger.info("Check aggregate data: {} {}".format(
+                        test_id, action_id))
                     if db_session.query(
                             test_action_aggregate_data.c.id).filter(
                                 test_action_aggregate_data.c.test_id == test_id
@@ -392,7 +407,8 @@ for build_root in build_roots:
                                 action_id=action_id,
                                 data=url_agg_data)
                             result = db_connection.execute(stm)
-                        except (sqlalchemy.exc.DataError, sqlalchemy.exc.StatementError,TypeError) as e:
+                        except (sqlalchemy.exc.DataError,
+                                sqlalchemy.exc.StatementError, TypeError) as e:
                             logger.error("Data: {}".format(url_agg_data))
                             logger.error("Exception {}".format(e))
 
@@ -409,17 +425,28 @@ for build_root in build_roots:
                         logger.info("new_data")
                         logger.info(new_data)
 
-                        maximum = new_data['max'] if new_data['max'] > old_data[0]['max'] else old_data[0]['max']
-                        minimum = new_data[ 'min'] if new_data['min'] < old_data[0]['min'] else old_data[0]['min']
-                        p50 = new_data['50%'] if new_data['50%'] > old_data[0]['50%'] else old_data[0]['50%']
-                        p75 = new_data['75%'] if new_data['75%'] > old_data[0]['75%'] else old_data[0]['75%']
-                        p90 = new_data['90%'] if new_data['90%'] > old_data[0]['90%'] else old_data[0]['90%']
-                        p99 = new_data['99%'] if new_data['99%'] > old_data[0]['99%'] else old_data[0]['99%']
-                        std = new_data['std'] 
+                        maximum = new_data[
+                            'max'] if new_data['max'] > old_data[0]['max'] else old_data[
+                                0]['max']
+                        minimum = new_data[
+                            'min'] if new_data['min'] < old_data[0]['min'] else old_data[
+                                0]['min']
+                        p50 = new_data[
+                            '50%'] if new_data['50%'] > old_data[0]['50%'] else old_data[
+                                0]['50%']
+                        p75 = new_data[
+                            '75%'] if new_data['75%'] > old_data[0]['75%'] else old_data[
+                                0]['75%']
+                        p90 = new_data[
+                            '90%'] if new_data['90%'] > old_data[0]['90%'] else old_data[
+                                0]['90%']
+                        p99 = new_data[
+                            '99%'] if new_data['99%'] > old_data[0]['99%'] else old_data[
+                                0]['99%']
+                        std = new_data['std']
                         old_data = {
                             'mean':
-                            (old_data[0]['weight'] + new_data['weight'])
-                            /
+                            (old_data[0]['weight'] + new_data['weight']) /
                             (old_data[0]['count'] + new_data['count']),
                             'max':
                             maximum,
@@ -444,12 +471,13 @@ for build_root in build_roots:
                         }
                         stm = test_action_aggregate_data.update().values(
                             data=old_data).where(
-                                test_action_aggregate_data.c.test_id ==
-                                test_id).where(test_action_aggregate_data.
-                                                c.action_id == action_id)
+                                test_action_aggregate_data.c.test_id == test_id
+                            ).where(test_action_aggregate_data.c.action_id ==
+                                    action_id)
                         try:
                             result = db_connection.execute(stm)
-                        except (sqlalchemy.exc.DataError, sqlalchemy.exc.StatementError,TypeError) as e:
+                        except (sqlalchemy.exc.DataError,
+                                sqlalchemy.exc.StatementError, TypeError) as e:
                             logger.error("Data: {}".format(old_data))
                             logger.error("Exception {}".format(e))
                     del url_agg_data, df_url
@@ -560,11 +588,11 @@ for build_root in build_roots:
 
                 url_agg_data = dict(
                     json.loads(df_url['response_time'].describe().to_json()))
-                url_agg_data['99%'] = df_url['response_time'].quantile(.99)
-                url_agg_data['90%'] = df_url['response_time'].quantile(.90)
+                url_agg_data['99%'] = float(df_url['response_time'].quantile(.99))
+                url_agg_data['90%'] = float(df_url['response_time'].quantile(.90))
                 url_agg_data['weight'] = float(df_url['response_time'].sum())
-                url_agg_data['errors'] = df_url[(
-                    df_url['success'] == False)]['success'].count()
+                url_agg_data['errors'] = int(df_url[(
+                    df_url['success'] == False)]['success'].count())
                 stm = test_action_aggregate_data.insert().values(
                     test_id=test_id, action_id=action_id, data=url_agg_data)
                 result = execute_db_stmt(stm, url_agg_data)
@@ -767,7 +795,7 @@ for build_root in build_roots:
 
 #stmt = select([test.c.id, test.c.path])
 # query_result = db_engine.execute(stmt)
-# 
+#
 # logger.info("Cleanup obsolete test results")
 # for q in query_result:
 #     test_id = q.id
@@ -785,11 +813,10 @@ for build_root in build_roots:
 #             test_action_aggregate_data.c.test_id == test_id)
 #         stm6 = test_error.delete().where(test_error.c.test_id == test_id)
 #         stm7 = test.delete().where(test.c.id == test_id)
-# 
+#
 #         result2 = db_connection.execute(stm2)
 #         result3 = db_connection.execute(stm3)
 #         result4 = db_connection.execute(stm4)
 #         result5 = db_connection.execute(stm5)
 #         result6 = db_connection.execute(stm6)
 #         result7 = db_connection.execute(stm7)
-

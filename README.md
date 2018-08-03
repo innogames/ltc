@@ -157,7 +157,7 @@ It is possible to use this application in cooperation with Jenkins. (if to start
 To parse data after the test just add in Jenkins post-job script:
 `curl --data "results_dir=$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/" http://localhost:8888/controller/parse_results`
 OR
-`datagenerator_linux.py`
+`./datagenerator_py3.py --jenkins-base-dir /var/jenkins/ --project-name PROJECT_NAME`
 
 To use with HTML Pulblisher plugin (https://wiki.jenkins.io/display/JENKINS/HTML+Publisher+Plugin) set this values in project setting in Publish HTML reports section:
 
