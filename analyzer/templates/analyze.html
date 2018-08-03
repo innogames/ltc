@@ -39,12 +39,14 @@ $('#select_test_1').on('change', function(){
  });
 
  $('#get_last_test_report_button').click(function () {
-  var last_test = JSON.parse(httpGet('/analyzer/project/' + selected_project + '/last_test/'));
-  test_id_1 = last_test[0].id;
-  $('#select_test_1').val(test_id_1);
-  $('#select_test_1').change();
-  $('#select_test_1').selectpicker('refresh');
+  $.getJSON('/analyzer/project/' + selected_project + '/last_test/',
+  function (json) {
+    $('#select_test_1').val(json[0].id);
+    $('#select_test_1').change();
+    $('#select_test_1').selectpicker('refresh');
+  });
 });
+
 $('#generate_project_confluence_report_btn').click(function() {
   $.ajax({
       url: '/analyzer/project/' + selected_project + '/generate_confluence_report/',

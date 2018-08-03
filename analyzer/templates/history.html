@@ -15,48 +15,42 @@
         </div>
     </div>
 </div>
-
-
 <script>
-var response = httpGet('/analyzer/project/' + selected_project + '/project_history/');
-console.log(response);
-jsonr = JSON.parse(response);
-//console.log(jsonr);
-var test = JSON.parse(httpGet('/analyzer/project/'+ selected_project + '/last_test/'));
-overall_graph = c3.generate({
-                    data: {
-                        url:  '/analyzer/project/' + selected_project + '/project_history/',
-                        mimeType: 'json',
-                        keys: {
-                        x: 'test_name',
-                        value: ['mean', 'median'],
-                        },
-                        type: 'bar',
-
-                    },
-                    axis: {
-                        x: {
-                            type: 'category',
-                        },
-                        y: {
-                        max: 500,
+$.getJSON('/analyzer/project/' + selected_project + '/last_test/',
+function(json) {
+    overall_graph = c3.generate({
+        data: {
+            url: '/analyzer/project/' + selected_project + '/project_history/',
+            mimeType: 'json',
+            keys: {
+                x: 'test_name',
+                value: ['mean', 'median'],
+            },
+            type: 'bar',
+        },
+        axis: {
+            x: {
+                type: 'category',
+            },
+            y: {
+                max: 500,
                 padding: {
                     top: 0,
                     bottom: 0
                 },
                 label: 'response times (ms)',
             },
-                    },
-                    grid: {
-                x: {
-                    lines: [{
-                        value: test[0].display_name,
-                        text: 'Current test',
-                        position: 'end'
-                    }]
-                }
-            },
-                    bindto: '#overall_project_graph'
-                });
-
+        },
+        grid: {
+            x: {
+                lines: [{
+                    value: json[0].display_name,
+                    text: 'Current test',
+                    position: 'end'
+                }]
+            }
+        },
+        bindto: '#overall_project_graph'
+    });
+});
 </script>

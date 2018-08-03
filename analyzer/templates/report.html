@@ -296,6 +296,7 @@ updateSelectList('#select_server_1', '/analyzer/test/' + monitoring_source + '/'
 updateSelectList('#select_test_2', '/analyzer/project/' + selected_project + "/tests_list/", "Select 2nd test", "display_name", "id");
 $("#aggregate_table").tablesorter();
 $("#aggregate_table").trigger('tsUpdate');
+
 var draw_monitoring_graph = function draw_monitoring_graph(test_id, server, metric, source) {
     var unit = "";
     var max_y = 0;
@@ -442,85 +443,83 @@ var draw_rtot_graph = function draw_rtot_graph(test_id, source, data_resolution_
 }
 
 function update_compare_graphs(num_of_tests_to_compare) {
-    var test = JSON.parse(httpGet('/analyzer/project/' + test_id_1 + '/test_info/'));
-    draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, compare_source);
-    var arr = [];
-    var graph_values = []; //values for the graph
+    $.getJSON('/analyzer/project/' + test_id_1 + '/test_info/',
+    function (json) {
+        var arr = [];
+        var graph_values = []; //values for the graph
 
-    $.ajax({
-        url: '/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_cpu',
-        type: "get",
-        success: function(response) {
-            var r = response;
-            var json_compare_cpu = JSON.parse(r);
-            for (var test_name in json_compare_cpu) {
-                for (server_name in json_compare_cpu[test_name]) {
-                    if ($.inArray(server_name, graph_values) < 0) {
-                        graph_values.push(server_name);
+        $.ajax({
+            url: '/analyzer/test/' + test_id_1 + '/' + num_of_tests_to_compare + '/compare_cpu',
+            type: "get",
+            success: function(response) {
+                var r = response;
+                var json_compare_cpu = JSON.parse(r);
+                for (var test_name in json_compare_cpu) {
+                    for (server_name in json_compare_cpu[test_name]) {
+                        if ($.inArray(server_name, graph_values) < 0) {
+                            graph_values.push(server_name);
+                        }
                     }
-                }
-                json_compare_cpu[test_name].display_name = test_name;
-                arr.push(json_compare_cpu[test_name]);
-                var new_json = JSON.stringify(arr.reverse());
-                new_json = JSON.parse(new_json);
-                var compare_cpu_graph = c3.generate({
-                    data: {
-                        json: new_json,
-                        keys: {
-                            x: 'display_name',
-                            value: graph_values
-                        },
-                        type: 'bar',
-
-                    },
-                    axis: {
-                        x: {
-                            type: 'category'
-                        },
-                        y: {
-                            padding: {
-                                top: 0,
-                                bottom: 0
+                    json_compare_cpu[test_name].display_name = test_name;
+                    arr.push(json_compare_cpu[test_name]);
+                    var new_json = JSON.stringify(arr.reverse());
+                    new_json = JSON.parse(new_json);
+                    var compare_cpu_graph = c3.generate({
+                        data: {
+                            json: new_json,
+                            keys: {
+                                x: 'display_name',
+                                value: graph_values
                             },
-                            label: '%',
-                            max: 100,
-                            min: 0,
-                        }
-                    },
+                            type: 'bar',
 
-                    grid: {
-                        x: {
-                            lines: [{
-                                value: test[0].display_name,
-                                text: 'Current test',
-                                position: 'end'
-                            }]
-                        }
-                    },
-                    regions: [{
-                        axis: 'x',
-                        start: 0.5,
-                        class: 'regionX'
-                    }, ],
-                    //regions: [
-                    //{axis: 'x', start: 0,  class: 'regionX'},
-                    //],
-                    title: {
-                        text: 'Comparison of average CPU load (%)'
-                    },
-                    bindto: '#compare_cpu_graph'
-                });
+                        },
+                        axis: {
+                            x: {
+                                type: 'category'
+                            },
+                            y: {
+                                padding: {
+                                    top: 0,
+                                    bottom: 0
+                                },
+                                label: '%',
+                                max: 100,
+                                min: 0,
+                            }
+                        },
 
+                        grid: {
+                            x: {
+                                lines: [{
+                                    value: json[0].display_name,
+                                    text: 'Current test',
+                                    position: 'end'
+                                }]
+                            }
+                        },
+                        regions: [{
+                            axis: 'x',
+                            start: 0.5,
+                            class: 'regionX'
+                        }, ],
+                        //regions: [
+                        //{axis: 'x', start: 0,  class: 'regionX'},
+                        //],
+                        title: {
+                            text: 'Comparison of average CPU load (%)'
+                        },
+                        bindto: '#compare_cpu_graph'
+                    });
+                }
+            },
+            error: function(xhr) {
+                response = JSON.parse("{\"message\":{\"text\": \"Cannot fetch compare CPU data\",\"type\": \"danger\"}}")
+                show_alert(response);
             }
-        },
-        error: function(xhr) {
-            response = JSON.parse("{\"message\":{\"text\": \"Cannot fetch compare CPU data\",\"type\": \"danger\"}}")
-            show_alert(response);
-        }
+        });
     });
-
-
-
+    draw_compare_avg_graph(test_id_1, num_of_tests_to_compare, compare_source);
     var errors_graph = c3.generate({
         data: {
             url: '/analyzer/test/' + test_id_1 + '/errors',
@@ -558,7 +557,6 @@ function update_compare_graphs(num_of_tests_to_compare) {
             });
 
         });
-
 }
 
 $('#compare_avg_switcher button').click(function() {
@@ -588,7 +586,8 @@ $('#compare_avg_switcher button').click(function() {
 });
 
 function draw_compare_avg_graph(test_id, num_of_tests_to_compare, source) {
-    var test = JSON.parse(httpGet('/analyzer/project/' + test_id_1 + '/test_info/'));
+$.getJSON('/analyzer/project/' + test_id_1 + '/test_info/',
+function (json) {
     $.ajax({
         url: "/analyzer/test/" + test_id + "/get_compare_data/",
         type: "post",
@@ -610,7 +609,6 @@ function draw_compare_avg_graph(test_id, num_of_tests_to_compare, source) {
                         value: ['average', 'median'],
                     },
                     type: 'bar',
-
                 },
                 axis: {
                     x: {
@@ -628,7 +626,7 @@ function draw_compare_avg_graph(test_id, num_of_tests_to_compare, source) {
                 grid: {
                     x: {
                         lines: [{
-                            value: test[0].display_name,
+                            value: json[0].display_name,
                             text: 'Current test',
                             position: 'end'
                         }]
@@ -652,6 +650,7 @@ function draw_compare_avg_graph(test_id, num_of_tests_to_compare, source) {
             $('.ajax-loader').css("visibility", "hidden");
         },
     });
+});
 }
 
 function draw_top_avg_graph(top_N) {
