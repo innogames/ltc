@@ -531,11 +531,11 @@ def get_compare_tests_aggregate_data(test_id,
                 values('display_name', 'start_time'). \
                 annotate(average=Sum(RawSQL("((data->>%s)::numeric)", ('avg',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
                 annotate(median=Sum(RawSQL("((data->>%s)::numeric)", ('median',))*RawSQL("((data->>%s)::numeric)", ('count',)))/Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
-                order_by(order)[:num_of_tests]
+                order_by(order)[:int(num_of_tests)]
     elif source == 'graphite':
         tests = Test.objects.filter(
             start_time__lte=start_time, project_id=project_id,
-            show=True).values().order_by('-start_time')[:num_of_tests]
+            show=True).values().order_by('-start_time')[:int(num_of_tests)]
         for t in tests:
             test_id = t['id']
             if not ServerMonitoringData.objects.filter(
@@ -551,7 +551,7 @@ def get_compare_tests_aggregate_data(test_id,
                 values('display_name', 'start_time'). \
                 annotate(average=Avg(RawSQL("((data->>%s)::numeric)", ('avg',)))). \
                 annotate(median=Avg(RawSQL("((data->>%s)::numeric)", ('median',)))). \
-                order_by(order).order_by(order)[:num_of_tests]
+                order_by(order).order_by(order)[:int(num_of_tests)]
     return data
 
 
@@ -648,7 +648,7 @@ def test_top_avg(request, test_id, top_number):
     data = TestActionAggregateData.objects.filter(test_id=test_id). \
             annotate(url=F('action__url')). \
             annotate(average=RawSQL("((data->>%s)::numeric)", ('mean',))). \
-            order_by('-average').values('url', 'average')[:top_number]
+            order_by('-average').values('url', 'average')[:int(top_number)]
     return JsonResponse(list(data), safe=False)
 
 
