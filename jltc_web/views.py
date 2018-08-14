@@ -37,7 +37,7 @@ class HomePageView(TemplateView):
             user_id = u.id
         return render(request, 'index.html', {
             'user': u,
-            'projects': Project.objects.all()
+            'projects': Project.objects.all().order_by('project_name')
         })
 
 
