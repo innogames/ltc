@@ -58,14 +58,14 @@ The application comes with:
 Current `requirements.txt` file is:
 
 ```
-python=2.7
-django_debug_toolbar==1.7
 Django==1.10.5
 matplotlib==1.4.3
-numpy==1.10.0
+numpy==1.13.1+mkl
 pandas==0.17.0
+paramiko==2.4.1
 psutil==5.2.1
 matplotlib==1.4.3
+scipy==0.19.1
 SQLAlchemy==1.1.3
 ```
 
