@@ -5,7 +5,7 @@
             <div class="panel-heading">Positive:</div>
             <div class="panel-body">
                 <ul>
-                    {% if report.lower_response_times|length > 0 %} {% for row in report.lower_response_times %} 
+                    {% if report.lower_response_times|length > 0 %} {% for row in report.lower_response_times %}
                     {% get_percentage_abs row.action_data_1.mean row.action_data_2.mean as diff_percentage %}
                     <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} is became
                         faster on <b>{{ diff_percentage }} % </b>in average ({{ row.action_data_2.mean|floatformat }} ms
@@ -20,21 +20,21 @@
             <div class="panel-body">
                 <ul>
                     {% if report.cpu_steal|length > 0 %}
-                    {% for row in report.cpu_steal %} 
-                    <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Server {{ row.server_name }} 
+                    {% for row in report.cpu_steal %}
+                    <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Server {{ row.server_name }}
                             had <b>high cpu_steal ({{ row.cpu_steal|floatformat }} % in average)</b> during the test <b>"{{ row.test_name }}"</b>
                     </li>
                     {% endfor %}
                     {% endif %}
-                    {% if report.higher_response_times|length > 0 %} 
-                    {% for row in report.higher_response_times %} 
+                    {% if report.higher_response_times|length > 0 %}
+                    {% for row in report.higher_response_times %}
                     {% get_percentage_abs row.action_data_1.mean row.action_data_2.mean as diff_percentage %}
                     <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} is became
                         slower on <b>{{ diff_percentage }} % </b>in average ({{ row.action_data_2.mean|floatformat }} ms
                         -> {{ row.action_data_1.mean|floatformat }} ms)</li>
                     {% endfor %}
                     {% else %}
-                    <b>No any reasonable negative changes</b> 
+                    <b>No any reasonable negative changes</b>
                     {% endif %}
                 </ul>
             </div>
@@ -43,16 +43,16 @@
             <div class="panel-heading">Additional:</div>
             <div class="panel-body">
                 <ul>
-                    {% if report.absense|length > 0 %} 
+                    {% if report.absense|length > 0 %}
                         {% for row in report.absense %}
                         <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} was not
                         executed during the last test <b>"{{ test_1.display_name }}"</b></li>
-                        {% endfor %} 
+                        {% endfor %}
                     {% elif report.lower_count|length > 0 %}
                         {% for row in report.lower_count %}
                         {% get_percentage_abs row.action_data_1.count row.action_data_2.count as diff_percentage %}
                         <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} had <b>{{ diff_percentage }}</b> % less executions than in previous test <b>"{{ test_2.display_name }}"</b></li>
-                        {% endfor %} 
+                        {% endfor %}
                     {% elif report.new_action_in_test|length > 0 %}
                         {% for row in report.new_action_in_test %}
                         <li class="list-group-item"><span class="badge alert-{{ row.severity }}">{{ row.severity }}</span> Action {{ row.action }} was not

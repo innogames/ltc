@@ -50,6 +50,6 @@ urlpatterns = [
     url(r'^test/(?P<test_id>\d+)/action_graphs/$',
         action_graphs),
     url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_aggregate_data/$',
-        tests_compare_aggregate_new),   
+        tests_compare_aggregate_new),
     url(r'^upload/test_result_file/$', upload_test_result_file, name='upload_test_result_file'), 
 ]
