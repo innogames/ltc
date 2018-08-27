@@ -61,7 +61,16 @@ function updateTestsSelectList(id, url, label, text_tag, value_tag) {
         $(id).empty();
         $(id).append($('<option disabled selected>').text(label).attr('value', label));
         $.each(json, function (i, obj) {
-            $(id).append($('<option>').text(obj[text_tag]).attr('value', obj[value_tag]).attr('data-subtext', obj['description']+obj['parameters'][1]['THREAD_COUNT']));
+            var additionalDescription = '';
+            if(obj['description'])
+            {
+                additionalDescription += obj['description'];
+            }
+            if(obj['parameters'])
+            {
+                additionalDescription += obj['parameters'][1]['THREAD_COUNT']
+            }
+            $(id).append($('<option>').text(obj[text_tag]).attr('value', obj[value_tag]).attr('data-subtext', additionalDescription));
         });
         $(id).selectpicker('refresh');
     });

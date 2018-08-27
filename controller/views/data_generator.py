@@ -253,12 +253,12 @@ def generate_test_results_data(test_id,
                     url_agg_data = dict(
                         json.loads(df_url['response_time'].describe()
                                    .to_json()))
-                    url_agg_data['99%'] = df_url['response_time'].quantile(.99)
-                    url_agg_data['90%'] = df_url['response_time'].quantile(.90)
+                    url_agg_data['99%'] = float(df_url['response_time'].quantile(.99))
+                    url_agg_data['90%'] = float(df_url['response_time'].quantile(.90))
                     url_agg_data['weight'] = float(
                         df_url['response_time'].sum())
-                    url_agg_data['errors'] = df_url[(
-                        df_url['success'] == False)]['success'].count()
+                    url_agg_data['errors'] = float(df_url[(
+                        df_url['success'] == False)]['success'].count())
                     test_action_aggregate_data = TestActionAggregateData(
                         test_id=test_id,
                         action_id=action_id,
