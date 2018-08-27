@@ -692,6 +692,44 @@ def metric_max_value(request, test_id, server_id, metric):
     return JsonResponse(max_value, safe=False)
 
 
+def compare_aggregate(test_id_1, test_id_2):
+    '''Return comparasion data for all actions in two tests'''
+    compare_data = []
+    action_data_1 = TestActionAggregateData.objects.annotate(
+        action_name=F('action__url')).filter(test_id=test_id_1).values(
+                    'action_id',
+                    'action_name',
+                    'data',)
+    for action in action_data_1:
+        action_id = action['action_id']
+        if TestActionAggregateData.objects.filter(
+                action_id=action_id, test_id=test_id_2).exists():
+            action_data_2 = TestActionAggregateData.objects.annotate(
+                action_name=F('action__url')).filter(
+                        action_id=action_id, test_id=test_id_2).values(
+                            'action_id',
+                            'action_name',
+                            'data')[0]
+            compare_data.append({
+                'action_name': action['action_name'],
+                'mean_1': action['data']['mean'],
+                'mean_2': action_data_2['data']['mean'],
+                'p50_1': action['data']['50%'],
+                'p50_2': action_data_2['data']['50%'],
+                'p90_1': action['data']['90%'],
+                'p90_2': action_data_2['data']['90%'],
+                'count_1': action['data']['count'],
+                'count_2': action_data_2['data']['count'],
+                'max_1': action['data']['max'],
+                'max_2': action_data_2['data']['max'],
+                'min_1': action['data']['min'],
+                'min_2': action_data_2['data']['min'],
+                'errors_1': action['data']['errors'],
+                'errors_2': action_data_2['data']['errors'],
+            })
+    return compare_data
+
+
 def tests_compare_aggregate_new(request, test_id_1, test_id_2):
     '''Return comparasion data for all actions in two tests'''
     response = []
@@ -945,6 +983,7 @@ def tests_compare_report(request, test_id_1, test_id_2):
             'report': report,
             'test_1': Test.objects.get(id=test_id_1),
             'test_2': Test.objects.get(id=test_id_2),
+            'compare_table': compare_aggregate(test_id_1, test_id_2),
         })
 
 

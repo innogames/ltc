@@ -74,6 +74,63 @@
         </div>
     </div>
 </div>
+<div class="panel panel-default">
+    <div class="panel-heading">Detailed comparasion table for tests: <b>{{test_1.display_name}}</b> vs. <b>{{test_2.display_name}}</b></div>
+    <div class="panel-body">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th colspan="2">mean</th>
+                    <th colspan="2">50%</th>
+                    <th colspan="2">90%</th>
+                    <th colspan="2">max</th>
+                    <th colspan="2">min</th>
+                    <th colspan="2">count</th>
+                    <th colspan="2">errors</th>
+                </tr>
+            </thead>
+            <tbody>
+                    <tr>
+                        <td></td>
+                        <td><b>{{test_1.display_name}}</b></td>
+                        <td><b>{{test_2.display_name}}</b></td>
+                        <td><b>{{test_1.display_name}}</b></td>
+                        <td><b>{{test_2.display_name}}</b></td>
+                        <td><b>{{test_1.display_name}}</b></td>
+                        <td><b>{{test_2.display_name}}</b></td>
+                        <td><b>{{test_1.display_name}}</b></td>
+                        <td><b>{{test_2.display_name}}</b></td>
+                        <td><b>{{test_1.display_name}}</b></td>
+                        <td><b>{{test_2.display_name}}</b></td>
+                        <td><b>{{test_1.display_name}}</b></td>
+                        <td><b>{{test_2.display_name}}</b></td>
+                        <td><b>{{test_1.display_name}}</b></td>
+                        <td><b>{{test_2.display_name}}</b></td>
+                    </tr>
+            {% for row in compare_table %}
+            <tr>
+                <td><b>{{ row.action_name }}</b></td>
+                <td>{{ row.mean_1 }}</td>
+                <td>{{ row.mean_2 }}</td>
+                <td>{{ row.p50_1 }}</td>
+                <td>{{ row.p50_2 }}</td>
+                <td>{{ row.p90_1 }}</td>
+                <td>{{ row.p90_2 }}</td>
+                <td>{{ row.max_1 }}</td>
+                <td>{{ row.max_2 }}</td>
+                <td>{{ row.min_1 }}</td>
+                <td>{{ row.min_2 }}</td>
+                <td>{{ row.count_1 }}</td>
+                <td>{{ row.count_2 }}</td>
+                <td>{{ row.errors_1 }}</td>
+                <td>{{ row.errors_2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+    </div>
+</div>
 <script>
     var compare_aggregate_data_graph = c3.generate({
         bindto: '#compare_aggregate_data_graph',
