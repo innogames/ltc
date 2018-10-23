@@ -215,7 +215,7 @@ def generate_test_results_data(test_id,
                 df_url = df[(df.url == url)]
                 url_data = pd.DataFrame()
                 df_url_gr_by_ts = df_url.groupby(
-                    pd.TimeGrouper(freq=data_resolution))
+                    pd.Grouper(freq=data_resolution))
                 url_data['avg'] = df_url_gr_by_ts.response_time.mean()
                 url_data['median'] = df_url_gr_by_ts.response_time.median()
                 url_data['count'] = df_url_gr_by_ts.success.count()
@@ -374,10 +374,142 @@ def generate_data(t_id, mode=''):
     test_id = test.id
     jmeter_results_file_path = test_running.result_file_dest
     monitoring_results_file_path = test_running.monitoring_file_dest
-    generate_test_results_data(test_id,
+    generate_test_results_data_v2(test_id,
                                project_id,
                                jmeter_results_file_path,
                                monitoring_results_file_path,
                                mode=mode,)
 
     return True
+
+
+def generate_test_results_data_v2(test_id,
+                               project_id,
+                               jmeter_results_file_path='',
+                               monitoring_results_file_path='',
+                               jmeter_results_file_fields=[],
+                               monitoring_results_file_fields=[],
+                               data_resolution='1Min',
+                               mode=''):
+    # First try to analyze data online
+    data_resolution_id = TestDataResolution.objects.get(
+        frequency=data_resolution).id
+    if not jmeter_results_file_fields:
+        jmeter_results_file_fields = [
+            'timestamp', 'response_time', 'url', 'responseCode', 'success', 'threadName',
+            'failureMessage', 'grpThreads', 'allThreads'
+        ]
+    if not monitoring_results_file_fields:
+        monitoring_results_file_fields = [
+            'server_name', 'Memory_used', 'Memory_free', 'Memory_buff',
+            'Memory_cached', 'Net_recv', 'Net_send', 'Disk_read', 'Disk_write',
+            'System_la1', 'CPU_user', 'CPU_system', 'CPU_iowait'
+        ]
+    jmeter_results_file = jmeter_results_file_path
+    check_read = True
+    if os.path.exists(jmeter_results_file):
+        unique_urls = []
+        try:
+            df = pd.DataFrame()
+            line_count = 0
+            with open(jmeter_results_file) as f:
+                line_count = 0
+                for line in f:
+                    line_count += 1
+            logger.info(line_count)
+            df = pd.read_csv(
+                jmeter_results_file,
+                index_col=0,
+                low_memory=False,
+                nrows=line_count-1,
+                names=jmeter_results_file_fields,
+            )
+            df.dropna(inplace=True)
+            print(df)
+            logger.info('[DAEMON] Number of lines: {}'.format(line_count))
+            df = df[~df['url'].str.contains('exclude_', na=False)]
+            df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
+            unique_urls = df['url'].unique()
+        except Exception, ex:
+            logger.error(ex)
+            check_read = False
+            raise Exception
+
+        if check_read:
+            # If gather data "online" just clean result file
+            if mode == 'online':
+                logger.info("[DAEMON] Cleaning file: {}".format(jmeter_results_file))
+                open(jmeter_results_file, 'w').close()
+            else:
+                zip_results_file(jmeter_results_file)
+        for url in unique_urls:
+            url = str(url)
+            if not Action.objects.filter(
+                    url=url, project_id=project_id).exists():
+                logger.debug("Adding new action: " + str(url) + " project_id: "
+                             + str(project_id))
+                a = Action(url=url, project_id=project_id)
+                a.save()
+            a = Action.objects.get(url=url, project_id=project_id)
+            action_id = a.id
+            logger.info("[DAEMON] Adding action data: {}".format(url))
+            df_url = df[(df.url == url)]
+            url_data = pd.DataFrame()
+            df_url_gr_by_ts = df_url.groupby(
+                pd.Grouper(freq=data_resolution))
+            url_data['avg'] = df_url_gr_by_ts.response_time.mean()
+            url_data['median'] = df_url_gr_by_ts.response_time.median()
+            url_data['count'] = df_url_gr_by_ts.success.count()
+            df_url_gr_by_ts_only_errors = df_url[(
+                df_url.success == False
+            )].groupby(pd.TimeGrouper(freq=data_resolution))
+            url_data[
+                'errors'] = df_url_gr_by_ts_only_errors.success.count()
+            url_data['test_id'] = test_id
+            url_data['url'] = url
+            output_json = json.loads(
+                url_data.to_json(orient='index', date_format='iso'),
+                object_pairs_hook=OrderedDict)
+            for row in output_json:
+                data = {
+                    'timestamp': row,
+                    'avg': output_json[row]['avg'],
+                    'median': output_json[row]['median'],
+                    'count': output_json[row]['count'],
+                    'url': output_json[row]['url'],
+                    'errors': output_json[row]['errors'],
+                    'test_id': output_json[row]['test_id'],
+                }
+                test_action_data = TestActionData(
+                    test_id=output_json[row]['test_id'],
+                    action_id=action_id,
+                    data_resolution_id=data_resolution_id,
+                    data=data)
+                test_action_data.save()
+            # TODO: handle aggregated data
+        logger.info("[DAEMON] Adding test overall data.".format(url))
+        test_overall_data = pd.DataFrame()
+        df_gr_by_ts = df.groupby(pd.Grouper(freq=data_resolution))
+        test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
+        test_overall_data['median'] = df_gr_by_ts.response_time.median()
+        test_overall_data['count'] = df_gr_by_ts.response_time.count()
+        test_overall_data['test_id'] = test_id
+        output_json = json.loads(
+            test_overall_data.to_json(orient='index',
+                                        date_format='iso'),
+            object_pairs_hook=OrderedDict)
+        for row in output_json:
+            data = {
+                'timestamp': row,
+                'avg': output_json[row]['avg'],
+                'median': output_json[row]['median'],
+                'count': output_json[row]['count']
+            }
+            test_data = TestData(
+                    test_id=output_json[row]['test_id'],
+                    data_resolution_id=data_resolution_id,
+                    data=data
+                )
+            test_data.save()
+    else:
+        logger.info("Result file does not exist")

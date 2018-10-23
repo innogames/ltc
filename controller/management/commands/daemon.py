@@ -9,6 +9,6 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        for t in TestRunning.objects.filter(project__project_name='TropicalIsland'):
+        for t in TestRunning.objects.all():
             logger.info('[DAEMON] Generating data from file {}'.format(t.result_file_dest))
             generate_data(t.id, mode='online')
