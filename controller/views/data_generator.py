@@ -2,7 +2,6 @@ from collections import defaultdict, OrderedDict
 import json
 
 from pandas import DataFrame
-from matplotlib import pylab
 from pylab import *
 import pandas as pd
 import re
@@ -16,6 +15,8 @@ from controller.models import TestRunning
 from analyzer.models import Project, Test, Action, \
     TestActionData, TestActionAggregateData, TestAggregate, TestData, \
     Server, ServerMonitoringData,TestDataResolution
+reload(sys)
+sys.setdefaultencoding('utf-8')
 logger = logging.getLogger(__name__)
 
 
@@ -109,11 +110,11 @@ def add_running_test(root):
                 display_name = params.text
     project_name = re.search('/([^/]+)/builds', root).group(1)
     if not Project.objects.filter(project_name=project_name).exists():
-        logger.info("Adding new project: {}".format(project_name))
+        print "Adding new project: " + project_name
         project = Project(project_name=project_name, show=True)
         project.save()
         project_id = project.id
-    logger.info("Project_id: ".format(project_id))
+    print "Project_id: " + str(project_id)
     build_number = int(re.search('/builds/(\d+)', root).group(1))
     running_test = TestRunning(
         project_id=project_id,
@@ -150,10 +151,11 @@ def unpack_test_results_data(test_id):
 def generate_test_results_data(test_id,
                                project_id,
                                jmeter_results_file_path='',
-                               jmeter_results_file_fields=[],
                                monitoring_results_file_path='',
+                               jmeter_results_file_fields=[],
                                monitoring_results_file_fields=[],
-                               data_resolution='1Min'):
+                               data_resolution='1Min',
+                               mode=''):
     data_resolution_id = TestDataResolution.objects.get(
         frequency=data_resolution).id
     if not jmeter_results_file_fields:
@@ -174,17 +176,7 @@ def generate_test_results_data(test_id,
             logger.debug("Executing a parse for a huge file")
             chunks = pd.read_table(
                 jmeter_results_file, sep=',', index_col=0, chunksize=3000000)
-
             for chunk in chunks:
-                for host in hosts:
-                    t = threading.Thread(
-                        target=get_host_info, args=(
-                            host,
-                            load_generators_info, ))
-                    t.start()
-                    threads.append(t)
-                for t in threads:
-                    t.join()
                 chunk.columns = jmeter_results_file_fields.split(',')
                 chunk = chunk[~chunk['URL'].str.contains('exclude_')]
                 df = df.append(chunk)
@@ -194,8 +186,13 @@ def generate_test_results_data(test_id,
             df.columns = jmeter_results_file_fields
             df = df[~df['url'].str.contains('exclude_', na=False)]
 
-        df.columns = jmeter_results_file_fields
+        # If gather data "online" just clean result file
+        if mode == 'online':
+            open(jmeter_results_file, 'w').close()
+        else:
+            zip_results_file(jmeter_results_file)
 
+        df.columns = jmeter_results_file_fields
         df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
         num_lines = df['response_time'].count()
         logger.debug('Number of lines in file: {}'.format(num_lines))
@@ -253,19 +250,18 @@ def generate_test_results_data(test_id,
                     url_agg_data = dict(
                         json.loads(df_url['response_time'].describe()
                                    .to_json()))
-                    url_agg_data['99%'] = float(df_url['response_time'].quantile(.99))
-                    url_agg_data['90%'] = float(df_url['response_time'].quantile(.90))
+                    url_agg_data['99%'] = df_url['response_time'].quantile(.99)
+                    url_agg_data['90%'] = df_url['response_time'].quantile(.90)
                     url_agg_data['weight'] = float(
                         df_url['response_time'].sum())
-                    url_agg_data['errors'] = float(df_url[(
-                        df_url['success'] == False)]['success'].count())
+                    url_agg_data['errors'] = df_url[(
+                        df_url['success'] == False)]['success'].count()
                     test_action_aggregate_data = TestActionAggregateData(
                         test_id=test_id,
                         action_id=action_id,
                         data=url_agg_data)
                     test_action_aggregate_data.save()
 
-        zip_results_file(jmeter_results_file)
         if not TestData.objects.filter(
                 test_id=test_id,
                 data_resolution_id=data_resolution_id).exists():
@@ -276,7 +272,8 @@ def generate_test_results_data(test_id,
             test_overall_data['count'] = df_gr_by_ts.response_time.count()
             test_overall_data['test_id'] = test_id
             output_json = json.loads(
-                test_overall_data.to_json(orient='index', date_format='iso'),
+                test_overall_data.to_json(orient='index',
+                                          date_format='iso'),
                 object_pairs_hook=OrderedDict)
             for row in output_json:
                 data = {
@@ -286,9 +283,10 @@ def generate_test_results_data(test_id,
                     'count': output_json[row]['count']
                 }
                 test_data = TestData(
-                    test_id=output_json[row]['test_id'],
-                    data_resolution_id=data_resolution_id,
-                    data=data)
+                        test_id=output_json[row]['test_id'],
+                        data_resolution_id=data_resolution_id,
+                        data=data
+                    )
                 test_data.save()
     monitoring_results_file = monitoring_results_file_path
     if os.path.exists(monitoring_results_file):
@@ -311,6 +309,7 @@ def generate_test_results_data(test_id,
         unique_servers = monitoring_df['server_name'].unique()
         for server_ in unique_servers:
             if not Server.objects.filter(server_name=server_).exists():
+                print "Adding new server: " + server_
                 s = Server(server_name=server_)
                 s.save()
             server_id = s.id
@@ -349,28 +348,36 @@ def generate_test_results_data(test_id,
         logger.info("Result file does not exist")
 
 
-def generate_data(t_id):
+def generate_data(t_id, mode=''):
     logger.info("Parse and generate test data: {}".format(t_id))
     test_running = TestRunning.objects.get(id=t_id)
-    if not Test.objects.filter(path=test_running.workspace).exists():
+    if not Test.objects.filter(path=test_running.build_path).exists():
+        end_time = test_running.start_time + 1
+        build_number = 0
+        display_name = ''
+        if test_running.duration:
+            end_time = test_running.start_time + test_running.duration
+        if test_running.build_number:
+            build_number = test_running.build_number
         test = Test(
             project_id=test_running.project_id,
-            path=test_running.workspace,
+            path=test_running.build_path,
             display_name=test_running.display_name,
             start_time=test_running.start_time,
-            end_tiem=test_running.end_time,
-            build_number=0,
+            end_time=end_time,
+            build_number=build_number,
             show=True)
         test.save()
     else:
-        test = Test.objects.get(path=test_running.workspace)
+        test = Test.objects.get(path=test_running.build_path)
     project_id = test.project_id
     test_id = test.id
     jmeter_results_file_path = test_running.result_file_dest
     monitoring_results_file_path = test_running.monitoring_file_dest
-    generate_test_results_data(test_id, project_id, jmeter_results_file_path,
-                               jmeter_results_file_fields,
+    generate_test_results_data(test_id,
+                               project_id,
+                               jmeter_results_file_path,
                                monitoring_results_file_path,
-                               monitoring_results_file_fields)
+                               mode=mode,)
 
     return True

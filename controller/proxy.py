@@ -143,7 +143,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         delay = get_delay(PROXY_ID_)
         print "[**] Delay: " + str(delay)
-        time.sleep(delay)
+        time.sleep(delay/2)
         self.connection_string = str(self.request.getpeername())
         self.request.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         print "[+] Incoming connection:" + str(self.connection_string)

@@ -8,19 +8,21 @@ import pandas as pd
 from collections import defaultdict, OrderedDict
 # Create your models here.
 from administrator.models import SSHKey
-from matplotlib import pylab
-from pylab import *
+from pylab import np
 
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 
+
 class ProjectGraphiteSettings(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    name =  models.CharField(max_length=1000, default="")
+    name = models.CharField(max_length=1000, default="")
     value = models.CharField(max_length=10000, default="")
+
     class Meta:
         db_table = 'project_graphite_settings'
         unique_together = (('project', 'value'))
-        
+
+
 class Proxy(models.Model):
     port = models.IntegerField(default=0)
     pid = models.IntegerField(default=0)
@@ -36,21 +38,25 @@ class Proxy(models.Model):
 class TestRunning(models.Model):
     '''Model for the running test'''
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    result_file_dest = models.CharField(max_length=200, default="")
-    monitoring_file_dest = models.CharField(max_length=200, default="")
-    log_file_dest = models.CharField(max_length=200, default="")
-    display_name = models.CharField(max_length=100, default="")
+    result_file_dest = models.CharField(max_length=200, default='')
+    monitoring_file_dest = models.CharField(max_length=200, default='')
+    testplan_file_dest = models.CharField(max_length=200, default='')
+    log_file_dest = models.CharField(max_length=200, default='')
+    display_name = models.CharField(max_length=100, default='')
     start_time = models.BigIntegerField()
     pid = models.IntegerField(default=0)
     jmeter_remote_instances = JSONField(null=True, blank=True)
-    workspace = models.CharField(max_length=200, default="")
+    workspace = models.CharField(max_length=200, default='')
     is_running = models.BooleanField(default=False)
     build_number = models.IntegerField(default=0)
-    rampup = models.IntegerField(default=0) # ramp up test period in seconds
-    duration = models.IntegerField(default=0) # overall test duration (incl. rampup)
+    rampup = models.IntegerField(default=0)  # ramp up test period in seconds
+    # overall test duration (incl. rampup)
+    duration = models.IntegerField(default=0)
     result_start_line = models.IntegerField(default=0)
     result_file_size = models.IntegerField(default=0)
     locked = models.BooleanField(default=False)
+    build_path = models.CharField(max_length=600, default='')
+
     def update_data_frame(self):
         if self.locked is False:
             self.locked = True
@@ -59,14 +65,13 @@ class TestRunning(models.Model):
             if self.result_start_line < num_lines - 10:
                 read_lines = num_lines - self.result_start_line - 10
                 skiprows = self.result_start_line
-                
                 df = pd.read_csv(
                     self.result_file_dest,
                     index_col=0,
                     low_memory=False,
                     skiprows=skiprows,
                     nrows=read_lines)
-                self.result_start_line=(skiprows + read_lines)
+                self.result_start_line = (skiprows + read_lines)
                 self.save()
                 df.columns = [
                     'response_time', 'URL', 'responseCode', 'success',
@@ -77,7 +82,7 @@ class TestRunning(models.Model):
                 df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
                 # update start line for the next parse
 
-                ### Response Codes
+                # Response Codes
                 group_by_response_codes = df.groupby('responseCode')
                 update_df = pd.DataFrame()
                 update_df['count'] = group_by_response_codes.success.count()
@@ -110,7 +115,7 @@ class TestRunning(models.Model):
                     test_running_data.data = old_data
                     test_running_data.save()
 
-                ### Aggregate table
+                # Aggregate table
                 update_df = pd.DataFrame()
                 group_by_url = df.groupby('URL')
                 update_df = group_by_url.aggregate({
@@ -185,7 +190,7 @@ class TestRunning(models.Model):
                     test_running_data.data = old_data
                     test_running_data.save()
 
-                ### Over time data
+                # Over time data
                 update_df = pd.DataFrame()
                 df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
                 update_df['avg'] = df_gr_by_ts.response_time.mean()
@@ -243,9 +248,9 @@ class TestRunning(models.Model):
                             test_running_data.save()
                         else:
                             test_running_data = TestRunningData(
-                            test_running_id=self.id,
-                            name="data_over_time",
-                            data=new_data)
+                                test_running_id=self.id,
+                                name="data_over_time",
+                                data=new_data)
                             test_running_data.save()
                 self.locked = False
                 self.save()
@@ -296,16 +301,18 @@ class JmeterInstance(models.Model):
     jmeter_dir = models.CharField(max_length=300, default="")
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     threads_number = models.IntegerField(default=0)
-    java_args =  models.CharField(max_length=1000, default="")
+    java_args = models.CharField(max_length=1000, default="")
+
     class Meta:
         db_table = 'jmeter_instance'
-        
+
+
 class ActivityLog(models.Model):
     date = models.DateTimeField(auto_now_add=True, blank=True)
-    action =  models.CharField(max_length=1000, default="")
+    action = models.CharField(max_length=1000, default="")
     load_generator = models.ForeignKey(LoadGenerator)
     data = JSONField()
-   
+
     class Meta:
         db_table = 'activity_log'
 

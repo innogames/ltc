@@ -1,0 +1,14 @@
+import os
+import logging
+from django.conf import settings
+from django.core.management.base import BaseCommand
+from controller.models import TestRunning
+from controller.views import generate_data
+
+logger = logging.getLogger(__name__)
+
+class Command(BaseCommand):
+    def handle(self, *args, **options):
+        for t in TestRunning.objects.filter(project__project_name='TropicalIsland'):
+            logger.info('[DAEMON] Generating data from file {}'.format(t.result_file_dest))
+            generate_data(t.id, mode='online')

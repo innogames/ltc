@@ -119,15 +119,15 @@
                 <label for="delay_{{ proxy.id }}">delay:</label>
                 <input type="text" class="form-control" id="delay_{{ proxy.id }}" value="{{ proxy.delay }}">
                 </div>
-                {% if proxy.started == False %}
-                <span class="badge alert-danger">Stopped</span>
-                <button id="start_proxy_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-success start_proxy_btn">Start proxy</button>
-                {% else %}
-                <span class="badge alert-success">Started</span>
-                <button id="stop_proxy_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-danger stop_proxy_btn">Stop proxy</button>
-                {% endif %}
-                <button id="set_delay_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-info set_delay_btn">Change delay</button>
-                <div id="status_{{ proxy.id }}"></div>
+                    {% if proxy.started == False %}
+                    <span class="badge alert-danger">Stopped</span>
+                    <button id="start_proxy_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-success start_proxy_btn">Start proxy</button>
+                    {% else %}
+                    <span class="badge alert-success">Started</span>
+                    <button id="stop_proxy_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-danger stop_proxy_btn">Stop proxy</button>
+                    {% endif %}
+                    <button id="set_delay_{{ proxy.id }}" value="{{ proxy.id }}" class="btn btn-info set_delay_btn">Change delay</button>
+                    <div id="status_{{ proxy.id }}"></div>
         {% endfor %}
         {% else %}
         <b>No any proxies</b>
