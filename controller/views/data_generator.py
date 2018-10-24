@@ -1,20 +1,25 @@
-from collections import defaultdict, OrderedDict
+import csv
 import json
-
-from pandas import DataFrame
-from pylab import *
-import pandas as pd
+import logging
+import itertools
+import os
 import re
 import sys
-import os
 import zipfile
-import logging
-from xml.etree.ElementTree import ElementTree
+import tempfile
+from collections import OrderedDict, defaultdict
 from os.path import basename
+from xml.etree.ElementTree import ElementTree
+
+import pandas as pd
+from pandas import DataFrame
+from pylab import *
+
+from analyzer.models import (Action, Project, Server, ServerMonitoringData,
+                             Test, TestActionAggregateData, TestActionData,
+                             TestAggregate, TestData, TestDataResolution)
 from controller.models import TestRunning
-from analyzer.models import Project, Test, Action, \
-    TestActionData, TestActionAggregateData, TestAggregate, TestData, \
-    Server, ServerMonitoringData,TestDataResolution
+
 reload(sys)
 sys.setdefaultencoding('utf-8')
 logger = logging.getLogger(__name__)
@@ -283,10 +288,10 @@ def generate_test_results_data(test_id,
                     'count': output_json[row]['count']
                 }
                 test_data = TestData(
-                        test_id=output_json[row]['test_id'],
-                        data_resolution_id=data_resolution_id,
-                        data=data
-                    )
+                    test_id=output_json[row]['test_id'],
+                    data_resolution_id=data_resolution_id,
+                    data=data
+                )
                 test_data.save()
     monitoring_results_file = monitoring_results_file_path
     if os.path.exists(monitoring_results_file):
@@ -371,26 +376,27 @@ def generate_data(t_id, mode=''):
     else:
         test = Test.objects.get(path=test_running.build_path)
     project_id = test.project_id
-    test_id = test.id
     jmeter_results_file_path = test_running.result_file_dest
     monitoring_results_file_path = test_running.monitoring_file_dest
-    generate_test_results_data_v2(test_id,
-                               project_id,
-                               jmeter_results_file_path,
-                               monitoring_results_file_path,
-                               mode=mode,)
+    logger.info('[DAEMON] Starting generate function.')
+    daemon_generate_data(test,
+                                  project_id,
+                                  jmeter_results_file_path,
+                                  monitoring_results_file_path,
+                                  mode=mode,)
 
     return True
 
 
-def generate_test_results_data_v2(test_id,
-                               project_id,
-                               jmeter_results_file_path='',
-                               monitoring_results_file_path='',
-                               jmeter_results_file_fields=[],
-                               monitoring_results_file_fields=[],
-                               data_resolution='1Min',
-                               mode=''):
+def daemon_generate_data(test,
+                                  project_id,
+                                  jmeter_results_file_path='',
+                                  monitoring_results_file_path='',
+                                  jmeter_results_file_fields=[],
+                                  monitoring_results_file_fields=[],
+                                  data_resolution='1Min',
+                                  mode=''):
+    test_id = test.id
     # First try to analyze data online
     data_resolution_id = TestDataResolution.objects.get(
         frequency=data_resolution).id
@@ -407,109 +413,191 @@ def generate_test_results_data_v2(test_id,
         ]
     jmeter_results_file = jmeter_results_file_path
     check_read = True
-    if os.path.exists(jmeter_results_file):
+    temp_path = os.path.join('/tmp/', str(test.project), str(test_id))
+    temp_to_parse_path = os.path.join(temp_path, 'to_parse')
+    try:
+        os.makedirs(temp_path)
+        os.makedirs(temp_to_parse_path)
+    except OSError:
+        logger.info('[DAEMON] Dirs are already exists.')
+    rows = open(jmeter_results_file).readlines()
+    rows_num = len(rows)
+    logger.info('[DAEMON] Rows {}.'.format(rows_num))
+    fd, temp_result_filename = tempfile.mkstemp('.jtl',
+                            '{}_main_'.format(test.project), temp_path)
+    open(temp_result_filename, 'w').writelines(rows[0:rows_num]) # avoid last line
+    logger.info('[DAEMON] Check file {}.'.format(temp_result_filename))
+    if os.path.exists(temp_result_filename):
+        logger.info('[DAEMON] Starting work with {}.'.format(temp_result_filename))
         unique_urls = []
-        try:
-            df = pd.DataFrame()
-            line_count = 0
-            with open(jmeter_results_file) as f:
-                line_count = 0
-                for line in f:
-                    line_count += 1
-            logger.info(line_count)
-            df = pd.read_csv(
-                jmeter_results_file,
-                index_col=0,
-                low_memory=False,
-                nrows=line_count-1,
-                names=jmeter_results_file_fields,
-            )
-            df.dropna(inplace=True)
-            print(df)
-            logger.info('[DAEMON] Number of lines: {}'.format(line_count))
-            df = df[~df['url'].str.contains('exclude_', na=False)]
-            df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
-            unique_urls = df['url'].unique()
-        except Exception, ex:
-            logger.error(ex)
-            check_read = False
-            raise Exception
-
-        if check_read:
-            # If gather data "online" just clean result file
-            if mode == 'online':
-                logger.info("[DAEMON] Cleaning file: {}".format(jmeter_results_file))
-                open(jmeter_results_file, 'w').close()
-            else:
-                zip_results_file(jmeter_results_file)
-        for url in unique_urls:
-            url = str(url)
-            if not Action.objects.filter(
-                    url=url, project_id=project_id).exists():
-                logger.debug("Adding new action: " + str(url) + " project_id: "
-                             + str(project_id))
-                a = Action(url=url, project_id=project_id)
-                a.save()
-            a = Action.objects.get(url=url, project_id=project_id)
-            action_id = a.id
-            logger.info("[DAEMON] Adding action data: {}".format(url))
-            df_url = df[(df.url == url)]
-            url_data = pd.DataFrame()
-            df_url_gr_by_ts = df_url.groupby(
-                pd.Grouper(freq=data_resolution))
-            url_data['avg'] = df_url_gr_by_ts.response_time.mean()
-            url_data['median'] = df_url_gr_by_ts.response_time.median()
-            url_data['count'] = df_url_gr_by_ts.success.count()
-            df_url_gr_by_ts_only_errors = df_url[(
-                df_url.success == False
-            )].groupby(pd.TimeGrouper(freq=data_resolution))
-            url_data[
-                'errors'] = df_url_gr_by_ts_only_errors.success.count()
-            url_data['test_id'] = test_id
-            url_data['url'] = url
-            output_json = json.loads(
-                url_data.to_json(orient='index', date_format='iso'),
-                object_pairs_hook=OrderedDict)
-            for row in output_json:
-                data = {
-                    'timestamp': row,
-                    'avg': output_json[row]['avg'],
-                    'median': output_json[row]['median'],
-                    'count': output_json[row]['count'],
-                    'url': output_json[row]['url'],
-                    'errors': output_json[row]['errors'],
-                    'test_id': output_json[row]['test_id'],
-                }
-                test_action_data = TestActionData(
-                    test_id=output_json[row]['test_id'],
-                    action_id=action_id,
-                    data_resolution_id=data_resolution_id,
-                    data=data)
-                test_action_data.save()
-            # TODO: handle aggregated data
-        logger.info("[DAEMON] Adding test overall data.".format(url))
-        test_overall_data = pd.DataFrame()
-        df_gr_by_ts = df.groupby(pd.Grouper(freq=data_resolution))
-        test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
-        test_overall_data['median'] = df_gr_by_ts.response_time.median()
-        test_overall_data['count'] = df_gr_by_ts.response_time.count()
-        test_overall_data['test_id'] = test_id
-        output_json = json.loads(
-            test_overall_data.to_json(orient='index',
-                                        date_format='iso'),
-            object_pairs_hook=OrderedDict)
-        for row in output_json:
-            data = {
-                'timestamp': row,
-                'avg': output_json[row]['avg'],
-                'median': output_json[row]['median'],
-                'count': output_json[row]['count']
-            }
-            test_data = TestData(
-                    test_id=output_json[row]['test_id'],
-                    data_resolution_id=data_resolution_id,
-                    data=data
+        df = pd.DataFrame()
+        n = 0
+        minutes_data = {}
+        with open(temp_result_filename) as f:
+            for r in f.readlines():
+                row = r.split(',')
+                if len(row[0]) == 13:
+                    ts_c = int(row[0])
+                    dt_c = datetime.datetime.fromtimestamp(ts_c/1000)
+                    minutes_data.setdefault(dt_c.strftime('%Y_%m_%d_%H_%M'), []).append(r)
+                n += 1
+        for key, value in minutes_data.iteritems():
+            temp_ts_file = os.path.join(temp_to_parse_path, key)
+            logger.info('[DAEMON] Writing temp data {}.'.format(temp_ts_file))
+            open(temp_ts_file, 'a+').writelines(value)
+        logger.info('[DAEMON] Cleaning main result file.')
+        open(jmeter_results_file, 'w').writelines(rows[-1])
+        logger.info('[DAEMON] Removing temp result file.')
+        os.remove(temp_result_filename)
+        # Iterate files and check if they were not modified last minute,
+        # parse it and insert to DB
+        logger.info('[DAEMON] Check modification time of result files.')
+        for filename in os.listdir(temp_to_parse_path):
+            data_file = os.path.join(temp_to_parse_path, filename)
+            file_mod_time = os.stat(data_file).st_mtime
+            last_time = (time.time() - file_mod_time)
+            if last_time > 60:
+                logger.info('[DAEMON] File {} was not modified since 1min, parsing.'.format(data_file))
+                df = pd.read_csv(
+                    data_file,
+                    index_col=0,
+                    low_memory=False,
+                    names=jmeter_results_file_fields,
                 )
-            test_data.save()
+                df.dropna(inplace=True)
+                df = df[~df['url'].str.contains('exclude_', na=False)]
+                df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
+                unique_urls = df['url'].unique()
+                for url in unique_urls:
+                    url = str(url)
+                    if not Action.objects.filter(
+                            url=url, project_id=project_id).exists():
+                        a = Action(url=url, project_id=project_id)
+                        a.save()
+                    logger.info("[DAEMON] Adding action data: {}".format(url))
+                    a = Action.objects.get(url=url, project_id=project_id)
+                    action_id = a.id
+                    df_url = df[(df.url == url)]
+                    url_data = pd.DataFrame()
+                    df_url_gr_by_ts = df_url.groupby(
+                        pd.Grouper(freq=data_resolution))
+                    url_data['avg'] = df_url_gr_by_ts.response_time.mean()
+                    url_data['median'] = df_url_gr_by_ts.response_time.median()
+                    url_data['count'] = df_url_gr_by_ts.success.count()
+                    df_url_gr_by_ts_only_errors = df_url[(
+                        df_url.success == False
+                    )].groupby(pd.Grouper(freq=data_resolution))
+                    url_data[
+                        'errors'] = df_url_gr_by_ts_only_errors.success.count()
+                    url_data['test_id'] = test_id
+                    url_data['url'] = url
+                    output_json = json.loads(
+                        url_data.to_json(orient='index', date_format='iso'),
+                        object_pairs_hook=OrderedDict)
+                    for row in output_json:
+                        logger.info('[DAEMON] {} {}'.format(url, row))
+                        data = {
+                            'timestamp': row,
+                            'avg': output_json[row]['avg'],
+                            'median': output_json[row]['median'],
+                            'count': output_json[row]['count'],
+                            'url': output_json[row]['url'],
+                            'errors': output_json[row]['errors'],
+                            'test_id': output_json[row]['test_id'],
+                        }
+                        test_action_data = TestActionData(
+                            test_id=output_json[row]['test_id'],
+                            action_id=action_id,
+                            data_resolution_id=data_resolution_id,
+                            data=data)
+                        test_action_data.save()
+                    logger.info('[DAEMON] Check aggregate data: {}'.format(url))
+                    url_agg_data = dict(
+                    json.loads(
+                        df_url['response_time'].describe().to_json()))
+                    url_agg_data['99%'] = df_url['response_time'].quantile(.99)
+                    url_agg_data['90%'] = df_url['response_time'].quantile(.90)
+                    url_agg_data['weight'] = float(
+                        df_url['response_time'].sum())
+                    url_agg_data['errors'] = float(df_url[(
+                        df_url['success'] == False)]['success'].count())
+                    if not TestActionAggregateData.objects.filter(action_id=action_id,
+                                                                    test_id=test_id).exists():
+                        logger.info('[DAEMON] Adding new aggregate data.')
+                        test_action_aggregate_data = TestActionAggregateData(
+                                                            test_id=test_id,
+                                                            action_id=action_id,
+                                                            data=url_agg_data
+                                                            ).save()
+                    else:
+                        logger.info('[DAEMON] Refreshing aggregate data.')
+                        data = {}
+                        d = TestActionAggregateData.objects.get(action_id=action_id,
+                                                                    test_id=test_id)
+                        old_data = d.data
+                        new_data = url_agg_data
+                        maximum = new_data['max'] if new_data['max'] > old_data['max'] else old_data['max']
+                        minimum = new_data[ 'min'] if new_data['min'] < old_data['min'] else old_data['min']
+                        p50 = new_data['50%'] if new_data['50%'] > old_data['50%'] else old_data['50%']
+                        p75 = new_data['75%'] if new_data['75%'] > old_data['75%'] else old_data['75%']
+                        p90 = new_data['90%'] if new_data['90%'] > old_data['90%'] else old_data['90%']
+                        p99 = new_data['99%'] if new_data['99%'] > old_data['99%'] else old_data['99%']
+                        std = new_data['std']
+                        old_data = {
+                            'mean':
+                            (old_data['weight'] + new_data['weight'])
+                            /
+                            (old_data['count'] + new_data['count']),
+                            'max':
+                            maximum,
+                            'min':
+                            minimum,
+                            'count':
+                            old_data['count'] + new_data['count'],
+                            'errors':
+                            old_data['errors'] + new_data['errors'],
+                            'weight':
+                            old_data['weight'] + new_data['weight'],
+                            '50%':
+                            p50,
+                            '75%':
+                            p75,
+                            '90%':
+                            p90,
+                            '99%':
+                            p99,
+                            'std':
+                            std,
+                        }
+                        d.data = old_data
+                        d.save()
+                logger.info("[DAEMON] Adding test overall data.".format(url))
+                test_overall_data = pd.DataFrame()
+                df_gr_by_ts = df.groupby(pd.Grouper(freq=data_resolution))
+                test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
+                test_overall_data['median'] = df_gr_by_ts.response_time.median()
+                test_overall_data['count'] = df_gr_by_ts.response_time.count()
+                test_overall_data['test_id'] = test_id
+                output_json = json.loads(
+                    test_overall_data.to_json(orient='index',
+                                            date_format='iso'),
+                    object_pairs_hook=OrderedDict)
+                for row in output_json:
+                    data = {
+                        'timestamp': row,
+                        'avg': output_json[row]['avg'],
+                        'median': output_json[row]['median'],
+                        'count': output_json[row]['count']
+                    }
+                    test_data = TestData(
+                        test_id=output_json[row]['test_id'],
+                        data_resolution_id=data_resolution_id,
+                        data=data
+                    )
+                    test_data.save()
+                logger.info('[DAEMON] Removing {}.'.format(data_file))
+                os.remove(data_file)
+
+
     else:
         logger.info("Result file does not exist")

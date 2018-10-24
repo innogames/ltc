@@ -56,6 +56,7 @@ class TestRunning(models.Model):
     result_file_size = models.IntegerField(default=0)
     locked = models.BooleanField(default=False)
     build_path = models.CharField(max_length=600, default='')
+    last_analyzed = models.DateTimeField(default=None, null=True)
 
     def update_data_frame(self):
         if self.locked is False:
