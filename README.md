@@ -128,7 +128,7 @@ Job pre-build action example:
 ```
 duration=$((DURATION + RAMPUP))
 TEST_DATA=`python /var/lib/jltc/manage.py shell -c "import controller.views as views; print(views.prepare_test('"$JOB_NAME"','"$WORKSPACE"','"$JMETER_DIR"', '$THREAD_COUNT', '$duration', '$RAMPUP', testplan_file='"$TEST_PLAN"', jenkins_env={'JENKINS_HOME':'"$JENKINS_HOME"','JOB_NAME':'"$JOB_NAME"','BUILD_NUMBER':'"$BUILD_NUMBER"','BUILD_DISPLAY_NAME':'"$BUILD_NUMBER"'}));"`
-TEST_PLAN=`python -c 'import json,sys;data=dict('"$REMOTE_HOSTS_DATA"');print data["testplan"]'`
+TEST_PLAN=`python -c 'import json,sys;data=dict('"$TEST_DATA"');print data["testplan"]'`
 
 echo "Test plan: $TEST_PLAN"
 
