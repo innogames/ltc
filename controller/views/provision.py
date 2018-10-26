@@ -1,12 +1,9 @@
-import json
 import logging
 import math
 import os
 import random
 import re
-import select
 import shutil
-import string
 import subprocess
 import sys
 import tempfile
@@ -34,7 +31,6 @@ from controller.models import (ActivityLog, JmeterInstance,
                                JMeterTestPlanParameter, LoadGenerator,
                                LoadGeneratorServer, Proxy, ScriptParameter,
                                TestRunning)
-from iggop.common.utils import get_project
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +94,7 @@ def update_load_generators_info():
     #    project='admin',
     #    function='loadgenerator',
     #    hostname=Regexp('loadtest.*-qa.ig.local'))
-
+    hosts = []
     for host in hosts:
         t = threading.Thread(
             target=get_host_info, args=(
@@ -265,6 +261,58 @@ def get_load_generator_data(request, load_generator_id):
         'load_generator': load_generator,
         'jmeter_instances': jmeter_instances,
     })
+
+
+def prepare_test(project_name,
+                    workspace,
+                    jmeter_dir,
+                    duration=0,
+                    rampup=0,
+                    testplan_file='',
+                    jenkins_env={}):
+    response = {}
+    if not Project.objects.filter(project_name=project_name).exists():
+        logger.info('Creating a new project: {}.'.format(project_name))
+        p = Project(project_name=project_name)
+        p.save()
+        project_id = p.id
+    else:
+        p = Project.objects.get(project_name=project_name)
+        project_id = p.id
+    start_time = int(time.time() * 1000)
+    t = TestRunning(
+        project_id=project_id,
+        start_time=start_time,
+        duration=duration,
+        workspace=workspace,
+        rampup=rampup,
+        is_running=False,
+        testplan_file_dest=os.path.join(workspace, testplan_file),
+        result_file_dest=os.path.join(workspace, 'result.jtl'),
+        )
+    # Insert CSV writer listener to test plan
+    new_testplan_file = prepare_test_plan(t.workspace,
+                                          t.testplan_file_dest,
+                                          t.result_file_dest,
+                                          )
+    if new_testplan_file:
+        logger.info('New testplan {}.'.format(new_testplan_file))
+        t.testplan_file_dest = new_testplan_file
+    if jenkins_env:
+        logger.info('Setting test build path.')
+        t.build_path = os.path.join(
+                              jenkins_env['JENKINS_HOME'],
+                              'jobs',
+                              jenkins_env['JOB_NAME'],
+                              jenkins_env['BUILD_NUMBER'],
+                            )
+        t.build_number = jenkins_env['BUILD_NUMBER']
+        t.display_name = jenkins_env['BUILD_DISPLAY_NAME']
+    t.save()
+    response = {
+            'testplan': t.testplan_file_dest,
+        }
+    return response
 
 
 def prepare_load_generators(project_name,

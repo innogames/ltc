@@ -113,47 +113,32 @@ Then execute in jltc folder:
 ### 4. Go!
 nohup python manage.py runserver 8888 &
 
-### 5. Running tests with Jmeter
-Current implementation of jltc supports only CSV result files. By default to save results from your test you have to add SimpleDataWriter listener with the next parameters:
+### 5. Running tests with Jenkins
+Add in Jenkins job those commands, to prepare test plan and run the test:
 
+Jmeter job parameters list example:
 ```
-    <ResultCollector guiclass="SimpleDataWriter" testclass="ResultCollector" testname="results writer"
-                 enabled="true">
-    <boolProp name="ResultCollector.error_logging">false</boolProp>
-    <objProp>
-        <name>saveConfig</name>
-        <value class="SampleSaveConfiguration">
-            <time>true</time>
-            <latency>true</latency>
-            <timestamp>true</timestamp>
-            <success>true</success>
-            <label>true</label>
-            <code>true</code>
-            <message>false</message>
-            <threadName>false</threadName>
-            <dataType>false</dataType>
-            <encoding>false</encoding>
-            <assertions>false</assertions>
-            <subresults>false</subresults>
-            <responseData>false</responseData>
-            <samplerData>false</samplerData>
-            <xml>false</xml>
-            <fieldNames>true</fieldNames>
-            <responseHeaders>false</responseHeaders>
-            <requestHeaders>false</requestHeaders>
-            <responseDataOnError>false</responseDataOnError>
-            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
-            <assertionsResultsToSave>0</assertionsResultsToSave>
-            <bytes>true</bytes>
-            <threadCounts>true</threadCounts>
-        </value>
-    </objProp>
-    <stringProp name="filename">/tmp/file</stringProp>
-    <stringProp name="TestPlan.comments">Added automatically</stringProp>
-    </ResultCollector>
+THREAD_COUNT = 100
+DURATION = 3600
+RAMPUP = 1800
+TEST_PLAN = testplan.jmx
+JMETER_DIR = /var/lib/jmeter/
+```
+Job pre-build action example:
+```
+duration=$((DURATION + RAMPUP))
+TEST_DATA=`python /var/lib/jltc/manage.py shell -c "import controller.views as views; print(views.prepare_test('"$JOB_NAME"','"$WORKSPACE"','"$JMETER_DIR"', '$THREAD_COUNT', '$duration', '$RAMPUP', testplan_file='"$TEST_PLAN"', jenkins_env={'JENKINS_HOME':'"$JENKINS_HOME"','JOB_NAME':'"$JOB_NAME"','BUILD_NUMBER':'"$BUILD_NUMBER"','BUILD_DISPLAY_NAME':'"$BUILD_NUMBER"'}));"`
+TEST_PLAN=`python -c 'import json,sys;data=dict('"$REMOTE_HOSTS_DATA"');print data["testplan"]'`
+
+echo "Test plan: $TEST_PLAN"
+
+VARS="-JTHREAD_COUNT=$THREAD_COUNT -JDURATION=$DURATION -JRAMPUP=$RAMPUP"
+
+java -jar -Xms5g -Xmx5g -Xss256k $JMETER_DIR/bin/ApacheJMeter.jar -n -t $TEST_PLAN -j $WORKSPACE/loadtest.log $VARS -Jjmeter.save.saveservice.default_delimiter=,
 ```
 
-### 5. Jenkins
+
+### 5. Test data analysis with Jenkins
 It is possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)
 To parse data after the test just add in Jenkins post-job script:
 `curl --data "results_dir=$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/" http://localhost:8888/controller/parse_results`
