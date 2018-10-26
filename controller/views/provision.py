@@ -12,8 +12,6 @@ import time
 from collections import OrderedDict
 from subprocess import call
 from sys import platform as _platform
-
-import kronos
 import paramiko
 import psutil
 # from adminapi.dataset import query
@@ -85,7 +83,7 @@ def get_host_info(host, load_generators_info):
     ssh.close()
 
 
-@kronos.register('*/10 * * * *')
+# TODO: create cron job
 def update_load_generators_info():
     response = []
     threads = []
@@ -165,11 +163,9 @@ def update_load_generators_info():
             lg.save()
 
 
-@kronos.register('*/5 * * * *')
+# TODO: create cron job
 def gather_jmeter_instances_info():
-
     # Connect and gather JAVA metrics from jmeter remote instances
-
     jmeter_instances = list(
         JmeterInstance.objects.annotate(hostname=F('load_generator__hostname'))
         .values('hostname', 'pid', 'project_id', 'threads_number',
