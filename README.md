@@ -58,15 +58,16 @@ The application comes with:
 Current `requirements.txt` file is:
 
 ```
-Django==1.10.5
-matplotlib==1.4.3
-numpy==1.13.1+mkl
-pandas==0.17.0
-paramiko==2.4.1
-psutil==5.2.1
-matplotlib==1.4.3
-scipy==0.19.1
-SQLAlchemy==1.1.3
+Django==1.11.16
+matplotlib
+numpy
+pandas
+paramiko
+psutil
+matplotlib
+scipy
+SQLAlchemy
+psycopg2
 ```
 
 For data storage uses *Postgres (9.5+)*.
