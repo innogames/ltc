@@ -5,7 +5,7 @@ import json
 import sys
 import time
 import logging
-from urllib2 import (
+from urllib.request import (
     HTTPBasicAuthHandler,
     HTTPPasswordMgrWithDefaultRealm,
     HTTPSHandler,
@@ -66,8 +66,6 @@ class GraphiteClient(object):
         }
         url = '{}/render?'.format(self.url)
         for k, v in args.iteritems():
-            print k
-            print v
             url += '{}={}&'.format(quote(k), quote(v))
 
         logger.debug('Query URL is {}'.format(url))

@@ -20,8 +20,6 @@ from analyzer.models import (Action, Project, Server, ServerMonitoringData,
                              TestAggregate, TestData, TestDataResolution)
 from controller.models import TestRunning
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
 logger = logging.getLogger(__name__)
 
 
@@ -115,11 +113,9 @@ def add_running_test(root):
                 display_name = params.text
     project_name = re.search('/([^/]+)/builds', root).group(1)
     if not Project.objects.filter(project_name=project_name).exists():
-        print "Adding new project: " + project_name
         project = Project(project_name=project_name, show=True)
         project.save()
         project_id = project.id
-    print "Project_id: " + str(project_id)
     build_number = int(re.search('/builds/(\d+)', root).group(1))
     running_test = TestRunning(
         project_id=project_id,
@@ -314,7 +310,6 @@ def generate_test_results_data(test_id,
         unique_servers = monitoring_df['server_name'].unique()
         for server_ in unique_servers:
             if not Server.objects.filter(server_name=server_).exists():
-                print "Adding new server: " + server_
                 s = Server(server_name=server_)
                 s.save()
             server_id = s.id

@@ -23,7 +23,7 @@ from django.db.models.expressions import F, RawSQL
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from controller.views import prepare_test_plan
+from controller.views.controller_views import prepare_test_plan
 from administrator.models import JMeterProfile, SSHKey
 from analyzer.models import Project
 from controller.models import (ActivityLog, JmeterInstance,

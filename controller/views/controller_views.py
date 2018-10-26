@@ -1,4 +1,3 @@
-#
 import json
 import os
 import subprocess
@@ -14,6 +13,7 @@ from django.db.models.expressions import F, RawSQL, Value
 import select
 
 import shutil
+
 from administrator.models import JMeterProfile, SSHKey
 
 if _platform == "linux" or _platform == "linux2":
@@ -612,19 +612,19 @@ def start_test(request, project_id):
 
         running_test_log_file_destination \
             = os.path.join(running_test_logs_dir,
-                           'main.log')
+                           "main.log")
         script_pre_log_file_destination \
             = os.path.join(running_test_logs_dir,
-                           'script_pre.log')
+                           "script_pre.log")
 
         result_file_destination = os.path.join(running_test_results_dir,
                                                "results.jtl")
         if os.path.exists(running_test_dir):
             shutil.rmtree(running_test_dir)
         os.makedirs(running_test_dir)
-        os.mkdir(running_test_testplan_dir, '0777')
-        os.mkdir(running_test_logs_dir, '0777')
-        os.mkdir(running_test_results_dir, '0777')
+        os.mkdir(running_test_testplan_dir, 777)
+        os.mkdir(running_test_logs_dir, 777)
+        os.mkdir(running_test_results_dir, 777)
 
         test_plan_params_flag = ""
         test_plan_params_str = ""
@@ -661,29 +661,10 @@ def start_test(request, project_id):
         project.jmeter_profile_id = jmeter_profile_id
         project.test_plan_destination = test_plan_destination
         project.save()
-        '''From Yandex.Tank plugin'''
-        with open(test_plan_destination, 'r') as src_jmx:
-            source_lines = src_jmx.readlines()
-        try:
-            closing = source_lines.pop(-1)
-            closing = source_lines.pop(-1) + closing
-            closing = source_lines.pop(-1) + closing
-        except Exception as e:
-            raise RuntimeError('Failed to find the end of JMX XML: {}'.format(e))
-
-        fd, fname = tempfile.mkstemp('.jmx', 'new_', running_test_testplan_dir)
-        os.close(fd)
-        os.chmod(fname, '0644')
-        #result_file_path = running_test_results_dir+'results.csv'
-
-        # Destination of test plan
-        test_plan_destination = fname
-        file_handle = open(test_plan_destination, "wb")
-        file_handle.write(''.join(source_lines))
-        file_handle.write(
-            ''.join(jmeter_simple_writer(result_file_destination)))
-        file_handle.write(closing)
-        file_handle.close()
+        prepare_test_plan(running_test_testplan_dir,
+                          test_plan_destination,
+                          result_file_destination
+                        )
         #project.jmeter_parameters = json.loads(jmeter_parameters)
         java_exec = ""
         if _platform == "linux" or _platform == "linux2":
@@ -912,6 +893,36 @@ def splitstring(string):
         return string.split()
 
 
+def prepare_test_plan(workspace, testplan_dest, result_dest):
+    new_testplan = ''
+    try:
+        with open(testplan_dest, 'r') as src_jmx:
+            source_lines = src_jmx.readlines()
+            closing = source_lines.pop(-1)
+            closing = source_lines.pop(-1) + closing
+            if "<hashTree/>" in source_lines[-1]:
+                source_lines.pop(-1)
+                source_lines.pop(-1)
+                source_lines.pop(-1)
+                source_lines.pop(-1)
+            closing = source_lines.pop(-1) + closing
+            fd, fname = tempfile.mkstemp('.jmx', 'new_', workspace)
+            os.close(fd)
+            os.chmod(fname, 644)
+            # Destination of test plan
+            new_testplan = fname
+            file_handle = open(new_testplan, "wb")
+            file_handle.write(''.join(source_lines))
+            file_handle.write(
+                ''.join(jmeter_simple_writer(result_dest)))
+            file_handle.write(closing)
+            file_handle.close()
+    except Exception as exc:
+        logger.error('Could not find testplan {}. Skiping.'.format(testplan_dest))
+        logger.error(exc)
+    return new_testplan
+
+
 def update_test_graphite_data(test_id):
     if Configuration.objects.filter(name='graphite_url').exists():
         graphite_url = Configuration.objects.get(name='graphite_url').value
@@ -977,7 +988,7 @@ def update_test_graphite_data(test_id):
 
         if world_id:
             webservers_mask = '{}w*_{}'.format(world_id, game_short_name)
-        else: 
+        else:
             webservers_mask = 'example'
 
         if not ProjectGraphiteSettings.objects.filter(
