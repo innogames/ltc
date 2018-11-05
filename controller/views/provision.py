@@ -262,6 +262,7 @@ def get_load_generator_data(request, load_generator_id):
 def prepare_test(project_name,
                     workspace,
                     jmeter_dir,
+                    threads_num,
                     duration=0,
                     rampup=0,
                     testplan_file='',
