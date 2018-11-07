@@ -156,7 +156,7 @@ def generate_test_results_data(test_id,
                                jmeter_results_file_fields=[],
                                monitoring_results_file_fields=[],
                                data_resolution='1Min',
-                               mode=''):
+                              ):
     data_resolution_id = TestDataResolution.objects.get(
         frequency=data_resolution).id
     if not jmeter_results_file_fields:
@@ -188,10 +188,7 @@ def generate_test_results_data(test_id,
             df = df[~df['url'].str.contains('exclude_', na=False)]
 
         # If gather data "online" just clean result file
-        if mode == 'online':
-            open(jmeter_results_file, 'w').close()
-        else:
-            zip_results_file(jmeter_results_file)
+        zip_results_file(jmeter_results_file)
 
         df.columns = jmeter_results_file_fields
         df.index = pd.to_datetime(dateconv((df.index.values / 1000)))
@@ -374,12 +371,17 @@ def generate_data(t_id, mode=''):
     jmeter_results_file_path = test_running.result_file_dest
     monitoring_results_file_path = test_running.monitoring_file_dest
     logger.info('[DAEMON] Starting generate function.')
-    daemon_generate_data(test,
-                                  project_id,
-                                  jmeter_results_file_path,
-                                  monitoring_results_file_path,
-                                  mode=mode,)
-
+    if mode == 'online':
+        daemon_generate_data(test,
+                                    project_id,
+                                    jmeter_results_file_path,
+                                    monitoring_results_file_path,
+                                    mode=mode,)
+    else:
+        generate_test_results_data(test_id,
+                                project_id,
+                                jmeter_results_file_path,
+                                monitoring_results_file_path)
     return True
 
 
@@ -389,8 +391,7 @@ def daemon_generate_data(test,
                                   monitoring_results_file_path='',
                                   jmeter_results_file_fields=[],
                                   monitoring_results_file_fields=[],
-                                  data_resolution='1Min',
-                                  mode=''):
+                                  data_resolution='1Min'):
     test_id = test.id
     # First try to analyze data online
     data_resolution_id = TestDataResolution.objects.get(

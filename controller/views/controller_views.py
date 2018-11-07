@@ -911,7 +911,7 @@ def prepare_test_plan(workspace, testplan_dest, result_dest):
             os.chmod(fname, 644)
             # Destination of test plan
             new_testplan = fname
-            file_handle = open(new_testplan, "wb")
+            file_handle = open(new_testplan, "w")
             file_handle.write(''.join(source_lines))
             file_handle.write(
                 ''.join(jmeter_simple_writer(result_dest)))

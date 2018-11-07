@@ -139,11 +139,19 @@ java -jar -Xms5g -Xmx5g -Xss256k $JMETER_DIR/bin/ApacheJMeter.jar -n -t $TEST_PL
 
 
 ### 5. Test data analysis with Jenkins
-It is possible to use this application in cooperation with Jenkins. (if to start with Yandex-tank https://github.com/yandex/yandex-tank)
 To parse data after the test just add in Jenkins post-job script:
-`curl --data "results_dir=$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/" http://localhost:8888/controller/parse_results`
+Copy generated result file to current build directory:
+```
+find "$WORKSPACE" -name jmeter*.jtl -exec mv {} "$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/jmeter.jtl" \;
+```
+Use datageneration script:
+```
+./datagenerator_py3.py --jenkins-base-dir /var/jenkins/ --project-name PROJECT_NAME
+```
 OR
-`./datagenerator_py3.py --jenkins-base-dir /var/jenkins/ --project-name PROJECT_NAME`
+
+`curl --data "results_dir=$JENKINS_HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/" http://localhost:8888/controller/parse_results`
+
 
 To use with HTML Pulblisher plugin (https://wiki.jenkins.io/display/JENKINS/HTML+Publisher+Plugin) set this values in project setting in Publish HTML reports section:
 

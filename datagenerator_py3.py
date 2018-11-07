@@ -24,7 +24,7 @@ from itertools import islice
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger()
 
-db_engine = create_engine('postgresql://postgres:postgres@localhost:5432/ltc')
+db_engine = create_engine('postgresql://postgres:1234@localhost:5432/jmeter')
 db_connection = db_engine.connect()
 meta = sqlalchemy.MetaData(bind=db_connection, reflect=True, schema="jltc")
 insp = reflection.Inspector.from_engine(db_engine)
@@ -145,7 +145,7 @@ def execute_db_stmt(stm, data):
     return result
 
 
-jtl_files = []
+data_to_analyze = []
 releases = []
 
 build_xml = ElementTree()
@@ -157,11 +157,12 @@ if args.jenkins_base_dir:
     jenkins_base_dir = args.jenkins_base_dir
 builds_dir = os.path.join(jenkins_base_dir, 'jobs', project_name,
                           'builds').replace('\\', '/')
-rx = re.compile(r'{builds_dir}/\d+?/jmeter.jtl'.format(builds_dir=builds_dir))
-
+rx = re.compile(r'.+?.jtl')
+logger.info('Check builds directory: {}'.format(builds_dir))
 for root, dirs, files in os.walk(builds_dir):
     for file in files:
-        if re.match(rx, os.path.join(root, file).replace('\\', '/')):
+        logger.info(file)
+        if re.match(rx, os.path.join(root, file)):
             if os.stat(os.path.join(root, file)).st_size > 0:
                 root = root.replace('\\', '/')
                 build_parameters = []
@@ -220,7 +221,7 @@ for root, dirs, files in os.walk(builds_dir):
                             description = params.text
 
                 if "Performance_HTML_Report" not in os.path.join(root, file):
-                    jtl_files.append([
+                    data_to_analyze.append([
                         os.path.join(root, file), monitoring_data, errors_data,
                         display_name, build_parameters, root
                     ])
@@ -238,7 +239,6 @@ for root, dirs, files in os.walk(builds_dir):
                     if db_session.query(test.c.path).filter(
                             test.c.path == root).count() == 0:
                         logger.info("Was found new test data, adding.")
-                        print(root)
                         build_number = int(
                             re.search('/builds/(\d+)', root).group(1))
                         end_time = start_time + duration
@@ -257,7 +257,7 @@ for root, dirs, files in os.walk(builds_dir):
                             data_resolution='1Min',
                             show=True)
                         result = db_connection.execute(stm)
-jtl_files = sorted(jtl_files, key=getIndex, reverse=True)
+data_to_analyze = sorted(data_to_analyze, key=getIndex, reverse=True)
 
 releases.sort()
 
@@ -275,11 +275,11 @@ cpu_over_releases = []
 file_index = 0
 logger.info("Trying to open CSV-files")
 
-build_roots = [jtl_files[i][5] for i in range(0, len(jtl_files))]
+build_roots = [data_to_analyze[i][5] for i in range(0, len(data_to_analyze))]
 
-#dataframe to compare with:
-
-for build_root in build_roots:
+logger.info(data_to_analyze)
+for d_ in data_to_analyze:
+    build_root = d_[5]
 
     logger.info("Current build directory:" + build_root)
     test_id = db_session.query(
@@ -292,7 +292,7 @@ for build_root in build_roots:
             test_data.c.test_id == test_id).count() == 0:
 
         df = pd.DataFrame()
-        jmeter_results_file = build_root + "/jmeter.jtl"
+        jmeter_results_file = d_[0]
         if not os.path.exists(jmeter_results_file):
             logger.info("Results file does not exists, try to check archive")
             jmeter_results_zip = jmeter_results_file + ".zip"
@@ -632,19 +632,19 @@ for build_root in build_roots:
     rownum = 0
 
     if os.path.isfile(
-            jtl_files[num][1]) and os.stat(jtl_files[num][1]).st_size != 0:
+            data_to_analyze[num][1]) and os.stat(data_to_analyze[num][1]).st_size != 0:
         test_id = db_session.query(
             test.c.id).filter(test.c.path == build_root).scalar()
-        f = open(jtl_files[num][1], "r")
+        f = open(data_to_analyze[num][1], "r")
         lines = f.readlines()
         f.close()
-        f = open(jtl_files[num][1], "w")
+        f = open(data_to_analyze[num][1], "w")
         for line in lines:
             if not ('start' in line):
                 f.write(line)
 
         f.close()
-        monitoring_df = pd.read_csv(jtl_files[num][1], index_col=1, sep=";")
+        monitoring_df = pd.read_csv(data_to_analyze[num][1], index_col=1, sep=";")
 
         monitoring_df.columns = [
             'server_name', 'Memory_used', 'Memory_free', 'Memory_buff',
@@ -706,20 +706,20 @@ for build_root in build_roots:
     if db_session.query(test_error.c.id).filter(
             test_error.c.test_id == test_id).count() == 0:
         logger.info("Errors data is empty for test: {}".format(test_id))
-        if not os.path.isdir(jtl_files[num][2]) or not len(
-                os.listdir(jtl_files[num][2])) > 0:
+        if not os.path.isdir(data_to_analyze[num][2]) or not len(
+                os.listdir(data_to_analyze[num][2])) > 0:
             if os.path.exists(errors_zip_dest):
                 logger.info("Archive file was found: " + errors_zip_dest)
                 with zipfile.ZipFile(errors_zip_dest, "r") as z:
                     z.extractall(build_root + '/errors/')
         if os.path.isdir(
-                jtl_files[num][2]) and len(os.listdir(jtl_files[num][2])) > 0:
+                data_to_analyze[num][2]) and len(os.listdir(data_to_analyze[num][2])) > 0:
             logger.info("Parsing errors data")
             project_id = db_session.query(
                 test.c.project_id).filter(test.c.id == test_id).scalar()
 
             # Iterate through files in errors folder
-            for root, dirs, files in os.walk(jtl_files[num][2]):
+            for root, dirs, files in os.walk(data_to_analyze[num][2]):
                 for file in files:
                     error_file = os.path.join(root, file)
                     try:
@@ -784,10 +784,10 @@ for build_root in build_roots:
                                 result = execute_db_stmt(stm, action_id)
                     except ValueError:
                         logger.error("Cannot parse error file for: ")
-        zip_dir(jtl_files[num][2], errors_zip_dest)
+        zip_dir(data_to_analyze[num][2], errors_zip_dest)
         try:
-            if 'errors' in jtl_files[num][2]:
-                shutil.rmtree(jtl_files[num][2])
+            if 'errors' in data_to_analyze[num][2]:
+                shutil.rmtree(data_to_analyze[num][2])
         except OSError:
             logger.error('OSError')
         logger.error("Errors folder was packed and removed")
