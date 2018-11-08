@@ -895,31 +895,27 @@ def splitstring(string):
 
 def prepare_test_plan(workspace, testplan_dest, result_dest):
     new_testplan = ''
-    try:
-        with open(testplan_dest, 'r') as src_jmx:
-            source_lines = src_jmx.readlines()
-            closing = source_lines.pop(-1)
-            closing = source_lines.pop(-1) + closing
-            if "<hashTree/>" in source_lines[-1]:
-                source_lines.pop(-1)
-                source_lines.pop(-1)
-                source_lines.pop(-1)
-                source_lines.pop(-1)
-            closing = source_lines.pop(-1) + closing
-            fd, fname = tempfile.mkstemp('.jmx', 'new_', workspace)
-            os.close(fd)
-            os.chmod(fname, 644)
-            # Destination of test plan
-            new_testplan = fname
-            file_handle = open(new_testplan, "w")
-            file_handle.write(''.join(source_lines))
-            file_handle.write(
-                ''.join(jmeter_simple_writer(result_dest)))
-            file_handle.write(closing)
-            file_handle.close()
-    except Exception as exc:
-        logger.error('Could not find testplan {}. Skiping.'.format(testplan_dest))
-        logger.error(exc)
+    with open(testplan_dest, 'r') as src_jmx:
+        source_lines = src_jmx.readlines()
+        closing = source_lines.pop(-1)
+        closing = source_lines.pop(-1) + closing
+        if "<hashTree/>" in source_lines[-1]:
+            source_lines.pop(-1)
+            source_lines.pop(-1)
+            source_lines.pop(-1)
+            source_lines.pop(-1)
+        closing = source_lines.pop(-1) + closing
+        fd, fname = tempfile.mkstemp('.jmx', 'new_', workspace)
+        os.close(fd)
+        os.chmod(fname, 644)
+        # Destination of test plan
+        new_testplan = fname
+        file_handle = open(new_testplan, "w")
+        file_handle.write(''.join(source_lines))
+        file_handle.write(
+            ''.join(jmeter_simple_writer(result_dest)))
+        file_handle.write(closing)
+        file_handle.close()
     return new_testplan
 
 
