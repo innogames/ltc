@@ -20,9 +20,6 @@ from analyzer.models import (Action, Project, Server, ServerMonitoringData,
                              Test, TestActionAggregateData, TestActionData,
                              TestAggregate, TestData, TestDataResolution)
 from controller.models import TestRunning
-
-reload(sys)
-sys.setdefaultencoding('utf-8')
 logger = logging.getLogger(__name__)
 
 
@@ -116,11 +113,9 @@ def add_running_test(root):
                 display_name = params.text
     project_name = re.search('/([^/]+)/builds', root).group(1)
     if not Project.objects.filter(project_name=project_name).exists():
-        print "Adding new project: " + project_name
         project = Project(project_name=project_name, show=True)
         project.save()
         project_id = project.id
-    print "Project_id: " + str(project_id)
     build_number = int(re.search('/builds/(\d+)', root).group(1))
     running_test = TestRunning(
         project_id=project_id,
@@ -478,7 +473,7 @@ def daemon_generate_data(test,
             t.join()
     else:
         logger.info("Result file does not exist")
-        
+
 
 def parse_csv_data(data_file, csv_file_fields, test, data_resolution):
     df = pd.read_csv(

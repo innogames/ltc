@@ -45,7 +45,7 @@ def tests_list(request):
             test_running.delete()
 
     if _platform == "linux" or _platform == "linux2":
-        jenkins_path = Configuration.objects.get(name='jenkins_path').value
+        jenkins_path = Configuration.objects.filter(name='jenkins_path').value
         MONITORING_DIRS = [jenkins_path + "jobs/", "/tmp/jltc/"]
     elif _platform == "win32":
         MONITORING_DIRS = ["C:\work\monitoring"]
