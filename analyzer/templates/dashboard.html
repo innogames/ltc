@@ -104,11 +104,11 @@
                                     <b><a href=""  onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
                                 </td>
                                 <td>
-                                        {% if row.success_requests > 98 %}
-                                         <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                        {% else  %}
+                                    {% if row.success_requests > 98 %}
+                                        <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                    {% else  %}
                                         <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                        {% endif %}
+                                    {% endif %}
                                 </td>
                                 <td>
                                         {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}

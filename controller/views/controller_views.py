@@ -602,10 +602,12 @@ def start_test(request, project_id):
     test_id = 0
     if request.method == 'POST':
         # Create dir for new test:
-        last_test_id = Test.objects.filter(
-            project_id=project_id).order_by("-id")[0]
+        last_test_id = 0
+        if Test.objects.filter(project_id=project_id).exists():
+            last_test_id = Test.objects.filter(
+                project_id=project_id).order_by("-id")[0].id
         running_test_dir = os.path.join('/tmp/', 'jltc', project.project_name,
-                                        str(last_test_id.id + 1))
+                                        str(last_test_id + 1))
         running_test_results_dir = os.path.join(running_test_dir, 'results/')
         running_test_logs_dir = os.path.join(running_test_dir, 'logs/')
         running_test_testplan_dir = os.path.join(running_test_dir, 'testplan/')
