@@ -700,7 +700,7 @@ def start_test(request, project_id):
 
                     stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
                     output = stdout.read()
-                    text_file = open(running_test_log_file_destination, "w")
+                    text_file = open(running_test_log_file_destination, "wb")
                     text_file.write(output)
                     text_file.close()
                     run_jmeter_server_cmd = 'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "$@" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -Jpoll={4} > /dev/null 2>&1 '.\
