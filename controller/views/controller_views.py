@@ -644,17 +644,18 @@ def start_test(request, project_id):
         jmeter_params = json.loads(
             json.dumps(project.jmeter_parameters, indent=4, sort_keys=True))
         test_plan_params_arg = []
-        test_plan_params_str = ""
-        for jmeter_param in jmeter_params:
-            test_plan_params_arg.append(
-                                  test_plan_params_flag + \
-                                  jmeter_param.get('p_name') + \
-                                  '=' + \
-                                  jmeter_param.get('value'))
-            test_plan_params_str += test_plan_params_flag + \
-                                  jmeter_param.get('p_name') + \
-                                  '=' + \
-                                  jmeter_param.get('value')
+        test_plan_params_str = ''
+        if jmeter_params:
+            for jmeter_param in jmeter_params:
+                test_plan_params_arg.append(
+                                    test_plan_params_flag + \
+                                    jmeter_param.get('p_name') + \
+                                    '=' + \
+                                    jmeter_param.get('value'))
+                test_plan_params_str += test_plan_params_flag + \
+                                    jmeter_param.get('p_name') + \
+                                    '=' + \
+                                    jmeter_param.get('value')
         jmeter_profile_id = request.POST.get('jmeter_profile_id', '')
         jmeter_profile = JMeterProfile.objects.get(id=jmeter_profile_id)
         test_plan_destination = request.POST.get('test_plan_destination', '{}')
