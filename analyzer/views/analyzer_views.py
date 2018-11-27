@@ -504,9 +504,10 @@ def compare_tests_cpu(request, test_id, num_of_tests):
             arr.append(d)
         counter += 1
     response = list(arr)
-    response = to_pivot(response, 'test__display_name', 'server__server_name',
-                        'cpu_load')
-    response = response.to_json(orient='index')
+    if 'cpu_load' in response:
+        response = to_pivot(response, 'test__display_name', 'server__server_name',
+                            'cpu_load')
+        response = response.to_json(orient='index')
     # return HttpResponse(response)
     return HttpResponse(
         json.loads(
