@@ -91,6 +91,8 @@ Also probably will be needed to install the next packages:
 `$ apt-get install python-tk`
 
 ### 3. Initialize the database
+Create your own or rename the example setting file jtlc/settings.py.example to jtlc/settings.py 
+
 First set the database engine (only PostgreSQL 9.5+) in your settings files; `jltc/settings.py` Of course, remember to install necessary database driver for your engine. Then define your credentials as well.
 By default jltc will use `jltc` schema in database, which needs to be created:
 
