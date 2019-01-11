@@ -13,8 +13,6 @@ from django.db.models.expressions import F, RawSQL
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
-from django.urls import reverse
-from django.views import View
 from django.views.generic import TemplateView
 from pylab import *
 from scipy import stats
@@ -504,9 +502,9 @@ def compare_tests_cpu(request, test_id, num_of_tests):
             arr.append(d)
         counter += 1
     response = list(arr)
-    if 'cpu_load' in response:
-        response = to_pivot(response, 'test__display_name', 'server__server_name',
-                            'cpu_load')
+    if response:
+        response = to_pivot(response, 'test__display_name',
+                            'server__server_name', 'cpu_load')
         response = response.to_json(orient='index')
     # return HttpResponse(response)
     return HttpResponse(
@@ -698,19 +696,18 @@ def compare_aggregate(test_id_1, test_id_2):
     compare_data = []
     action_data_1 = TestActionAggregateData.objects.annotate(
         action_name=F('action__url')).filter(test_id=test_id_1).values(
-                    'action_id',
-                    'action_name',
-                    'data',)
+            'action_id',
+            'action_name',
+            'data',
+        )
     for action in action_data_1:
         action_id = action['action_id']
         if TestActionAggregateData.objects.filter(
                 action_id=action_id, test_id=test_id_2).exists():
             action_data_2 = TestActionAggregateData.objects.annotate(
                 action_name=F('action__url')).filter(
-                        action_id=action_id, test_id=test_id_2).values(
-                            'action_id',
-                            'action_name',
-                            'data')[0]
+                    action_id=action_id, test_id=test_id_2).values(
+                        'action_id', 'action_name', 'data')[0]
             compare_data.append({
                 'action_name': action['action_name'],
                 'mean_1': action['data']['mean'],

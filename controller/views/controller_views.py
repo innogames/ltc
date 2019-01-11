@@ -947,7 +947,11 @@ def update_test_graphite_data(test_id):
                         ',')
                     game_short_name = hosts_for_monitoring[0].split(".", 1)[1]
                     for server_name in hosts_for_monitoring:
-                        server = Server.objects.get(server_name=server_name)
+                        if not Server.objects.filter(server_name=server_name).exists():
+                            server = Server(server_name=server_name)
+                            server.save()
+                        else:
+                            server = Server.objects.get(server_name=server_name)
                         server_name = server_name.replace('.', '_').replace(
                             '_ig_local', '')
                         logger.info('Try to get monitroing data for: {}'.

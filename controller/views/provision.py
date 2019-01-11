@@ -3,216 +3,24 @@ import math
 import os
 import random
 import re
-import shutil
 import subprocess
-import sys
-import tempfile
 import threading
 import time
-from collections import OrderedDict
-from subprocess import call
-from sys import platform as _platform
+
 import paramiko
-import psutil
-# from adminapi.dataset import query
-# from adminapi.dataset.filters import Regexp
 from django.db.models import Avg, Count, FloatField
 from django.db.models.expressions import F, RawSQL
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import render
 
-from controller.views.controller_views import prepare_test_plan
-from administrator.models import JMeterProfile, SSHKey
+from administrator.models import SSHKey
 from analyzer.models import Project
 from controller.models import (ActivityLog, JmeterInstance,
-                               JmeterInstanceStatistic,
-                               JMeterTestPlanParameter, LoadGenerator,
-                               LoadGeneratorServer, Proxy, ScriptParameter,
+                               JmeterInstanceStatistic, LoadGenerator,
                                TestRunning)
+from controller.views import prepare_test_plan
 
 logger = logging.getLogger(__name__)
-
-# from iggop.common.fabfile import (
-#_igvm_build_vm,
-#_update_state,
-#_server_delete_vm,
-# server_update,
-# puppet_run,
-#_push_lb_config,
-# dns_delete, )
-# from iggop.loadtest.tasks.server_create import (
-#_create_serveradmin_object,
-#_create_serveradmin_object_with_params, )
-
-# from iggop.loadtest.fabfile import (
-# loadgenerator_create,
-# server_delete, )
-
-
-def get_host_info(host, load_generators_info):
-    logger.debug("Checking loadgenerator {}".format(host))
-    ssh_key = SSHKey.objects.get(default=True).path
-    logger.debug("Use SSH key: {}".format(ssh_key))
-    hostname = host['hostname']
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(hostname, username="root", key_filename=ssh_key)
-    cmd1 = 'cat /proc/meminfo'
-    stdin, stdout, stderr = ssh.exec_command(cmd1)
-    MemFree = str(
-        int(re.search('MemFree:\s+?(\d+)', str(stdout.readlines())).group(1)) /
-        1024)
-    cmd2 = 'uptime'
-    stdin, stdout, stderr = ssh.exec_command(cmd2)
-    load_avg = re.search(
-        'load average:\s+([0-9.]+?),\s+([0-9.]+?),\s+([0-9.]+)',
-        str(stdout.readlines()))
-    if load_avg:
-        la_1 = load_avg.group(1)
-        la_5 = load_avg.group(2)
-        la_15 = load_avg.group(3)
-    load_generators_info.append({
-        'hostname': hostname,
-        'num_cpu': host['num_cpu'],
-        'memory': host['memory'],
-        'memory_free': MemFree,
-        'la_1': la_1,
-        'la_5': la_5,
-        'la_15': la_15,
-    })
-    ssh.close()
-
-
-# TODO: create cron job
-def update_load_generators_info():
-    response = []
-    threads = []
-    load_generators_info = []
-    # hosts = query(
-    #    project='admin',
-    #    function='loadgenerator',
-    #    hostname=Regexp('loadtest.*-qa.ig.local'))
-    hosts = []
-    for host in hosts:
-        t = threading.Thread(
-            target=get_host_info, args=(
-                host,
-                load_generators_info, ))
-        t.start()
-        threads.append(t)
-    for t in threads:
-        t.join()
-    for generator in load_generators_info:
-        hostname = generator['hostname']
-        logger.debug(generator)
-        num_cpu = float(generator['num_cpu'])
-        memory = float(generator['memory'])
-        memory_free = float(generator['memory_free'])
-        la_1 = float(generator['la_1'])
-        la_5 = float(generator['la_5'])
-        la_15 = float(generator['la_15'])
-        status = 'success'
-        reason = 'ok'
-        if memory_free < memory * 0.5:
-            status = 'warning'
-            reason = 'memory'
-        elif memory_free < memory * 0.1:
-            status = 'danger'
-            reason = 'low memory'
-        if la_5 > num_cpu / 2:
-            status = 'warning'
-            reason = 'average load'
-        elif la_5 > num_cpu:
-            status = 'danger'
-            reason = 'high load'
-        if not LoadGenerator.objects.filter(hostname=hostname).exists():
-            logger.debug("Adding a new load generator: {}".format(hostname))
-            new_lg = LoadGenerator(
-                hostname=hostname,
-                num_cpu=num_cpu,
-                memory=memory,
-                la_1=la_1,
-                la_5=la_5,
-                la_15=la_15,
-                status=status,
-                memory_free=memory_free,
-                reason=reason,
-                active=True, )
-            new_lg.save()
-        else:
-            logger.debug("Updating a load generator data: {}".format(hostname))
-            lg = LoadGenerator.objects.get(hostname=hostname)
-            lg.num_cpu = num_cpu
-            lg.memory = memory
-            lg.memory_free = memory_free
-            lg.la_1 = la_1
-            lg.la_5 = la_5
-            lg.la_15 = la_15
-            lg.status = status
-            lg.reason = reason
-            lg.active = True
-            lg.save()
-
-    for generator in list(LoadGenerator.objects.values()):
-        hostname = generator["hostname"]
-        if not hostname in str(load_generators_info):
-            logger.debug(
-                "Remove loadgenerator from database: {}".format(hostname))
-            lg = LoadGenerator.objects.get(hostname=hostname)
-            lg.active = False
-            lg.save()
-
-
-# TODO: create cron job
-def gather_jmeter_instances_info():
-    # Connect and gather JAVA metrics from jmeter remote instances
-    jmeter_instances = list(
-        JmeterInstance.objects.annotate(hostname=F('load_generator__hostname'))
-        .values('hostname', 'pid', 'project_id', 'threads_number',
-                'test_running_id'))
-    for jmeter_instance in jmeter_instances:
-        current_time = int(time.time() * 1000)
-        hostname = jmeter_instance['hostname']
-        project_id = jmeter_instance['project_id']
-        pid = jmeter_instance['pid']
-        threads_number = jmeter_instance['threads_number']
-        test_running_id = jmeter_instance['test_running_id']
-
-        # Estimate number of threads at this moment
-        test_running = TestRunning.objects.get(id=test_running_id)
-        test_rampup = float(test_running.rampup) * 1000
-        test_start_time = float(test_running.start_time)
-        current_time = float(time.time() * 1000)
-        if (test_start_time + test_rampup) > current_time:
-            threads_number = int(
-                threads_number *
-                ((current_time - test_start_time) / test_rampup))
-
-        logger.debug("threads_number: {};".format(threads_number))
-        ssh_key = SSHKey.objects.get(default=True).path
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname, username="root", key_filename=ssh_key)
-        cmd1 = 'jstat -gc {}'.format(pid)
-        stdin, stdout, stderr = ssh.exec_command(cmd1)
-        i = 0
-        process_data = {}
-        header = str(stdout.readline()).split()
-        data = str(stdout.readline()).split()
-        for h in header:
-            process_data[h] = data[i]
-            i += 1
-        logger.debug("process_data: {}".format(str(process_data)))
-        process_data['threads_number'] = threads_number
-        # Need to sum this to get summary heap allocation:
-        # S0U: Survivor space 0 utilization (kB).
-        # S1U: Survivor space 1 utilization (kB).
-        # EU: Eden space utilization (kB).
-        # OU: Old space utilization (kB).
-        JmeterInstanceStatistic(
-            project_id=project_id, data=process_data).save()
-        ssh.close()
-    return True
 
 
 def get_avg_thread_malloc_for_project(project_id, threads_num):
@@ -259,59 +67,6 @@ def get_load_generator_data(request, load_generator_id):
     })
 
 
-def prepare_test(project_name,
-                    workspace,
-                    jmeter_dir,
-                    threads_num,
-                    duration=0,
-                    rampup=0,
-                    testplan_file='',
-                    jenkins_env={}):
-    response = {}
-    if not Project.objects.filter(project_name=project_name).exists():
-        logger.info('Creating a new project: {}.'.format(project_name))
-        p = Project(project_name=project_name)
-        p.save()
-        project_id = p.id
-    else:
-        p = Project.objects.get(project_name=project_name)
-        project_id = p.id
-    start_time = int(time.time() * 1000)
-    t = TestRunning(
-        project_id=project_id,
-        start_time=start_time,
-        duration=duration,
-        workspace=workspace,
-        rampup=rampup,
-        is_running=False,
-        testplan_file_dest=os.path.join(workspace, testplan_file),
-        result_file_dest=os.path.join(workspace, 'result.jtl'),
-        )
-    # Insert CSV writer listener to test plan
-    new_testplan_file = prepare_test_plan(t.workspace,
-                                          t.testplan_file_dest,
-                                          t.result_file_dest,
-                                          )
-    if new_testplan_file:
-        logger.info('New testplan {}.'.format(new_testplan_file))
-        t.testplan_file_dest = new_testplan_file
-    if jenkins_env:
-        logger.info('Setting test build path.')
-        t.build_path = os.path.join(
-                              jenkins_env['JENKINS_HOME'],
-                              'jobs',
-                              jenkins_env['JOB_NAME'],
-                              jenkins_env['BUILD_NUMBER'],
-                            )
-        t.build_number = jenkins_env['BUILD_NUMBER']
-        t.display_name = jenkins_env['BUILD_DISPLAY_NAME']
-    t.save()
-    response = {
-            'testplan': t.testplan_file_dest,
-        }
-    return response
-
-
 def prepare_load_generators(project_name,
                             workspace,
                             jmeter_dir,
@@ -332,6 +87,7 @@ def prepare_load_generators(project_name,
         p = Project.objects.get(project_name=project_name)
         project_id = p.id
     start_time = int(time.time() * 1000)
+    logger.info('Adding running test instance to DB.')
     t = TestRunning(
         project_id=project_id,
         start_time=start_time,
@@ -341,7 +97,7 @@ def prepare_load_generators(project_name,
         is_running=False,
         testplan_file_dest=os.path.join(workspace, testplan_file),
         result_file_dest=os.path.join(workspace, 'result.jtl'),
-        )
+    )
     # Insert CSV writer listener to test plan
     new_testplan_file = prepare_test_plan(t.workspace,
                                           t.testplan_file_dest,
@@ -349,15 +105,16 @@ def prepare_load_generators(project_name,
                                           )
     if new_testplan_file:
         logger.info('New testplan {}.'.format(new_testplan_file))
-        t.testplan_file_dest = new_testplan_file
+        if project_name != 'TropicalIsland':
+            t.testplan_file_dest = new_testplan_file
     if jenkins_env:
         logger.info('Setting test build path.')
         t.build_path = os.path.join(
-                              jenkins_env['JENKINS_HOME'],
-                              'jobs',
-                              jenkins_env['JOB_NAME'],
-                              jenkins_env['BUILD_NUMBER'],
-                            )
+            jenkins_env['JENKINS_HOME'],
+            'jobs',
+            jenkins_env['JOB_NAME'],
+            jenkins_env['BUILD_NUMBER'],
+        )
         t.build_number = jenkins_env['BUILD_NUMBER']
         t.display_name = jenkins_env['BUILD_DISPLAY_NAME']
     t.save()
@@ -366,14 +123,18 @@ def prepare_load_generators(project_name,
     if mb_per_thread == 0:
         mb_per_thread = get_avg_thread_malloc_for_project(
             project_id, threads_num)
-    logger.debug(
+    logger.info(
         "Threads_num: {}; mb_per_thread: {}; project_name: {}; jmeter_dir: {}; duration: {}".
         format(threads_num, mb_per_thread, project_name, jmeter_dir, duration))
     matched_load_generators = []
     ready = False
 
     rmt = 0.0  # recommended_max_threads_per_one_jmeter_instance
-    if mb_per_thread < 2:
+    mem_multiplier = 2.0
+    if mb_per_thread < 1.5:
+        rmt = 500.0
+        mem_multiplier = 2
+    elif mb_per_thread >= 1.5 and mb_per_thread < 2:
         rmt = 400.0
     elif mb_per_thread >= 2 and mb_per_thread < 5:
         rmt = 300.0
@@ -382,19 +143,25 @@ def prepare_load_generators(project_name,
     elif mb_per_thread >= 10:
         rmt = 100.0
 
-    logger.debug("rmt: {};".format(rmt))
+    logger.info("Threads per jmeter instance: {};".format(rmt))
     logger.debug("ceil1: {};".format(float(threads_num) / rmt))
     logger.debug("ceil2: {};".format(math.ceil(float(threads_num) / rmt)))
     target_amount_jri = int(math.ceil(float(threads_num) / rmt))
     required_memory_for_jri = int(math.ceil(
-        mb_per_thread * rmt * 2))  # why 2 ? dunno
+        mb_per_thread * rmt * mem_multiplier))  # why 2 ? dunno
     required_memory_total = math.ceil(
-        target_amount_jri * required_memory_for_jri * 1.3)  # why 1.3 ? dunno
+        target_amount_jri * required_memory_for_jri * 1.2)
+    logger.info('HEAP Xmx: {}'.format(required_memory_for_jri))
     logger.info("target_amount_jri: {}; required_memory_total: {}".format(
         target_amount_jri, required_memory_total))
-    java_args = "-server -Xms{}m -Xmx{}m -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=70 -XX:+ScavengeBeforeFullGC -XX:+CMSScavengeBeforeRemark -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled".format(
+    java_args = "-server -Xms{}m -Xmx{}m -Xss228k -XX:+DisableExplicitGC -XX:+CMSClassUnloadingEnabled -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=70 -XX:+ScavengeBeforeFullGC -XX:+CMSScavengeBeforeRemark -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false".format(
         required_memory_for_jri, required_memory_for_jri)
+
+    # java_args = "-server -Xms{}m -Xmx{}m  -Xss228k -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+DisableExplicitGC -XX:+CMSClassUnloadingEnabled -XX:+AggressiveOpts -Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false".format(
+    #    required_memory_for_jri, required_memory_for_jri)
     # update_load_generators_info()
+    # java_args = "-server -Xms{}m -Xmx{}m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:G1ReservePercent=20 -Djava.net.preferIPv6Addresses=true".format(
+    #    required_memory_for_jri, required_memory_for_jri)
     load_generators_info = list(
         LoadGenerator.objects.filter(active=True).values())
     load_generators_count = LoadGenerator.objects.filter(active=True).count()
@@ -404,7 +171,7 @@ def prepare_load_generators(project_name,
 
     threads_per_host = int(float(threads_num) / target_amount_jri)
 
-    if ready == False:
+    if not ready:
         logger.info(
             "Did not a single load generator. Trying to find a combination.")
         t_hosts = {}
@@ -418,10 +185,9 @@ def prepare_load_generators(project_name,
             la_5 = float(generator['la_5'])
             la_15 = float(generator['la_15'])
             status = generator['status']
-            reason = generator['reason']
-            p = memory_free / (required_memory_for_jri * 1.3)
+            p = memory_free / (required_memory_for_jri * 1.2)
             t_hosts[hostname] = math.ceil(memory_free /
-                                          (required_memory_for_jri * 1.3))
+                                          (required_memory_for_jri * 1.2))
         t_sorted_hosts = sorted(t_hosts, key=t_hosts.get, reverse=True)
 
         # Try to spread them equally on load generators
@@ -449,7 +215,7 @@ def prepare_load_generators(project_name,
             if overall_hosts_amount_jri >= target_amount_jri:
                 ready = True
                 break
-    if ready == False and overall_hosts_amount_jri < target_amount_jri:
+    if not ready and overall_hosts_amount_jri < target_amount_jri:
         logger.debug(
             "################CREATING NEW LOAD GENERATOR###################")
         n = target_amount_jri - overall_hosts_amount_jri
@@ -473,13 +239,13 @@ def prepare_load_generators(project_name,
         #                        threads_num, duration, rampup, mb_per_thread)
     logger.debug(
         "matched_load_generators: {};".format(str(matched_load_generators)))
-    data_pool_index=0
-    start_jri_threads=[]
+    data_pool_index = 0
+    start_jri_threads = []
     if ready:
         for load_generator in matched_load_generators:
-            thread=threading.Thread(
-                target = start_jris_on_load_generator,
-                args = (
+            thread = threading.Thread(
+                target=start_jris_on_load_generator,
+                args=(
                     load_generator,
                     threads_per_host,
                     test_running_id,
@@ -496,11 +262,11 @@ def prepare_load_generators(project_name,
         for thread in start_jri_threads:
             thread.join()
 
-        t.jmeter_remote_instances=running_test_jris
-        t.is_running=True
+        t.jmeter_remote_instances = running_test_jris
+        t.is_running = True
         t.save()
-        final_str=""
-        jmeter_instances=JmeterInstance.objects.annotate(
+        final_str = ""
+        jmeter_instances = JmeterInstance.objects.annotate(
             hostname=F('load_generator__hostname')).filter(
                 test_running_id=test_running_id).values('hostname', 'port')
         for jmeter_instance in jmeter_instances:
@@ -562,10 +328,10 @@ def start_jris_on_load_generator(
         logger.info(
             'Starting jmeter instance on remote host: {}'.format(hostname))
         data_pool_index += 1
-        run_jmeter_server_cmd = 'nohup java {0} -Duser.dir={5}/bin/ -jar "{1}/bin/ApacheJMeter.jar" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -j jmeter-server.log -Jpoll={4} {6} > /dev/null 2>&1 '.\
+        run_jmeter_server_cmd = 'nohup java {0} -Duser.dir={5}/bin/ -jar "{1}/bin/ApacheJMeter.jar" -Jserver.rmi.ssl.disable=true "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -j jmeter-server.log -Jpoll={4} {6} > /dev/null 2>&1 '.\
             format(java_args, jmeter_dir, hostname, str(port), str(
                 data_pool_index), jmeter_dir, additional_args)
-        logger.info('nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "-Djava.rmi.server.hostname={2}" -Duser.dir={5}/bin/ -Dserver_port={3} -s -Jpoll={4} {6} > /dev/null 2>&1 '.
+        logger.info('nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" -Jserver.rmi.ssl.disable=true "-Djava.rmi.server.hostname={2}" -Duser.dir={5}/bin/ -Dserver_port={3} -s -Jpoll={4} {6} > /dev/null 2>&1 '.
                     format(java_args, jmeter_dir, hostname, str(port), str(data_pool_index), jmeter_dir, additional_args))
         command = 'echo $$; exec ' + run_jmeter_server_cmd
         cmds = ['cd {0}/bin/'.format(jmeter_dir), command]
