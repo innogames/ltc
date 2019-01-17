@@ -3,7 +3,7 @@ JMeter Load Testing Center (codename `jltc`) - dashboard/report analyzer for loa
 
 Developed and used in Innogames GmbH (www.innogames.com) to provide load tests results.
 
-Online web-application/dashboard for "continuous integration" (CI) Load testing with JMeter.  
+Online web-application/dashboard for "continuous integration" (CI) Load testing with JMeter.
 A central system for launching (incl. distribution testing), monitoring tests, creating reports and for a comparative analysis between different load tests provided with Jmeter.
 Can be used with Jenkins or as a replacement for Jenkins + Plugins + Jmeter combination.
 
@@ -14,7 +14,7 @@ Consist of several modules:
 3. Controller - configure and run the tests
 4. Administrator - configure different parameters
 
-## [DASHBOARD] 
+## [DASHBOARD]
 (!) New feature
 Upload CSV files with your test results data and get immediately report and compare
 it with previous tests:
@@ -23,7 +23,7 @@ it with previous tests:
 Get tests overview
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/dashboard.png)
 
-## [ANALYZER] 
+## [ANALYZER]
 Create dynamic report for the tests
 ![alt tag](https://github.com/v0devil/jltom/blob/master/pics/report.png)
 
@@ -77,7 +77,7 @@ Supports Linux and Windows.
 ### 1. Download
 You have to download project files in your folder:
     $ cd /home/
-    $ git clone git://github.com/v0devil/JMeter-Control-Center.git
+    $ git clone git://github.com/innogames/JMeter-Control-Center.git
 
 ### 2. Requirements
 Right there, you will find the *requirements.txt* file that has all tools, django. To install them, simply type:
