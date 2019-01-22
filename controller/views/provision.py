@@ -18,7 +18,7 @@ from analyzer.models import Project
 from controller.models import (ActivityLog, JmeterInstance,
                                JmeterInstanceStatistic, LoadGenerator,
                                TestRunning)
-from controller.views import prepare_test_plan
+from controller.views.controller_views import prepare_test_plan
 
 logger = logging.getLogger(__name__)
 
