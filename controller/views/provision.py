@@ -25,7 +25,10 @@ logger = logging.getLogger(__name__)
 
 def get_avg_thread_malloc_for_project(project_id, threads_num):
     data = JmeterInstanceStatistic.objects.filter(project_id=project_id, data__contains=[{'threads_number': threads_num}]). \
-        annotate(mem_alloc_for_thread=(RawSQL("((data->>%s)::numeric)", ('S0U',)) + RawSQL("((data->>%s)::numeric)", ('S1U',)) + RawSQL("((data->>%s)::numeric)", ('EU',)) + RawSQL("((data->>%s)::numeric)", ('OU',)))/1024/RawSQL("((data->>%s)::numeric)", ('threads_number',))). \
+        annotate(mem_alloc_for_thread=(RawSQL("((data->>%s)::numeric)", ('S0U',)) +
+                                       RawSQL("((data->>%s)::numeric)", ('S1U',)) +
+                                       RawSQL("((data->>%s)::numeric)", ('EU',)) +
+                                       RawSQL("((data->>%s)::numeric)", ('OU',)))/1024/RawSQL("((data->>%s)::numeric)", ('threads_number',))). \
         aggregate(avg_mem_alloc_for_thread=Avg(
             F('mem_alloc_for_thread'), output_field=FloatField()))
     logger.debug("test_jmeter_instances_info: {}".format(str(data)))

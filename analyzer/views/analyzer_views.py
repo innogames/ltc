@@ -87,7 +87,9 @@ def upload_test_result_file(request):
     path = default_storage.save('test_result_data.csv',
                                 ContentFile(csv_file.read()))
     csv_file_fields = csv_file_fields.split(',')
-    generate_test_results_data(test_id, project_id, path, csv_file_fields)
+    generate_test_results_data(test_id,
+                               project_id, path,
+                               jmeter_results_file_fields=csv_file_fields)
 
     return render(request, "upload/success.html", {
         'result': 'ok',

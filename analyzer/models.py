@@ -72,9 +72,9 @@ class TestData(models.Model):
 
 
 class Action(models.Model):
-    url = models.CharField(max_length=100)
+    url = models.TextField()
     project = models.ForeignKey(Project, on_delete=models.CASCADE, default=1)
-    description = models.CharField(max_length=400, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'action'
