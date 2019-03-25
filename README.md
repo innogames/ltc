@@ -14,6 +14,10 @@ Consist of several modules:
 3. Controller - configure and run the tests
 4. Administrator - configure different parameters
 
+### Docker
+To try to use this tool, you can try this docker-compose to deploy it quickly.
+https://github.com/arcmedia/JmeterControlCenter
+
 ## [DASHBOARD]
 (!) New feature
 Upload CSV files with your test results data and get immediately report and compare
@@ -74,6 +78,7 @@ For data storage uses *Postgres (9.5+)*.
 Supports Linux and Windows.
 
 ## Installation
+
 ### 1. Download
 You have to download project files in your folder:
     $ cd /home/
