@@ -1003,9 +1003,10 @@ def dashboard_compare_tests_list(tests_list):
     for t in tests_list:
         test_id = t['id']
         project_id = t['project_id']
+        project = Project.objects.get(id=project_id)
 
         project_tests = Test.objects.filter(
-            project_id=project_id, id__lte=test_id).order_by('-start_time')
+            project=project, id__lte=test_id).order_by('-start_time')
 
         if project_tests.count() > 1:
             prev_test_id = project_tests[1].id
@@ -1060,6 +1061,7 @@ def dashboard_compare_tests_list(tests_list):
             prev_test_data['overall_avg'],
             'result':
             result,
+            'prefix': project.confluence_page
         })
     return tests
 
@@ -1133,7 +1135,7 @@ def confluence_project_report(project_id):
     agg_response_times_graph = generate_confluence_graph(project, list(data))
     last_tests = Test.objects.filter(project_id=project_id).values(
         'project__project_name', 'project_id', 'display_name', 'id',
-        'parameters', 'start_time').order_by('start_time')[:10]
+        'parameters', 'start_time').order_by('-start_time')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     last_tests_table_html = render_to_string(
         'confluence/last_tests_table.html', {'last_tests': tests})
@@ -1155,7 +1157,10 @@ def generate_confluence_project_report(request, project_id):
 
     space = project.confluence_space
 
-    target_page = '{0} Load Testing Reports'.format(project.project_name)
+    target_page = project.confluence_page
+
+    if not target_page:
+        target_page = '{0} Load Testing Reports'.format(project.project_name)
 
     target_url = '{}/display/{}/{}'.format(wiki_url, space, target_page)
 
@@ -1188,14 +1193,15 @@ def generate_confluence_project_report(request, project_id):
     for test in Test.objects.filter(project_id=project_id).values():
         test_id = test['id']
         test_name = test['display_name']
+        page_title = target_page + ' - ' + test_name
         test_report_page_exists = True
         try:
-            page_test_report = cp.get_page(space, test_name)
+            page_test_report = cp.get_page(space, page_title)
         except Exception as e:
             test_report_page_exists = False
             page_test_report = page_parent
             page_test_report['parentId'] = page_parent_id
-            page_test_report['title'] = test_name
+            page_test_report['title'] = page_title
         if not test_report_page_exists:
             logger.info('Creating test report page: {}'.format(test_name))
             page_test_report['content'] = confluence_test_report(test_id)

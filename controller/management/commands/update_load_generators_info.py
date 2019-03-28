@@ -2,7 +2,7 @@ import logging
 import re
 import threading
 import paramiko
-from adminapi.dataset import query
+#from adminapi.dataset import query
 from django.core.management.base import BaseCommand
 from administrator.models import SSHKey
 from controller.models import LoadGenerator

@@ -108,8 +108,7 @@ def prepare_load_generators(project_name,
                                           )
     if new_testplan_file:
         logger.info('New testplan {}.'.format(new_testplan_file))
-        if project_name != 'TropicalIsland':
-            t.testplan_file_dest = new_testplan_file
+        t.testplan_file_dest = new_testplan_file
     if jenkins_env:
         logger.info('Setting test build path.')
         t.build_path = os.path.join(
