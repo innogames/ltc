@@ -1070,34 +1070,38 @@ def dashboard(request):
     '''
     Generate dashboard page
     '''
+
     last_tests_by_project = []
     projects_list = []
-    s = Test.objects.values('project_id').annotate(
-        latest_time=Max('start_time'))
-    for i in s:
-        project_id = i['project_id']
-        # Only tests executed in last 30 days
-        if int(i['latest_time']) >= int(
-                time.time() * 1000) - 1000 * 1 * 60 * 60 * 24 * 30:
-            r = Test.objects.filter(project_id=project_id,
-                                    start_time=i['latest_time']).\
-                values('project__project_name', 'display_name', 'id',
-                       'project_id', 'parameters', 'start_time')
-            last_tests_by_project.append(list(r)[0])
-            projects_list.append(Project.objects.get(id=project_id))
-
+    project_ids = []
+    # Only tests executed in last 30 days
+    tests = Test.objects.filter(start_time__gt=int(
+                    time.time() * 1000) - 1000 * 1 * 60 * 60 * 24 * 30
+                ).values('project_id').annotate(
+                    latest_time=Max('start_time')
+                )
+    for test in tests:
+        project_id = test['project_id']
+        r = Test.objects.filter(project_id=project_id,
+                                start_time=test['latest_time']).\
+            values('project__project_name', 'display_name', 'id',
+                    'project_id', 'parameters', 'start_time')
+        last_tests_by_project.append(list(r)[0])
+        projects_list.append(Project.objects.get(id=project_id))
+        project_ids.append(project_id)
     last_tests = Test.objects.filter(project__show=True).values(
         'project__project_name', 'project_id', 'display_name', 'id',
         'parameters', 'start_time').order_by('-start_time')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     tests_by_project = dashboard_compare_tests_list(last_tests_by_project)
-    logger.debug(projects_list)
     return render(
-        request, 'dashboard.html', {
-            'last_tests': tests,
-            'last_tests_by_project': tests_by_project,
-            'projects_list': projects_list
-        })
+            request, 'dashboard.html', {
+                'last_tests': tests,
+                'last_tests_by_project': tests_by_project,
+                'projects_list': projects_list,
+                'project_ids': json.dumps(project_ids)
+            }
+        )
 
 
 class Analyze(TemplateView):
