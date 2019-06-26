@@ -1,185 +1,195 @@
 {% load static %}
-<hr/>
+<hr />
 <div class="row">
     <div class="col-xs-9">
         <div class="panel panel-default">
             <div class="panel-heading">
-                    <h3 class="panel-title">
-                            Last tests:</h3>
-                        <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
-                       </div>
+                <h3 class="panel-title">
+                    Last tests:</h3>
+                <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+            </div>
             <div class="panel-body">
-            <article id="dashboard_tabs" class="tabs"  >
+                <article id="dashboard_tabs" class="tabs">
                     <ul>
-                        <li><a href='#new_tests_all'><span class="glyphicon glyphicon-th" aria-hidden="true"></span> Last 10 tests</a></li>
-                        <li><a href='#new_tests_by_project'><span class="glyphicon glyphicon-th-large" aria-hidden="true"></span> Last tests in projects</a></li>
+                        <li><a href='#new_tests_all'><span class="glyphicon glyphicon-th" aria-hidden="true"></span>
+                                Last 10 tests</a></li>
+                        <li><a href='#new_tests_by_project'><span class="glyphicon glyphicon-th-large"
+                                    aria-hidden="true"></span> Last tests in projects</a></li>
                     </ul>
                     <div id="new_tests_all">
-                {% if last_tests %}
-                <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Project</th>
-                            <th>Test name</th>
-                            <th>Virtual Users #</th>
-                            <th>Duration</th>
-                            <th>Success requests</th>
-                            <th>Avg. response times</th>
-                            <th>Result</th>
-                        </tr>
-                    </thead>
-                    {% for row in last_tests %}
-                    <tr>
+                        {% if last_tests %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Project</th>
+                                        <th>Test name</th>
+                                        <th>Virtual Users #</th>
+                                        <th>Duration</th>
+                                        <th>Success requests</th>
+                                        <th>Avg. response times</th>
+                                        <th>Result</th>
+                                    </tr>
+                                </thead>
+                                {% for row in last_tests %}
+                                <tr>
 
-                            <td>
-                                {{ row.project_name }}
-                            </td>
-                            <td>
-                                <b><a href=""  onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
-                            </td>
-                            <td>
-                                {% for parameter in row.parameters %}
-                                {% for name, value in parameter.items %}
-                                    {% if name == "THREAD_COUNT" %}
-                                    {{ value }}
-                                    {% endif %}
-                                {% endfor %}
-                                {% endfor %}
-                            </td>
-                            <td>
-                                {% for parameter in row.parameters %}
-                                {% for name, value in parameter.items %}
-                                    {% if name == "DURATION" %}
-                                    {% seconds_to_time value %}
-                                    {% endif %}
-                                {% endfor %}
-                                {% endfor %}
-                            </td>
-                            <td>
-                                    {% if row.success_requests > 98 %}
-                                    <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                    {% elif row.success_requests <= 98 and row.success_requests > 95  %}
-                                    <font color="yellow"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                    {% else %}
-                                    <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                    {% endif %}
-                            </td>
-                            <td>
-                                    {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
-                                    {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
-                                    {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff <= 0 %}<font color="green"></0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs > 0 %} <font color="red"></0>(<span>&#8593;</span> {{ avg_diff }} %) </font>  {% endif %}
-                            </td>
-                            <td>
-                               <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
-
-                            </td>
-
-                    </tr>
-                    {% endfor %}
-                </table>
-                </div>
-                {% else %}
-                    <b>No data</b>
-                {% endif %}
-            </div>
-            <div id="new_tests_by_project">
-                    {% if last_tests_by_project %}
-                    <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Project</th>
-                                <th>Test name</th>
-                                <th>Success requests</th>
-                                <th>Avg. response times</th>
-                                <th>Result</th>
-                            </tr>
-                        </thead>
-                        {% for row in last_tests_by_project %}
-                        <tr>
-                                <td>
-                                    {{ row.project_name }}
-                                </td>
-                                <td>
-                                    <b><a href=""  onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
-                                </td>
-                                <td>
-                                    {% if row.success_requests > 98 %}
+                                    <td>
+                                        {{ row.project_name }}
+                                    </td>
+                                    <td>
+                                        <b><a href="" onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
+                                    </td>
+                                    <td>
+                                        {% for parameter in row.parameters %}
+                                        {% for name, value in parameter.items %}
+                                        {% if name == "THREAD_COUNT" %}
+                                        {{ value }}
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% for parameter in row.parameters %}
+                                        {% for name, value in parameter.items %}
+                                        {% if name == "DURATION" %}
+                                        {% seconds_to_time value %}
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% if row.success_requests > 98 %}
                                         <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                    {% else  %}
+                                        {% elif row.success_requests <= 98 and row.success_requests > 95  %}
+                                        <font color="yellow"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                        {% else %}
                                         <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                    {% endif %}
-                                </td>
-                                <td>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
                                         {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
-                                        {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff <= 0 %}<font color="green"></0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs > 0 %} <font color="red"></0>(<span>&#8593;</span> {{ avg_diff }} %) </font>  {% endif %}
-                                </td>
-                                <td>
-                                   <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
-                                </td>
-                        </tr>
-                        {% endfor %}
-                    </table>
-                    </div>
-                    {% else %}
+                                        {{ row.test_avg_response_times|floatformat }} ms {% if avg_diff <= 0 %}<font
+                                            color="green">
+                                            </0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font>
+                                        {% elif avg_diff_abs > 0 %} <font color="red">
+                                            </0>(<span>&#8593;</span> {{ avg_diff }} %) </font> {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
+
+                                    </td>
+
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% else %}
                         <b>No data</b>
-                    {% endif %}
-                </div>
+                        {% endif %}
+                    </div>
+                    <div id="new_tests_by_project">
+                        {% if last_tests_by_project %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Project</th>
+                                        <th>Test name</th>
+                                        <th>Success requests</th>
+                                        <th>Avg. response times</th>
+                                        <th>Result</th>
+                                    </tr>
+                                </thead>
+                                {% for row in last_tests_by_project %}
+                                <tr>
+                                    <td>
+                                        {{ row.project_name }}
+                                    </td>
+                                    <td>
+                                        <b><a href="" onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
+                                    </td>
+                                    <td>
+                                        {% if row.success_requests > 98 %}
+                                        <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                        {% else  %}
+                                        <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
+                                        {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
+                                        {{ row.test_avg_response_times|floatformat }} ms {% if avg_diff <= 0 %}<font
+                                            color="green">
+                                            </0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font>
+                                        {% elif avg_diff_abs > 0 %} <font color="red">
+                                            </0>(<span>&#8593;</span> {{ avg_diff }} %) </font> {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% else %}
+                        <b>No data</b>
+                        {% endif %}
+                    </div>
             </div>
         </div>
     </div>
-        <div class="col-xs-3">
-         <div class="panel panel-default">
-                        <div class="panel-heading">
-                                <h3 class="panel-title">
-                                        Running tests:</h3>
-                                    <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
-                            </div>
-                        <div class="panel-body">
-                            <div id="running_tests_list"></div>
-                        </div>
-                    </div>
-                <div class="panel panel-default">
-                        <div class="panel-heading">
-                                <h3 class="panel-title">
-                                        Active load generators:</h3>
-                                    <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
-                           </div>
-                        <div class="panel-body">
-                            <div id="load_generators_list"></div>
-                        </div>
-                    </div>
+    <div class="col-xs-3">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    Running tests:</h3>
+                <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+            </div>
+            <div class="panel-body">
+                <div id="running_tests_list"></div>
+            </div>
         </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    Active load generators:</h3>
+                <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+            </div>
+            <div class="panel-body">
+                <div id="load_generators_list"></div>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="row">
-        <div class="col-xs-3">
-        </div>
+    <div class="col-xs-3">
+    </div>
 </div>
 <div class="row">
     <div class="col-xs-12">
         <div class="panel panel-default">
-                <div class="panel-heading">
-                        <h3 class="panel-title">
-                               Graphs:</h3>
-                            <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
-                    </div>
-        <div class="panel-body">
-<hr/>
-{% for project in projects_list %}
-    {% if project.show == True %}
-        <div id="overall_{{ project.id }}"></div>
-    {% endif %}
-{% endfor %}
-        </div>
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    Graphs:</h3>
+                <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+            </div>
+            <div class="panel-body">
+                <hr />
+                {% for project in projects_list %}
+                {% if project.show == True %}
+                <div id="overall_{{ project.id }}"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
 <script src="{% static 'js/dashboard.js' %}"></script>
 <script type="text/javascript">
-    var projects = {{ project_ids|safe }};
+    var projects = {{project_ids|safe}};
     projects.forEach(function (projectId, index) {
         drawProjectOverallGraph(projectId);
     });
- </script>
+</script>
