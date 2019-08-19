@@ -664,17 +664,13 @@ def start_test(request, project_id):
         project.jmeter_profile_id = jmeter_profile_id
         project.test_plan_destination = test_plan_destination
         project.save()
-        prepare_test_plan(running_test_testplan_dir,
-                          test_plan_destination,
-                          result_file_destination
-                        )
+        prepare_test_plan(
+            running_test_testplan_dir,
+            test_plan_destination,
+            result_file_destination
+        )
         #project.jmeter_parameters = json.loads(jmeter_parameters)
-        java_exec = ""
-        if _platform == "linux" or _platform == "linux2":
-            java_exec = "java"
-        else:
-            java_exec = "C:\\Program Files\\Java\\jdk1.8.0_60\\bin\\java.exe"
-        jmeter_path = jmeter_profile.path + "/bin/ApacheJMeter.jar"
+        java_exec = 'java'
         running_test_jris = []
         if jris is not None:
             for jri in jris:
@@ -721,8 +717,9 @@ def start_test(request, project_id):
         args = [java_exec, '-jar']
         args += splitstring(jmeter_profile.jvm_args_main)
         args += [
-            jmeter_path, "-n", "-t", test_plan_destination, '-j',
-            running_test_log_file_destination, jris_str,
+            jmeter_profile.jmeter_jar_path(), "-n", "-t",
+            test_plan_destination, '-j', running_test_log_file_destination,
+            jris_str,
             test_plan_params_str.lstrip(),
             '-Jjmeter.save.saveservice.default_delimiter=,'
         ]
@@ -744,7 +741,8 @@ def start_test(request, project_id):
         else:
             jmeter_process = subprocess.Popen(
                 args,
-                executable=java_exec, )
+                executable=java_exec,
+            )
         pid = jmeter_process.pid
         start_time = int(time.time() * 1000)
         t = TestRunning(
@@ -758,7 +756,8 @@ def start_test(request, project_id):
             jmeter_remote_instances=running_test_jris,
             workspace=running_test_dir,
             build_number=0,
-            is_running=True)
+            is_running=True
+        )
         t.save()
         test_id = t.id
 
@@ -779,7 +778,6 @@ def start_test(request, project_id):
 def wait_for_finished_test(request, t, jmeter_process):
     ''' Check if test is still running'''
     while t.is_running:
-
         retcode = jmeter_process.poll()
         logger.info(
             "Check if JMeter process is still exists, current state: {0}".
