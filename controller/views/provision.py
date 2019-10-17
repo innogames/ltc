@@ -19,7 +19,7 @@ from controller.models import (ActivityLog, JmeterInstance,
                                JmeterInstanceStatistic, LoadGenerator,
                                TestRunning)
 from controller.views.controller_views import prepare_test_plan
-
+from django.forms.models import model_to_dict
 logger = logging.getLogger(__name__)
 
 
@@ -40,23 +40,23 @@ def get_avg_thread_malloc_for_project(project_id, threads_num):
 
 
 def get_load_generators_data(request):
-    load_generators_data = list(
-        LoadGenerator.objects.annotate(
-            jmeter_instances_count=Count('jmeterinstance__id')).filter(
-                active=True).values(
-                    'id',
-                    'hostname',
-                    'num_cpu',
-                    'memory',
-                    'memory_free',
-                    'la_1',
-                    'la_5',
-                    'la_15',
-                    'jmeter_instances_count',
-                    'reason',
-                    'status',
-                ))
-    return JsonResponse(load_generators_data, safe=False)
+    """
+    Returns data for all load generators.
+    """
+
+    data = []
+    for load_generator in LoadGenerator.objects.annotate(
+            jmeter_instances_count=Count('jmeterinstance__id')
+        ).filter(
+            active=True
+        ):
+            load_generator_data = model_to_dict(load_generator)
+            load_generator_data['status'] = load_generator.status()
+            load_generator_data[
+                'jmeter_instances_count'
+            ] = load_generator.jmeter_instances_count
+            data.append(load_generator_data)
+    return JsonResponse(data, safe=False)
 
 
 def get_load_generator_data(request, load_generator_id):
@@ -235,7 +235,6 @@ def prepare_load_generators(project_name,
                       running_test_jris, additional_args))
             # Increment data pool index by number of jris on started thread
             data_pool_index += load_generator['possible_jris_on_host']
-            thread.start()
             start_jri_threads.append(thread)
         for thread in start_jri_threads:
             thread.join()
@@ -281,70 +280,108 @@ def start_jris_on_load_generator(load_generator, threads_per_jri,
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE)
+    p.wait()
+    # Starting Jmeter remote instances on free port
+    for i in range(1, possible_jris_on_host + 1):
+        new_instance_data = {}
+        t = 0
+        pid = 0
+        data_pool_index += 1
+        while pid == 0:
+            new_instance_data = start_jmeter_instance(
+                    hostname,
+                    java_args,
+                    data_pool_index,
+                    jmeter_dir,
+                    additional_args,
+            )
+            pid = new_instance_data['pid']
+            t = t + 1
+            if t > 5:
+                logger.error('Cannot start jmeter instances on {}'.format(
+                        hostname
+                ))
+                break
+        if pid > 0:
+            running_test_jris.append({
+                'hostname': hostname,
+                'pid': new_instance_data['pid']
+            })
+            ActivityLog(
+                action="start_jmeter_instance",
+                load_generator_id=load_generator_id,
+                data={
+                    "pid": new_instance_data['pid'],
+                    "port": new_instance_data['port'],
+                    "java_args": java_args
+                }
+            ).save()
+            jmeter_instance = JmeterInstance(
+                test_running_id=test_running_id,
+                load_generator_id=load_generator_id,
+                pid=new_instance_data['pid'],
+                port=new_instance_data['port'],
+                jmeter_dir=jmeter_dir,
+                project_id=project_id,
+                threads_number=threads_per_jri,
+                java_args=java_args,
+            )
+            jmeter_instance.save()
+            logger.info(
+                'New jmeter instance was added to database, '
+                'pid: {}, port: {}, test_id: {}'.
+                format(
+                    new_instance_data['pid'],
+                    new_instance_data['port'],
+                    jmeter_instance.test_running_id
+                )
+            )
+
+def start_jmeter_instance(
+        hostname,
+        java_args,
+        data_pool_index,
+        jmeter_dir,
+        additional_args,
+):
+    ssh_key = SSHKey.objects.get(default=True).path
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(hostname, username="root", key_filename=ssh_key)
-    # create an array of used ports
-    cmd1 = 'netstat -tulpn | grep LISTEN'
-    stdin, stdout, stderr = ssh.exec_command(cmd1)
+    logger.info('Starting jmeter instance on remote host: {}'.format(hostname))
+    stdin, stdout, stderr = ssh.exec_command('netstat -tulpn | grep LISTEN')
     used_ports = []
     netstat_output = str(stdout.readlines())
     ports = re.findall('\d+\.\d+\.\d+\.\d+\:(\d+)', netstat_output)
     ports_ipv6 = re.findall('\:\:\:(\d+)', netstat_output)
-    p.wait()
-    for port in ports:
-        used_ports.append(int(port))
-    for port in ports_ipv6:
-        used_ports.append(int(port))
-    ssh.close()
-    # Starting Jmeter remote instances on free port
-    for i in range(1, possible_jris_on_host + 1):
+    for p in ports:
+        used_ports.append(int(p))
+    for p in ports_ipv6:
+        used_ports.append(int(p))
+    port = int(random.randint(10000, 20000))
+    while port in used_ports:
         port = int(random.randint(10000, 20000))
-        while port in used_ports:
-            port = int(random.randint(10000, 20000))
-        logger.info(port)
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname, username="root", key_filename=ssh_key)
-        logger.info(
-            'Starting jmeter instance on remote host: {}'.format(hostname))
-        data_pool_index += 1
-        run_jmeter_server_cmd = 'nohup java {0} -Duser.dir={5}/bin/ -jar "{1}/bin/ApacheJMeter.jar" -Jserver.rmi.ssl.disable=true "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -j jmeter-server.log -Jpoll={4} {6} > /dev/null 2>&1 '.\
-            format(java_args, jmeter_dir, hostname, str(port), str(
-                data_pool_index), jmeter_dir, additional_args)
-        logger.info(
-            'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" -Jserver.rmi.ssl.disable=true "-Djava.rmi.server.hostname={2}" -Duser.dir={5}/bin/ -Dserver_port={3} -s -Jpoll={4} {6} > /dev/null 2>&1 '.
-            format(java_args, jmeter_dir, hostname, str(port),
-                   str(data_pool_index), jmeter_dir, additional_args))
-        command = 'echo $$; exec ' + run_jmeter_server_cmd
-        cmds = ['cd {0}/bin/'.format(jmeter_dir), command]
-        stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
-        pid = int(stdout.readline())
-        running_test_jris.append({'hostname': hostname, 'pid': pid})
-        ActivityLog(
-            action="start_jmeter_instance",
-            load_generator_id=load_generator_id,
-            data={
-                "pid": pid,
-                "port": port,
-                "java_args": java_args
-            }).save()
-        jmeter_instance = JmeterInstance(
-            test_running_id=test_running_id,
-            load_generator_id=load_generator_id,
-            pid=pid,
-            port=port,
-            jmeter_dir=jmeter_dir,
-            project_id=project_id,
-            threads_number=threads_per_jri,
-            java_args=java_args,
-        )
-
-        jmeter_instance.save()
-        logger.info(
-            'New jmeter instance was added to database, pid: {}, port: {}, test_id: {}'.
-            format(pid, port, jmeter_instance.test_running_id))
-        ssh.close()
+    logger.info('Selected port: {}'.format(port))
+    run_jmeter_server_cmd = 'nohup java {0} -Duser.dir={5}/bin/ -jar "{1}/bin/ApacheJMeter.jar" -Jserver.rmi.ssl.disable=true "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -j jmeter-server.log -Jpoll={4} {6} > /dev/null 2>&1 '.\
+        format(java_args, jmeter_dir, hostname, str(port), str(
+            data_pool_index), jmeter_dir, additional_args)
+    logger.info(
+        'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" -Jserver.rmi.ssl.disable=true "-Djava.rmi.server.hostname={2}" -Duser.dir={5}/bin/ -Dserver_port={3} -s -Jpoll={4} {6} > /dev/null 2>&1 '.
+        format(java_args, jmeter_dir, hostname, str(port),
+               str(data_pool_index), jmeter_dir, additional_args))
+    command = 'echo $$; exec ' + run_jmeter_server_cmd
+    cmds = ['cd {0}/bin/'.format(jmeter_dir), command]
+    stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
+    pid = stdout.readline().strip()
+    stdin, stdout, stderr = ssh.exec_command('ls /proc/')
+    ls_output = str(stdout.readlines())
+    procs = re.findall('\d+', ls_output)
+    ssh.close()
+    if procs.count(pid) > 0 and used_ports.count(port) > 0:
+        logger.info('{} process is using port: {}'.format(pid, port))
+        return {'pid': pid, 'port': port}
+    logger.info('Was a problem to start jmeter on {}:{}'.format(hostname, port)) 
+    return {'pid': 0, 'port': port}
 
 
 def stop_jmeter_instance(jmeter_instance):
@@ -421,8 +458,15 @@ def stop_test_for_project(project_name, gather_errors_data=False):
                     'jmeter_dir', 'load_generator__hostname').distinct()
             for load_generator in load_generators:
                 gather_error_data(test, load_generator)
+        threads = []
         for jmeter_instance in jmeter_instances:
-            stop_jmeter_instance(jmeter_instance)
+            thread = threading.Thread(
+                target=stop_jmeter_instance,
+                args=(jmeter_instance)
+            )
+            thread.start()
+        for thread in threads:
+            thread.join()
         logger.info('Delete running test: {}'.format(test_running_id))
         TestRunning.objects.get(id=test_running_id).delete()
 

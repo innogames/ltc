@@ -1,0 +1,70 @@
+{% if last_tests %}
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>Test name</th>
+                <th>Virtual Users #</th>
+                <th>Duration</th>
+                <th>Success requests</th>
+                <th>Avg. response times</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        {% for row in last_tests %}
+        <tr>
+
+            <td>
+                {{ row.project_name }}
+            </td>
+            <td>
+                <b><a href="" onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
+            </td>
+            <td>
+                {% for parameter in row.parameters %}
+                {% for name, value in parameter.items %}
+                {% if name == "THREAD_COUNT" %}
+                {{ value }}
+                {% endif %}
+                {% endfor %}
+                {% endfor %}
+            </td>
+            <td>
+                {% for parameter in row.parameters %}
+                {% for name, value in parameter.items %}
+                {% if name == "DURATION" %}
+                {% seconds_to_time value %}
+                {% endif %}
+                {% endfor %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if row.success_requests > 98 %}
+                <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
+                {% elif row.success_requests <= 98 and row.success_requests > 95  %}
+                <font color="yellow"><b>{{ row.success_requests|floatformat }} % </b></font>
+                {% else %}
+                <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
+                {% endif %}
+            </td>
+            <td>
+                {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
+                {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
+                {{ row.test_avg_response_times|floatformat }} ms {% if avg_diff <= 0 %}<font color="green">
+                    </0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font>
+                {% elif avg_diff_abs > 0 %} <font color="red">
+                    </0>(<span>&#8593;</span> {{ avg_diff }} %) </font> {% endif %}
+            </td>
+            <td>
+                <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
+
+            </td>
+
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% else %}
+<b>No data</b>
+{% endif %}

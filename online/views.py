@@ -91,7 +91,9 @@ def online_test_response_codes(request, test_running_id):
     test_running = get_object_or_404(TestRunning, id=test_running_id)
     response = []
     test_response_codes = TestRunningData.objects.get(
-        name='response_codes', test_running=test_running).data
+        name='response_codes',
+        test_running=test_running
+    ).data
     for k in test_response_codes:
         response.append({
             'response_code': k,
@@ -170,7 +172,7 @@ def update(request, test_running_id):
             "text": "Running test data was updated",
             "type": "success",
             "msg_params": {
-                "test_running_id": test_running_id
+                "test_running_id": test_running.id
             }
         }
     }

@@ -1,55 +1,15 @@
 from django.conf.urls import url
-from analyzer.views import *
-app_name = 'analyzer'
+from django.urls import path
+
+from . import views
+
 urlpatterns = [
-    url(r'^projects_list', projects_list),
-    url(r'^data_resolutions_list', data_resolutions_list),
-    url(r'^analyze$', Analyze.as_view()),
-    url(r'^history$', History.as_view()),
-    url(r'^dashboard', dashboard),
-    url(r'^project/(?P<project_id>\d+)/project_history/$',
-        project_history),
-    url(r'^project/(?P<project_id>\d+)/generate_confluence_report/$',
-        generate_confluence_project_report),
-    url(r'^composite_data/$',
-    composite_data),
-    url(r'^project/(?P<project_id>\d+)/tests_list/$', tests_list),
-    url(r'^project/(?P<project_id>\d+)/last_test/$', last_test),
-    url(r'^project/(?P<project_id>\d+)/'
-        r'(?P<build_number>\d+)/test_info/$', test_info),
-    url(r'^project/(?P<test_id>\d+)/test_info/$', test_info_from_id),
-    url(r'^project/(?P<project_id>\d+)/configure/$', configure_page),
-    url(r'^test/(?P<test_id>\d+)/prev_test_id/$', prev_test_id),
-    url(r'^test/(?P<test_id>\d+)/report/$', test_report),
-    url(r'^test/(?P<test_id>\d+)/actions_list/$', test_actions_list),
-    url(r'^project/(?P<project_id>\d+)/composite/$', composite),
-    url(r'^test/(?P<test_id>\d+)/(?P<action_id>\d+)/action_report/$',
-        action_report),
-    url(r'^test/(?P<test_id>\d+)/action/(?P<action_id>\d+)/rtot/$',
-        action_rtot),
-    url(r'^test/(?P<source>[\w\-]+)/(?P<test_id>\d+)/servers/$', test_servers),
-    url(r'^test/(?P<test_id>\d+)/edit/$', test_edit_page),
-    url(r'^test/(?P<test_id>\d+)/change/$', test_change),
-    url(r'^test/(?P<test_id>\d+)/get_test_rtot_data/$', test_rtot_data),
-    url(r'^test/(?P<test_id>\d+)/get_compare_data/$',
-        compare_tests_avg),
-    url(r'^test/(?P<test_id>\d+)/(?P<num_of_tests>\d+)/compare_cpu/$',
-        compare_tests_cpu),
-    url(r'^test/(?P<test_id>\d+)/(?P<top_number>\d+)/top_avg/$',
-        test_top_avg),
-    url(r'^test/(?P<test_id>\d+)/top_errors/$', test_top_errors),
-    url(r'^test/(?P<test_id>\d+)/errors/$', test_errors),
-    url(r'^test/(?P<test_id>\d+)/check_graphite_data/$', check_graphite_data),
-    url(r'^test/(?P<source>[\w\-]+)/(?P<test_id>\d+)/(?P<server_id>\d+)/monitoring_metrics/$',
-        available_test_monitoring_metrics),
-    url(r'^test/(?P<test_id>\d+)/(?P<server_id>\d+)'
-        r'/(?P<metric>[\w\-]+)/max_value/$', metric_max_value),
-    url(r'^test/(?P<test_id>\d+)/get_server_monitoring_data', server_monitoring_data),
-    url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_report/$',
-        tests_compare_report),
-    url(r'^test/(?P<test_id>\d+)/action_graphs/$',
-        action_graphs),
-    url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_aggregate_data/$',
-        tests_compare_aggregate_new),
-    url(r'^upload/test_result_file/$', upload_test_result_file, name='upload_test_result_file'), 
+    path('', views.index, name='analyzer.index'),
+    url('test_data', views.test_data),
+    url('compare_highlights', views.compare_highlights),
+    path(
+        '/action_details/(?P<test_id>\d+)/(?P<action_id>\d+)',
+        views.action_details,
+        name='action_details',
+    ),
 ]

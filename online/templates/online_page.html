@@ -52,180 +52,180 @@
 </div>
 </div>
 <script>
-     $("#online_tabs").tabs();
-    var online_graph = c3.generate({
-        data: {
-            url: '/online/' + running_test_id + '/rtot/',
-            mimeType: 'json',
-            keys: {
-                x: 'time',
-                value: ['avg', 'rps', 'errors']
-            },
-            type: 'line',
-            xFormat: '%Y-%m-%dT%H:%M:%S',
-            axes: {
-                rps: 'y2',
-                errors: 'y2',
-            },
-            colors: {
-                'errors': 'red',
-                'fail_%': '#DF6F80'
-            },
-        },
-        axis: {
-            x: {
-                type: 'timeseries',
-                tick: {
-                    format: '%Y-%d-%m %H:%M'
-                }
-            },
-            y: {
-                padding: {
-                    top: 0,
-                    bottom: 0
-                },
-                label: 'Response times (ms)',
-            },
-            y2: {
-                min: 0,
-                show: true,
-                padding: {
-                    top: 0,
-                    bottom: 0
-                },
-                label: 'Requests/s',
-            }
-
-        },
-        bindto: '#online_graph'
-    });
-    var online_successful_requests_percentage_graph = c3.generate({
-        data: {
-            url: '/online/' + running_test_id + '/success_rate/',
-            mimeType: 'json',
-            type: 'gauge',
-            keys: {
-                value: ['success_%']
-            },
-
-        },
-        color: {
-            pattern: ['#FF0000', '#F6C600', '#60B044'], // the three color levels for the percentage values.
-            threshold: {
-                //            unit: 'value', // percentage is default
-                //            max: 200, // 100 is default
-                values: [97, 99, 100]
-            }
-        },
-
-        title: {
-            text: 'Successful requests percentage (%)'
-        },
-        bindto: '#online_successful_requests_percentage_graph'
-    });
-    var online_rps_graph = c3.generate({
-        data: {
-            url: '/online/' + running_test_id + '/rps/',
-            mimeType: 'json',
-            type: 'gauge',
-            keys: {
-                value: ['rps']
-            },
-        },
-        gauge: {
-            label: {
-                format: function(value, ratio) {
-                    return value;
-                },
-                show: true // to turn off the min/max labels.
-            },
-            min: 0, // 0 is default, //can handle negative min e.g. vacuum / voltage / current flow / rate of change
-            max: 500, // 100 is default
-            units: ' rps',
-            //    width: 39 // for adjusting arc thickness
-        },
-
-        title: {
-            text: 'Requests per second (average during the last minute)'
-        },
-        bindto: '#online_rps_graph'
-    });
-
-    var online_response_codes_graph = c3.generate({
-        data: {
-            url: '/online/' + running_test_id + '/response_codes/',
-            mimeType: 'json',
-            type: 'donut',
-            keys: {
-                x: 'response_code',
-                value: ['count']
-            },
-        },
-        donut: {
-            title: "Response codes"
-        },
-        bindto: '#online_response_codes_graph'
-    });
-
-    setInterval(function() {
-        $('#online_aggregate_table').tablesorter();
-        $.ajax({
-            url: '/online/' + running_test_id + '/update/',
-            type: "get",
-            success: function(response) {
-                show_alert(response);
-            },
-            error: function(xhr) {
-                show_alert(response);
-            }
-        });
-
-        online_graph.load({
-            url: '/online/' + running_test_id + '/rtot/',
-            mimeType: 'json',
-            keys: {
-                x: 'time',
-                value: ['avg', 'rps', 'errors']
-            },
-        });
-
-        online_successful_requests_percentage_graph.load({
-            url: '/online/' + running_test_id + '/success_rate/',
-            mimeType: 'json',
-            keys: {
-                value: ['success_%']
-            },
-        });
-
-        online_rps_graph.load({
-            url: '/online/' + running_test_id + '/rps/',
-            mimeType: 'json',
-            keys: {
-                value: ['rps']
-            },
-        });
-
-        var online_response_codes_graph = c3.generate({
-        data: {
-            url: '/online/' + running_test_id + '/response_codes/',
-            mimeType: 'json',
-            keys: {
-                x: 'response_code',
-                value: ['count']
-            },
-            }
-            });
-    $.ajax({
-        url: '/online/' + running_test_id + '/aggregate/',
-        type: "get",
-        success: function(response) {
-            document.getElementById("online_aggregate_table").innerHTML = response;
-            $("#online_aggregate_table").tablesorter();
-            $("#online_aggregate_table").trigger('tsUpdate');
-        },
-        error: function(xhr) {
-            show_alert(response);
+$("#online_tabs").tabs();
+var online_graph = c3.generate({
+data: {
+    url: '/online/' + running_test_id + '/rtot/',
+    mimeType: 'json',
+    keys: {
+        x: 'time',
+        value: ['avg', 'rps', 'errors']
+    },
+    type: 'line',
+    xFormat: '%Y-%m-%dT%H:%M:%S',
+    axes: {
+        rps: 'y2',
+        errors: 'y2',
+    },
+    colors: {
+        'errors': 'red',
+        'fail_%': '#DF6F80'
+    },
+},
+axis: {
+    x: {
+        type: 'timeseries',
+        tick: {
+            format: '%Y-%d-%m %H:%M'
         }
+    },
+    y: {
+        padding: {
+            top: 0,
+            bottom: 0
+        },
+        label: 'Response times (ms)',
+    },
+    y2: {
+        min: 0,
+        show: true,
+        padding: {
+            top: 0,
+            bottom: 0
+        },
+        label: 'Requests/s',
+    }
+
+},
+bindto: '#online_graph'
+});
+var online_successful_requests_percentage_graph = c3.generate({
+data: {
+    url: '/online/' + running_test_id + '/success_rate/',
+    mimeType: 'json',
+    type: 'gauge',
+    keys: {
+        value: ['success_%']
+    },
+
+},
+color: {
+    pattern: ['#FF0000', '#F6C600', '#60B044'], // the three color levels for the percentage values.
+    threshold: {
+        //            unit: 'value', // percentage is default
+        //            max: 200, // 100 is default
+        values: [97, 99, 100]
+    }
+},
+
+title: {
+    text: 'Successful requests percentage (%)'
+},
+bindto: '#online_successful_requests_percentage_graph'
+});
+var online_rps_graph = c3.generate({
+data: {
+    url: '/online/' + running_test_id + '/rps/',
+    mimeType: 'json',
+    type: 'gauge',
+    keys: {
+        value: ['rps']
+    },
+},
+gauge: {
+    label: {
+        format: function(value, ratio) {
+            return value;
+        },
+        show: true // to turn off the min/max labels.
+    },
+    min: 0, // 0 is default, //can handle negative min e.g. vacuum / voltage / current flow / rate of change
+    max: 500, // 100 is default
+    units: ' rps',
+    //    width: 39 // for adjusting arc thickness
+},
+
+title: {
+    text: 'Requests per second (average during the last minute)'
+},
+bindto: '#online_rps_graph'
+});
+
+var online_response_codes_graph = c3.generate({
+data: {
+    url: '/online/' + running_test_id + '/response_codes/',
+    mimeType: 'json',
+    type: 'donut',
+    keys: {
+        x: 'response_code',
+        value: ['count']
+    },
+},
+donut: {
+    title: "Response codes"
+},
+bindto: '#online_response_codes_graph'
+});
+
+setInterval(function() {
+$('#online_aggregate_table').tablesorter();
+$.ajax({
+    url: '/online/' + running_test_id + '/update/',
+    type: "get",
+    success: function(response) {
+        show_alert(response);
+    },
+    error: function(xhr) {
+        console.log('Error: cannot update online data')
+    }
+});
+
+online_graph.load({
+    url: '/online/' + running_test_id + '/rtot/',
+    mimeType: 'json',
+    keys: {
+        x: 'time',
+        value: ['avg', 'rps', 'errors']
+    },
+});
+
+online_successful_requests_percentage_graph.load({
+    url: '/online/' + running_test_id + '/success_rate/',
+    mimeType: 'json',
+    keys: {
+        value: ['success_%']
+    },
+});
+
+online_rps_graph.load({
+    url: '/online/' + running_test_id + '/rps/',
+    mimeType: 'json',
+    keys: {
+        value: ['rps']
+    },
+});
+
+var online_response_codes_graph = c3.generate({
+data: {
+    url: '/online/' + running_test_id + '/response_codes/',
+    mimeType: 'json',
+    keys: {
+        x: 'response_code',
+        value: ['count']
+    },
+    }
     });
-    }, 10000);
+$.ajax({
+url: '/online/' + running_test_id + '/aggregate/',
+type: "get",
+success: function(response) {
+    document.getElementById("online_aggregate_table").innerHTML = response;
+    $("#online_aggregate_table").tablesorter();
+    $("#online_aggregate_table").trigger('tsUpdate');
+},
+error: function(xhr) {
+    console.log('Error: cannot retrieve online results')
+}
+});
+}, 10000);
 </script>

@@ -279,16 +279,31 @@ class LoadGeneratorServer(models.Model):
 
 
 class LoadGenerator(models.Model):
-    hostname = models.CharField(max_length=200, default="", unique=True)
-    num_cpu = models.CharField(max_length=200, default="")
-    memory = models.CharField(max_length=200, default="")
-    memory_free = models.CharField(max_length=200, default="")
-    la_1 = models.CharField(max_length=200, default="")
-    la_5 = models.CharField(max_length=200, default="")
-    la_15 = models.CharField(max_length=200, default="")
-    status = models.CharField(max_length=200, default="")
-    reason = models.CharField(max_length=200, default="")
+    hostname = models.CharField(max_length=200, default='', unique=True)
+    num_cpu = models.CharField(max_length=200, default='')
+    memory = models.CharField(max_length=200, default='')
+    memory_free = models.CharField(max_length=200, default='')
+    la_1 = models.CharField(max_length=200, default='')
+    la_5 = models.CharField(max_length=200, default='')
+    la_15 = models.CharField(max_length=200, default='')
     active = models.BooleanField(default=True)
+
+    def status(self):
+        status = 'success'
+        reason = 'ok'
+        if float(self.memory_free) < float(self.memory) * 0.5:
+            status = 'warning'
+            reason = 'memory'
+        elif float(self.memory_free) < float(self.memory) * 0.1:
+            status = 'danger'
+            reason = 'low memory'
+        if float(self.la_5) > float(self.num_cpu) / 2:
+            status = 'warning'
+            reason = 'average load'
+        elif float(self.la_5) > float(self.num_cpu):
+            status = 'danger'
+            reason = 'high load'
+        return {'status': status, 'reason': reason}
 
     class Meta:
         db_table = 'load_generator'
@@ -296,7 +311,7 @@ class LoadGenerator(models.Model):
 
 class JmeterInstance(models.Model):
     test_running = models.ForeignKey(TestRunning, on_delete=models.CASCADE)
-    load_generator = models.ForeignKey(LoadGenerator)
+    load_generator = models.ForeignKey(LoadGenerator, on_delete=models.CASCADE)
     pid = models.IntegerField(default=0)
     port = models.IntegerField(default=0)
     jmeter_dir = models.CharField(max_length=300, default="")
@@ -311,7 +326,7 @@ class JmeterInstance(models.Model):
 class ActivityLog(models.Model):
     date = models.DateTimeField(auto_now_add=True, blank=True)
     action = models.CharField(max_length=1000, default="")
-    load_generator = models.ForeignKey(LoadGenerator)
+    load_generator = models.ForeignKey(LoadGenerator, on_delete=models.CASCADE)
     data = JSONField()
 
     class Meta:

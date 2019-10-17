@@ -1,0 +1,39 @@
+{% load static %}
+{% load analyzer_extras %}
+<ul class="nav nav-tabs" id="test-report-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview" role="tab" aria-controls="overview" aria-selected="true">Overview</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="compare-tab" data-toggle="tab" href="#compare" role="tab" aria-controls="compare" aria-selected="false">Compare tests</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="aggregate-table-tab" data-toggle="tab" href="#aggregate-tab" role="tab" aria-controls="aggregate-table" aria-selected="false">Aggregate table</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="rtot-graph-tab" data-toggle="tab" href="#rtot-graph" role="tab" aria-controls="rtot-graph" aria-selected="false">Response times graphs</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="monitoring-tab" data-toggle="tab" href="#monitoring" role="tab" aria-controls="monitoring" aria-selected="false">Monitoring graphs</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+        {% overview test %}
+    </div>
+    <div class="tab-pane" id="compare" role="tabpanel" aria-labelledby="compare-tab">
+        {% include "analyzer/report/test_report/compare.html" %}
+    </div>
+    <div class="tab-pane" id="aggregate-tab" role="tabpanel" aria-labelledby="aggregate-table-tab">
+        {% aggregate_table test %}
+    </div>
+    <div class="tab-pane" id="rtot-graph" role="tabpanel" aria-labelledby="rtot-graph-tab">
+        {% include "analyzer/report/test_report/rtot.html" %}
+    </div>
+    <div class="tab-pane" id="monitoring" role="tabpanel" aria-labelledby="monitoring-tab">
+        {% include "analyzer/report/test_report/monitoring.html" %}
+    </div>
+</div>
+<div id="page-data" data-test-id="{{ test.id }}" data-csrf="{{ csrf_token }}"></div>
+<script type="text/javascript" src="{% static "js/analyzer/testreport.js" %}"></script>
+<script type="text/javascript" src="{% static "js/analyzer/report.js" %}"></script>

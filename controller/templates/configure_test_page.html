@@ -78,168 +78,162 @@
     </div>
 </div>
 <script>
-        $('#select_jmeter_profile').selectpicker('refresh');
-        function getJRIs()
-        {
+$('#select_jmeter_profile').selectpicker('refresh');
+function getJRIs()
+{
 
-        $.ajax({
-                          url: "/controller/project/{{ project.id }}/jri/list/",
-                          type: "get",
-                          success: function(response) {
-                            $("#jris").empty();
-                            $("#new_jri").empty();
-                            $("#jris").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
+$.ajax({
+                  url: "/controller/project/{{ project.id }}/jri/list/",
+                  type: "get",
+                  success: function(response) {
+                    $("#jris").empty();
+                    $("#new_jri").empty();
+                    $("#jris").html(response);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
+}
 
-
-        }
-
-        function getJMeterParamsHTML()
-        {
-        $.ajax({
-                          url: "/controller/project/{{ project.id }}/jmeter_params/list/",
-                          type: "get",
-                          success: function(response) {
-                            $("#jmeter_params").empty();
-                            $("#new_jmeter_param").empty();
-                            $("#jmeter_params").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
+function getJMeterParamsHTML()
+{
+$.ajax({
+                  url: "/controller/project/{{ project.id }}/jmeter_params/list/",
+                  type: "get",
+                  success: function(response) {
+                    $("#jmeter_params").empty();
+                    $("#new_jmeter_param").empty();
+                    $("#jmeter_params").html(response);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
 
 
-        }
+}
 
-        function getScriptParamsHTML()
-        {
-        $.ajax({
-                          url: "/controller/project/{{ project.id }}/script_params/list/",
-                          type: "get",
-                          success: function(response) {
-                            $("#script_params").empty();
-                            $("#new_script_param").empty();
-                            $("#script_params").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-
-
-        }
-
-        function getJMeterParams() {
-        jsonObj = [];
-        $('input[class="form-control jmeter_params"]').each(function() {
-        console.log("HUI");
-        var p_name = $(this).attr("id");
-        var p_value = $(this).val();
-
-        item = {}
-        item ["p_name"] = p_name;
-        item ["value"] = p_value;
-        item ["comment"] = "";
-        jsonObj.push(item);
-        });
-        jsonString = JSON.stringify(jsonObj);
-        console.log(jsonString);
-        return jsonString;
-        }
-
-        getJRIs();
-        getJMeterParamsHTML();
-        getScriptParamsHTML();
-
-        $('#add_jri_btn').click(function() {
-                 $.ajax({
-                          url: "/controller/project/{{ project.id }}/new_jri/",
-                          type: "get",
-                          success: function(response) {
-                            $("#new_jri").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-        });
-
-        $('#add_jmeter_param_btn').click(function() {
-                 $.ajax({
-                          url: "/controller/project/{{ project.id }}/new_jmeter_param/",
-                          type: "get",
-                          success: function(response) {
-                            $("#new_jmeter_param").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-        });
+function getScriptParamsHTML()
+{
+$.ajax({
+                  url: "/controller/project/{{ project.id }}/script_params/list/",
+                  type: "get",
+                  success: function(response) {
+                    $("#script_params").empty();
+                    $("#new_script_param").empty();
+                    $("#script_params").html(response);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
 
 
-        $('#add_script_param_btn').click(function() {
-                 $.ajax({
-                          url: "/controller/project/{{ project.id }}/new_script_param/",
-                          type: "get",
-                          success: function(response) {
-                            $("#new_script_param").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-        });
+}
+
+function getJMeterParams() {
+jsonObj = [];
+$('input[class="form-control jmeter_params"]').each(function() {
+var p_name = $(this).attr("id");
+var p_value = $(this).val();
+
+item = {}
+item ["p_name"] = p_name;
+item ["value"] = p_value;
+item ["comment"] = "";
+jsonObj.push(item);
+});
+jsonString = JSON.stringify(jsonObj);
+return jsonString;
+}
+
+getJRIs();
+getJMeterParamsHTML();
+getScriptParamsHTML();
+
+$('#add_jri_btn').click(function() {
+          $.ajax({
+                  url: "/controller/project/{{ project.id }}/new_jri/",
+                  type: "get",
+                  success: function(response) {
+                    $("#new_jri").html(response);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
+});
+
+$('#add_jmeter_param_btn').click(function() {
+          $.ajax({
+                  url: "/controller/project/{{ project.id }}/new_jmeter_param/",
+                  type: "get",
+                  success: function(response) {
+                    $("#new_jmeter_param").html(response);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
+});
 
 
-        $('#configure_test_return_button').click(function() {
-                  $.ajax({
-                          url: "/controller",
-                          success: function(response) {
-                            $("#controller_page").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-        });
-
-        $('#start_test_button').click(function() {
-        var project_id = $(this).val();
-        console.log("Start test for project_id:"+project_id);
-                 $.ajax({
-                          url: "/controller/project/"+project_id+"/start_test/",
-                          type: "post",
-                          data: {
-                          jmeter_profile_id: $('#select_jmeter_profile').val(),
-                          test_plan_destination: $('#test_plan_destination').val(),
-                          test_display_name: $('#test_display_name').val(),
-                          csrfmiddlewaretoken: '{{ csrf_token }}'
-                          },
-                          success: function(response) {
-                             show_alert(response);
-                           },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-
-                 $.ajax({
-                          url: "/controller",
-                          success: function(response) {
-
-                            $("#controller_page").html(response);
-                          },
-                          error: function(xhr) {
-                            //Do Something to handle error
-                          }
-                        });
-        });
+$('#add_script_param_btn').click(function() {
+          $.ajax({
+                  url: "/controller/project/{{ project.id }}/new_script_param/",
+                  type: "get",
+                  success: function(response) {
+                    $("#new_script_param").html(response);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
+});
 
 
+$('#configure_test_return_button').click(function() {
+          $.ajax({
+                  url: "/controller",
+                  success: function(response) {
+                    $("#controller_page").html(response);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
+});
+
+$('#start_test_button').click(function() {
+var project_id = $(this).val();
+console.log("Start test for project_id:"+project_id);
+          $.ajax({
+                  url: "/controller/project/"+project_id+"/start_test/",
+                  type: "post",
+                  data: {
+                  jmeter_profile_id: $('#select_jmeter_profile').val(),
+                  test_plan_destination: $('#test_plan_destination').val(),
+                  test_display_name: $('#test_display_name').val(),
+                  csrfmiddlewaretoken: '{{ csrf_token }}'
+                  },
+                  success: function(response) {
+                      show_alert(response);
+                    },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
+
+          $.ajax({
+                  url: "/controller",
+                  success: function(response) {
+
+                    $("#controller_page").html(response);
+                  },
+                  error: function(xhr) {
+                    //Do Something to handle error
+                  }
+                });
+});
 </script>

@@ -73,20 +73,7 @@ class Command(BaseCommand):
             la_1 = float(generator['la_1'])
             la_5 = float(generator['la_5'])
             la_15 = float(generator['la_15'])
-            status = 'success'
-            reason = 'ok'
-            if memory_free < memory * 0.5:
-                status = 'warning'
-                reason = 'memory'
-            elif memory_free < memory * 0.1:
-                status = 'danger'
-                reason = 'low memory'
-            if la_5 > num_cpu / 2:
-                status = 'warning'
-                reason = 'average load'
-            elif la_5 > num_cpu:
-                status = 'danger'
-                reason = 'high load'
+
             if not LoadGenerator.objects.filter(hostname=hostname).exists():
                 logger.debug(
                     "Adding a new load generator: {}".format(hostname))
@@ -97,9 +84,7 @@ class Command(BaseCommand):
                     la_1=la_1,
                     la_5=la_5,
                     la_15=la_15,
-                    status=status,
                     memory_free=memory_free,
-                    reason=reason,
                     active=True, )
                 new_lg.save()
             else:
@@ -112,8 +97,6 @@ class Command(BaseCommand):
                 lg.la_1 = la_1
                 lg.la_5 = la_5
                 lg.la_15 = la_15
-                lg.status = status
-                lg.reason = reason
                 lg.active = True
                 lg.save()
 

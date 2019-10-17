@@ -6,3 +6,7 @@
 *.log
 settings.py
 desktop.ini
+.venv
+.vscode
+logs
+migrations

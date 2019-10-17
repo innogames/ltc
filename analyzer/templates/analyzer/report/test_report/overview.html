@@ -1,0 +1,38 @@
+<h3 class="page-header">Requests statistic <small>for the current test</small></h3>
+<div class="row">
+    <div class="col-xs-6">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div class="col-xs-6">
+                    <div id="errors-graph"></div>
+                </div>
+                <div class="col-xs-6">
+                    <div class="panel panel-danger">
+                        <div class="panel-heading">Top failed actions</div>
+                        <div class="panel-body">
+                            <ul class="list-group">
+                                <li class="list-group-item">
+                                    {% for e in test.top_errors %}
+                                    <span class="badge alert-danger">{{ e.errors }}</span>
+                                    <div style="word-wrap:break-word;">
+                                        <b>
+                                            <a href="">{{ e.url }}</a>
+                                        </b>
+                                    </div>
+                                    {% endfor %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xs-6">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div id="top-avg-graph"></div>
+            </div>
+        </div>
+    </div>
+</div>
