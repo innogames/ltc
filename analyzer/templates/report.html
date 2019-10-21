@@ -85,6 +85,14 @@
                                     <div id="compare_cpu_graph"></div>
                                 </div>
                             </div>
+                            <div class="row">
+                                <div class="col-xs-6">
+                                    <div id="compare_count_graph"></div>
+                                </div>
+                                <div class="col-xs-6">
+
+                                </div>
+                            </div>
                         </div>
                         </div>
                     </div>
@@ -539,7 +547,6 @@ function update_compare_graphs(num_of_tests_to_compare) {
             onmouseout: function(d, i) {
             }
         },
-
         donut: {
             title: "Successful requests (%)"
         },
@@ -586,71 +593,137 @@ $('#compare_avg_switcher button').click(function() {
 });
 
 function draw_compare_avg_graph(test_id, num_of_tests_to_compare, source) {
-$.getJSON('/analyzer/project/' + test_id_1 + '/test_info/',
-function (json) {
-    $.ajax({
-        url: "/analyzer/test/" + test_id + "/get_compare_data/",
-        type: "post",
-        data: {
-            num_of_tests_to_compare: num_of_tests_to_compare,
-            source: source,
-            csrfmiddlewaretoken: '{{ csrf_token }}'
-        },
-        beforeSend: function() {
-            $('.ajax-loader').css("visibility", "visible");
-        },
-        success: function(response) {
-            compare_avg_graph = c3.generate({
-                data: {
-                    json: response,
-                    mimeType: 'json',
-                    keys: {
-                        x: 'display_name',
-                        value: ['average', 'median'],
-                    },
-                    type: 'bar',
-                },
-                axis: {
-                    x: {
-                        type: 'category',
-                    },
-                    y: {
-                        padding: {
-                            top: 0,
-                            bottom: 0
+    $.getJSON('/analyzer/project/' + test_id_1 + '/test_info/',
+    function (json) {
+        $.ajax({
+            url: "/analyzer/test/" + test_id + "/get_compare_data/",
+            type: "post",
+            data: {
+                num_of_tests_to_compare: num_of_tests_to_compare,
+                source: source,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            beforeSend: function() {
+                $('.ajax-loader').css("visibility", "visible");
+            },
+            success: function(response) {
+                compare_avg_graph = c3.generate({
+                    data: {
+                        json: response,
+                        mimeType: 'json',
+                        keys: {
+                            x: 'display_name',
+                            value: ['average', 'median'],
                         },
-                        label: 'ms',
-                        min: 0,
-                    }
-                },
-                grid: {
-                    x: {
-                        lines: [{
-                            value: json[0].display_name,
-                            text: 'Current test',
-                            position: 'end'
-                        }]
-                    }
-                },
-                regions: [{
-                    axis: 'x',
-                    start: 0.5,
-                    class: 'regionX'
-                }, ],
-                title: {
-                    text: 'Comparison of average and median response times'
-                },
-                bindto: '#compare_avg_graph'
-            });
-        },
-        error: function(xhr) {
-            show_alert(response);
-        },
-        complete: function() {
-            $('.ajax-loader').css("visibility", "hidden");
-        },
+                        type: 'bar',
+                    },
+                    axis: {
+                        x: {
+                            type: 'category',
+                        },
+                        y: {
+                            padding: {
+                                top: 0,
+                                bottom: 0
+                            },
+                            label: 'ms',
+                            min: 0,
+                        }
+                    },
+                    grid: {
+                        x: {
+                            lines: [{
+                                value: json[0].display_name,
+                                text: 'Current test',
+                                position: 'end'
+                            }]
+                        }
+                    },
+                    regions: [{
+                        axis: 'x',
+                        start: 0.5,
+                        class: 'regionX'
+                    }, ],
+                    title: {
+                        text: 'Comparison of average and median response times'
+                    },
+                    bindto: '#compare_avg_graph'
+                });
+            },
+            error: function(xhr) {
+                show_alert(response);
+            },
+            complete: function() {
+                $('.ajax-loader').css("visibility", "hidden");
+            },
+        });
     });
-});
+
+    $.getJSON('/analyzer/project/' + test_id_1 + '/test_info/',
+    function (json) {
+        $.ajax({
+            url: "/analyzer/test/" + test_id + "/compare_count/",
+            type: "post",
+            data: {
+                num_of_tests_to_compare: num_of_tests_to_compare,
+                source: source,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            beforeSend: function() {
+                $('.ajax-loader').css("visibility", "visible");
+            },
+            success: function(response) {
+                compare_count_graph = c3.generate({
+                    data: {
+                        json: response,
+                        mimeType: 'json',
+                        keys: {
+                            x: 'display_name',
+                            value: ['count', 'errors'],
+                        },
+                        type: 'bar',
+                    },
+                    axis: {
+                        x: {
+                            type: 'category',
+                        },
+                        y: {
+                            padding: {
+                                top: 0,
+                                bottom: 0
+                            },
+                            label: 'reqs',
+                            min: 0,
+                        }
+                    },
+                    grid: {
+                        x: {
+                            lines: [{
+                                value: json[0].display_name,
+                                text: 'Current test',
+                                position: 'end'
+                            }]
+                        }
+                    },
+                    regions: [{
+                        axis: 'x',
+                        start: 0.5,
+                        class: 'regionX'
+                    }, ],
+                    title: {
+                        text: 'Comparison of requests amount and errors'
+                    },
+                    bindto: '#compare_count_graph'
+                });
+            },
+            error: function(xhr) {
+                show_alert(response);
+            },
+            complete: function() {
+                $('.ajax-loader').css("visibility", "hidden");
+            },
+        });
+    });
 }
 
 function draw_top_avg_graph(top_N) {

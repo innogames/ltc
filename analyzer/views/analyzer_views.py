@@ -465,7 +465,8 @@ def get_compare_tests_server_monitoring_data(test_id,
         test__start_time__lte=start_time,
         test__project_id=project_id,
         test__show=True,
-        data_resolution_id=1
+        data_resolution_id=1,
+        source='default',
     ).values(
         'test__display_name', 'server__server_name', 'test__start_time'
     ).annotate(
@@ -569,6 +570,65 @@ def compare_tests_avg(request, test_id):
         num_of_tests = request.POST.get('num_of_tests_to_compare', '0')
         data = get_compare_tests_aggregate_data(
             test_id, num_of_tests, source=source)
+        current_rank = 1
+        counter = 0
+        arr = []
+        for d in data:
+            if counter < 1:
+                d['rank'] = current_rank
+            else:
+                if int(d['start_time']) == int(
+                        data[counter - 1]['start_time']):
+                    d['rank'] = current_rank
+                else:
+                    current_rank += 1
+                    d['rank'] = current_rank
+            # filter by rank >_<
+            if int(d['rank']) <= int(num_of_tests) + 1:
+                arr.append(d)
+            counter += 1
+        response = list(arr)
+    return JsonResponse(response, safe=False)
+
+
+def get_compare_tests_count(test_id,
+                            num_of_tests,
+                            order='-test__start_time',
+                            source='default'):
+    '''
+    Compares given test with test_id against num_of_tests previous
+    '''
+    project = Test.objects.filter(id=test_id).values('project_id')
+    start_time = Test.objects.filter(
+        id=test_id).values('start_time')[0]['start_time']
+    project_id = project[0]['project_id']
+    data = TestActionData.objects.filter(
+                test__start_time__lte=start_time,
+                test__project_id=project_id,
+                test__show=True,
+                data_resolution_id=1
+            ).annotate(
+                display_name=F('test__display_name')
+            ).annotate(
+                start_time=F('test__start_time')
+            ).values(
+                'display_name', 'start_time'
+            ).annotate(
+                count=Sum(RawSQL("((data->>%s)::numeric)", ('count',)))
+            ).annotate(
+                errors=Sum(RawSQL("((data->>%s)::numeric)", ('errors',)))
+            ).order_by(order)[:int(num_of_tests)]
+
+    return data
+
+def compare_tests_count(request, test_id):
+    '''
+    Compare amount of requests and errors from current and N previous tests
+    '''
+    if request.method == 'POST':
+        source = request.POST.get('source', '0')
+        num_of_tests = request.POST.get('num_of_tests_to_compare', '0')
+        data = get_compare_tests_count(test_id, num_of_tests, source=source)
         current_rank = 1
         counter = 0
         arr = []
