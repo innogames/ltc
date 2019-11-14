@@ -2,35 +2,35 @@
 {% load analyzer_extras %}
 <ul class="nav nav-tabs" id="test-report-tabs" role="tablist">
     <li class="nav-item">
-        <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview" role="tab" aria-controls="overview" aria-selected="true">Overview</a>
+        <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview">Overview</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="compare-tab" data-toggle="tab" href="#compare" role="tab" aria-controls="compare" aria-selected="false">Compare tests</a>
+        <a class="nav-link" id="compare-tab" data-toggle="tab" href="#compare">Compare tests</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="aggregate-table-tab" data-toggle="tab" href="#aggregate-tab" role="tab" aria-controls="aggregate-table" aria-selected="false">Aggregate table</a>
+        <a class="nav-link" id="aggregate-table-tab" data-toggle="tab" href="#aggregate-tab" >Aggregate table</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="rtot-graph-tab" data-toggle="tab" href="#rtot-graph" role="tab" aria-controls="rtot-graph" aria-selected="false">Response times graphs</a>
+        <a class="nav-link" id="rtot-graph-tab" data-toggle="tab" href="#rtot-graph" >Response times graphs</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="monitoring-tab" data-toggle="tab" href="#monitoring" role="tab" aria-controls="monitoring" aria-selected="false">Monitoring graphs</a>
+        <a class="nav-link" id="monitoring-tab" data-toggle="tab" href="#monitoring" >Monitoring graphs</a>
     </li>
 </ul>
 <div class="tab-content">
-    <div class="tab-pane active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+    <div class="tab-pane" id="overview">
         {% overview test %}
     </div>
-    <div class="tab-pane" id="compare" role="tabpanel" aria-labelledby="compare-tab">
+    <div class="tab-pane" id="compare">
         {% include "analyzer/report/test_report/compare.html" %}
     </div>
-    <div class="tab-pane" id="aggregate-tab" role="tabpanel" aria-labelledby="aggregate-table-tab">
+    <div class="tab-pane" id="aggregate-tab">
         {% aggregate_table test %}
     </div>
-    <div class="tab-pane" id="rtot-graph" role="tabpanel" aria-labelledby="rtot-graph-tab">
+    <div class="tab-pane" id="rtot-graph">
         {% include "analyzer/report/test_report/rtot.html" %}
     </div>
-    <div class="tab-pane" id="monitoring" role="tabpanel" aria-labelledby="monitoring-tab">
+    <div class="tab-pane" id="monitoring">
         {% include "analyzer/report/test_report/monitoring.html" %}
     </div>
 </div>

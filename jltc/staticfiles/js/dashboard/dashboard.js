@@ -2,7 +2,7 @@ class Dashboard {
 
     constructor() {
         this.loadGenerators = new LoadGenerators('load-generators');
-        // /this.runningTests = new RunningTests('running-tests');
+        this.runningTests = new RunningTests('running-tests');
         this.refreshInterval = 10000;
     }
 
@@ -17,7 +17,7 @@ class Dashboard {
 
     refresh() {
         this.loadGenerators.refresh();
-        //this.runningTests.refresh();
+        this.runningTests.refresh();
     }
 }
 
@@ -52,8 +52,8 @@ class LoadGenerators extends DashboardElement {
             type: 'get',
             context: this,
             success: function (response) {
-               let html =
-                `<table class="table">
+                let html =
+                    `<table class="table">
                 <thead>
                 <tr>
                 <th>Host</th>
@@ -87,51 +87,51 @@ class LoadGenerators extends DashboardElement {
         });
     }
 }
-/*
 class RunningTests extends DashboardElement {
-    constructor(id, html, dashboard) {
-        super(id, html, dashboard);
+    constructor(id, html) {
+        super(id, html);
+    }
+
+    init() {
+        this.refresh();
     }
 
     refresh() {
         $.ajax({
-            url: '/controller/running_tests/get_data/',
+            url: '/controller/running_tests/',
             async: 'true',
             type: 'get',
+            context: this,
             success: function (response) {
-                $("#running_tests_list").empty();
-                var running_tests_table = '<div class="table-responsive"><table class="table">' +
-                    '<thead>' +
-                    '<tr>' +
-                    '<th>Project</th>' +
-                    '<th>Test ID</th>' +
-                    //'<th>Remote instances</th>' +
-                    '<th>Progress</th>' +
-                    '</tr>' +
-                    '</thead>'
-                $.each(response, function (i, obj) {
-                    var project_name = obj['project_name'];
-                    var start_time = obj['start_time'];
-                    var current_time = obj['current_time'];
-                    var duration = obj['duration'];
-                    var id = obj['id'];
-                    var jmeter_remote_instances = obj['jmeter_remote_instances']; 
+                let html =
+                   `<table class="table">
+                    <thead>
+                        <tr>
+                        <th>Project</th>
+                        <th>TestID</th>
+                        <th>Progress</th>
+                        </tr>
+                    </thead>`
+                $.each(response, function (i, test) {
+                    var start_time = test['start_time'];
+                    var current_time = test['current_time'];
+                    var duration = test['duration'];
                     var progress = Math.round(((current_time - start_time) / 1000) * 100 / duration)
                     if (progress > 100) progress = 100;
-                    var progress_bar = '<div class="progress">' +
-                        '<div class="progress-bar progress-bar-striped active" role="progressbar"' +
-                        'aria-valuenow="' + progress + '" aria-valuemin="0" aria-valuemax="100" style="width:' + progress + '%">' +
-                        progress + '%' +
-                        '</div></div>'
-                    running_tests_table += '<tr><td>' + project_name + '</td>' + '<td>' + id + '</td>' + '<td>' + progress_bar + '</td></tr>';
+                    var progress_bar =
+                    `<div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: ${progress}%" aria-valuenow="${progress}" aria-valuemin="0"
+                        aria-valuemax="100" style="min-width: 2em;">${progress}%</div>
+                    </div>`
+                    html += `<tr><td>${test['project_name']}</td><td>${test['id']}</td><td>${progress_bar}</td></tr>`;
                 });
-                running_tests_table += '</table></div>';
-                $("#running_tests_list").append(running_tests_table);
+                html += '</table>';
+                this.html = html;
+                this.show();
             },
             error: function (xhr) {}
         });
     }
 }
-*/
 var dashboard = new Dashboard();
 dashboard.init();

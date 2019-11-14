@@ -32,6 +32,21 @@ from administrator.models import Configuration
 
 logger = logging.getLogger(__name__)
 
+def get_running_tests(request):
+    '''
+    Returns list of current running tests.
+    '''
+    running_tests = list(
+        TestRunning.objects.annotate(
+            project_name=F('project__project_name')
+        ).annotate(
+            current_time=Value(time.time() * 1000, output_field=IntegerField())
+        ).values(
+            'project_name', 'id', 'start_time', 'current_time',
+            'jmeter_remote_instances', 'duration'
+        )
+    )
+    return JsonResponse(running_tests, safe=False)
 
 def setlimits():
     logger.info("Setting resource limit in child (pid %d)" % os.getpid())
@@ -170,14 +185,7 @@ def jri_list(request, project_id):
     return render(request, 'jri.html', {'jris': jris, 'project': project})
 
 
-def get_running_tests(request):
-    running_tests_data = list(
-        TestRunning.objects.annotate(project_name=F('project__project_name'))
-        .annotate(current_time=Value(
-            time.time() * 1000, output_field=IntegerField())).values(
-                'project_name', 'id', 'start_time', 'current_time',
-                'jmeter_remote_instances', 'duration'))
-    return JsonResponse(running_tests_data, safe=False)
+
 
 
 def jmeter_param_delete(request, project_id, param_id):

@@ -1,7 +1,3 @@
-$(function () {
-    $('#test-report-tabs li:last-child a').tab('show')
-})
-
 class Test {
     constructor(csrf) {
         this.id = $('#page-data').data('test-id');
@@ -43,7 +39,6 @@ class Test {
                 errors: a.errors + b.errors,
             }));
         this.startTime = data.test_data[data.test_data.length - 1].timestamp;
-        console.log(data)
         this.servers = Object.keys(data.server_monitoring_data)
     }
 
@@ -61,6 +56,7 @@ class TestReportGraph extends TestReportElement {
         super(id, data);
         this.title = title;
         this.description = description;
+        this.chart;
     }
 
     show() {
@@ -70,7 +66,7 @@ class TestReportGraph extends TestReportElement {
         this.description['title'] = {
             'text': this.title
         };
-        c3.generate(this.description)
+        this.chart = c3.generate(this.description)
     }
 }
 
@@ -104,7 +100,7 @@ class TestHighlights extends TestReportElement {
 class TestReport {
     constructor(test) {
         this.test = test;
-        this.graphs = new Array();
+        this.charts = new Array();
     }
 
     init() {
@@ -137,7 +133,7 @@ class TestReport {
         var testStartTime = this.test.startTime;
         var testHighlights = new TestHighlights('compare-highlights', this.test);
         testHighlights.show();
-        this.graphs = [
+        this.charts = [
             new TestReportGraph('compare-cpu-graph',
                 this.test.data.compare_data.map(function (r) {
                     var metric = 'cpu_load'
@@ -367,10 +363,19 @@ class TestReport {
             ),
         ];
 
-        this.graphs.forEach(
+        this.charts.forEach(
             function (graph, elementId) {
                 graph.show();
             }
         )
+
     }
 }
+
+$('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+    testReport.charts.forEach(
+        function (c, chartId) {
+            c.chart.resize();
+        }
+    )
+});
