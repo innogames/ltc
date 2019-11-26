@@ -1,11 +1,4 @@
 from django.contrib import admin
+from .models import TestDataResolution
 
-# Register your models here.
-from analyzer.models import Test, Project
-
-
-class TestAdmin(admin.ModelAdmin):
-    search_fields = ('display_name',)
-
-admin.site.register(Test, TestAdmin)
-admin.site.register(Project)
+admin.site.register(TestDataResolution)

@@ -1,14 +1,16 @@
 import json
 import logging
 import time
+from datetime import datetime, timedelta
 
-from django.db.models import Avg, Func, Max, Min, Sum, FloatField
+from django.db.models import Avg, FloatField, Func, Max, Min, Sum
 from django.db.models.expressions import F, RawSQL
 from django.shortcuts import render
 
-from analyzer.models import (Action, Project, Server, ServerMonitoringData,
-                             Test, TestActionAggregateData, TestActionData,
-                             TestData, TestDataResolution, TestError)
+from analyzer.models import (
+    Action, Server, ServerMonitoringData, TestActionAggregateData,
+    TestActionData, TestData, TestDataResolution, TestError)
+from jltc.models import Project, Test
 
 logger = logging.getLogger(__name__)
 
@@ -16,22 +18,22 @@ def index(request):
     last_tests_by_project = []
     # Only tests executed in last 30 days
     tests = Test.objects.filter(
-        start_time__gt=int(time.time() * 1000) - 1000 * 1 * 60 * 60 * 24 * 30
+        started_at__gt=datetime.now() - timedelta(days=30)
     ).values('project_id').annotate(
-        latest_time=Max('start_time')
+        latest_time=Max('started_at')
     )
     for test in tests:
         project_id = test.project_id
         t = Test.objects.filter(
-            project_id=project_id, start_time=test.latest_time
+            project_id=project_id, started_at=test.latest_time
         ).values(
-            'project__project_name', 'display_name', 'id',
-            'project_id', 'parameters', 'start_time'
+            'project__name', 'name', 'id',
+            'project_id', 'parameters', 'started_at'
         )
         last_tests_by_project.append(t.first())
-    last_tests = Test.objects.filter(project__show=True).values(
-        'project__project_name', 'project_id', 'display_name', 'id',
-        'parameters', 'start_time').order_by('-start_time')[:10]
+    last_tests = Test.objects.filter(project__enabled=True).values(
+        'project__name', 'project_id', 'name', 'id',
+        'started_at').order_by('-started_at')[:10]
     tests = dashboard_compare_tests_list(last_tests)
     tests_by_project = dashboard_compare_tests_list(last_tests_by_project)
     return render(
@@ -51,7 +53,7 @@ def dashboard_compare_tests_list(tests_list):
         project = Project.objects.get(id=project_id)
 
         project_tests = Test.objects.filter(
-            project=project, id__lte=test_id).order_by('-start_time')
+            project=project, id__lte=test_id).order_by('-started_at')
 
         if project_tests.count() > 1:
             prev_test_id = project_tests[1].id
@@ -90,14 +92,12 @@ def dashboard_compare_tests_list(tests_list):
         else:
             result = 'danger'
         tests.append({
-            'project_name':
-            t['project__project_name'],
-            'display_name':
-            t['display_name'],
-            'parameters':
-            t['parameters'],
-            'start_time':
-            t['start_time'],
+            'name':
+            t['project__name'],
+            'name':
+            t['name'],
+            'started_at':
+            t['started_at'],
             'success_requests':
             success_requests,
             'test_avg_response_times':
@@ -106,6 +106,5 @@ def dashboard_compare_tests_list(tests_list):
             prev_test_data['overall_avg'],
             'result':
             result,
-            'prefix': project.confluence_page
         })
     return tests

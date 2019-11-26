@@ -16,9 +16,10 @@ import pandas as pd
 from pandas import DataFrame
 from pylab import *
 
-from analyzer.models import (Action, Project, Server, ServerMonitoringData,
-                             Test, TestActionAggregateData, TestActionData,
-                             TestAggregate, TestData, TestDataResolution)
+from analyzer.models import (Action, Server, ServerMonitoringData,
+                            TestActionAggregateData, TestActionData,
+                            TestData, TestDataResolution)
+from jltc.models import Test, Project
 from controller.models import TestRunning
 logger = logging.getLogger(__name__)
 

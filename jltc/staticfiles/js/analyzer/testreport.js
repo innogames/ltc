@@ -171,7 +171,7 @@ class TestReport {
                     grid: {
                         x: {
                             lines: [{
-                                value: this.test.data.display_name,
+                                value: this.test.data.name,
                                 text: 'Current test',
                                 position: 'end'
                             }]
@@ -210,7 +210,7 @@ class TestReport {
                     grid: {
                         x: {
                             lines: [{
-                                value: this.test.data.display_name,
+                                value: this.test.data.name,
                                 text: 'Current test',
                                 position: 'end'
                             }]
@@ -223,7 +223,7 @@ class TestReport {
                     }, ],
                 }, 'Compare graph'
             ),
-            new TestReportGraph('monitoring-graph',
+            /*new TestReportGraph('monitoring-graph',
                 this.test.data.server_monitoring_data[self.test.servers[0]].map(function (r) {
                     return {
                         timestamp: new Date(r.timestamp) - new Date(testStartTime),
@@ -255,12 +255,12 @@ class TestReport {
                         },
                     },
                 }, 'Monitoring graph ' + self.test.servers[0]
-            ),
+            ),*/
             new TestReportGraph('rtot-graph',
                 this.test.data.test_data.map(function (r) {
                     return {
                         timestamp: new Date(r.timestamp) - new Date(testStartTime),
-                        mean: r.avg,
+                        mean: r.mean,
                         median: r.median,
                         rps: r.count / 60
                     };
@@ -324,7 +324,7 @@ class TestReport {
                     },
                 }, 'Successful requests (%)'
             ),
-            new TestReportGraph('top-avg-graph',
+            new TestReportGraph('top-mean-graph',
                 d3.nest()
                 .key(function (d) {
                     return d.action

@@ -16,12 +16,14 @@ from django.template.loader import render_to_string
 from django.views.generic import TemplateView
 from scipy import stats
 
-from jltc.models import Configuration
+from jltc.models import Configuration, Test, Project
 from analyzer.confluence import confluenceposter
 from analyzer.confluence.utils import generate_confluence_graph
-from analyzer.models import (Action, Project, Server, ServerMonitoringData,
-                             Test, TestActionAggregateData, TestActionData,
-                             TestData, TestDataResolution, TestError)
+from analyzer.models import (
+    Action, Server, ServerMonitoringData,
+    TestActionAggregateData, TestActionData,
+    TestData, TestDataResolution, TestError
+)
 from django.views.decorators.http import require_POST
 from django.forms.models import model_to_dict
 
@@ -52,11 +54,11 @@ def test_data(request):
         'servermonitoringdata_set'
     )
     data = data.first()
-    response['display_name'] = data.display_name
+    response['name'] = data.name
     test_action_aggregate_data = []
     for d in data.testactionaggregatedata_set.all():
         d_ = d.data
-        d_['action'] = d.action.url
+        d_['action'] = d.action.name
         test_action_aggregate_data.append(d_)
     test_data = []
     for d in data.testdata_set.all():
@@ -70,14 +72,15 @@ def test_data(request):
             d.server.server_name.replace(".", "_"), []
         ).append(d_)
 
-    prev_tests = Test.objects.filter(start_time__lte=data.start_time,
-        project_id=data.project_id, show=True,
-    ).order_by('-start_time')
+    prev_tests = Test.objects.filter(
+        started_at__lte=data.started_at,
+        project_id=data.project_id,
+    ).order_by('-started_at')
     compare_data = []
     for t in prev_tests:
         compare_data.append(
             {
-                'test_name': t.display_name,
+                'test_name': t.name,
                 'mean': t.get_test_metric('mean')[0]['mean'],
                 'median': t.get_test_metric('median')[0]['median'],
                 'cpu_load': t.get_test_metric('cpu_load')
@@ -116,39 +119,39 @@ def compare_highlights(request):
     actions_data = {}
     for test in tests:
         actions[
-            test.display_name
+            test.name
         ] = TestActionAggregateData.objects.annotate(
-            url=F('action__url')
-        ).filter(test=test).values('url', 'action_id')
+            name=F('action__name')
+        ).filter(test=test).values('name', 'action_id')
         actions_data[
-            test.display_name
+            test.name
         ] = TestActionAggregateData.objects.annotate(
-            url=F('action__url')
-        ).filter(test=test).values('url', 'data')
+            name=F('action__name')
+        ).filter(test=test).values('name', 'data')
 
     highlights['warning'] = [
         {'action': action, 'type': 'new_actions'}
-        for action in actions[tests[0].display_name]
-        if action not in actions[tests[1].display_name]
+        for action in actions[tests[0].name]
+        if action not in actions[tests[1].name]
     ]
 
     highlights['warning'] = [
         {'action': action, 'type': 'absent_actions'}
-        for action in actions[tests[1].display_name]
-        if action not in actions[tests[0].display_name]
+        for action in actions[tests[1].name]
+        if action not in actions[tests[0].name]
     ]
 
     sp = int(Configuration.objects.get(
         name='signifficant_actions_compare_percent'
         ).value)
 
-    for a in actions_data[tests[1].display_name]:
+    for a in actions_data[tests[1].name]:
         action = {}
         action['other_test'] = a
-        action_url = action['other_test']['url']
+        action_name = action['other_test']['name']
         a_ = actions_data[
-            tests[0].display_name
-        ].filter(url=action_url)
+            tests[0].name
+        ].filter(name=action_name)
         if a_.first() is None:
             continue
         action['current_test'] = a_.first()
@@ -211,9 +214,9 @@ def action_details(request, test_id, action_id):
 
     action_aggregate_data = list(
         TestActionAggregateData.objects.annotate(
-            test_name=F('test__display_name')).filter(
+            test_name=F('test__name')).filter(
                 action_id=action_id, test_id__lte=test_id).values(
-                    'test_name', 'data').order_by('-test__start_time'))[:5]
+                    'test_name', 'data').order_by('-test__started_at'))[:5]
     action_data = []
     for e in action_aggregate_data:
         data = e['data']
@@ -247,7 +250,7 @@ def action_details(request, test_id, action_id):
             "std": std,
             "test_name": test_name
         })
-    test_start_time = TestActionData.objects. \
+    test_started_at = TestActionData.objects. \
         filter(test_id=test_id, data_resolution_id=1). \
         aggregate(min_timestamp=Min(
             RawSQL("((data->>%s)::timestamp)",
@@ -262,6 +265,6 @@ def action_details(request, test_id, action_id):
             'test_id': test_id,
             'action': Action.objects.get(id=action_id),
             'action_data': action_data,
-            'test_start_time': test_start_time,
+            'test_started_at': test_started_at,
             'test_errors': test_errors,
         })

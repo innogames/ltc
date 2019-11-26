@@ -22,7 +22,8 @@ if _platform == "linux" or _platform == "linux2":
 import paramiko
 import tempfile
 from controller.graphite import graphiteclient
-from analyzer.models import Project, Test, Server, ServerMonitoringData, TestData
+from analyzer.models import Server, ServerMonitoringData, TestData
+from jltc.models import Project, Test
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 
@@ -38,11 +39,11 @@ def get_running_tests(request):
     '''
     running_tests = list(
         TestRunning.objects.annotate(
-            project_name=F('project__project_name')
+            name=F('project__name')
         ).annotate(
             current_time=Value(time.time() * 1000, output_field=IntegerField())
         ).values(
-            'project_name', 'id', 'start_time', 'current_time',
+            'name', 'id', 'start_time', 'current_time',
             'jmeter_remote_instances', 'duration'
         )
     )
@@ -548,12 +549,12 @@ def create_project(request, project_id):
     project = Project.objects.get(id=project_id)
     response = []
     if request.method == 'POST':
-        project_name = request.POST.get('project_name', '')
+        name = request.POST.get('name', '')
         jmeter_destination = request.POST.get('jmeter_destination', '')
         test_plan_destination = request.POST.get('test_plan_destination', '')
         project.jmeter_destination = jmeter_destination
         project.test_plan_destination = test_plan_destination
-        project.project_name = project_name
+        project.name = name
         project.save()
     return JsonResponse(response, safe=False)
 
@@ -614,7 +615,7 @@ def start_test(request, project_id):
         if Test.objects.filter(project_id=project_id).exists():
             last_test_id = Test.objects.filter(
                 project_id=project_id).order_by("-id")[0].id
-        running_test_dir = os.path.join('/tmp/', 'jltc', project.project_name,
+        running_test_dir = os.path.join('/tmp/', 'jltc', project.name,
                                         str(last_test_id + 1))
         running_test_results_dir = os.path.join(running_test_dir, 'results/')
         running_test_logs_dir = os.path.join(running_test_dir, 'logs/')

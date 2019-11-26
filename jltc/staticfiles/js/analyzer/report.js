@@ -5,7 +5,6 @@ testReport.init();
 
 $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
     localStorage.setItem('activeTab', $(e.target).attr('href'));
-    $(window).resize()
 });
 var activeTab = localStorage.getItem('activeTab');
 if(activeTab){

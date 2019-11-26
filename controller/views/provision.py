@@ -14,7 +14,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 
 from administrator.models import SSHKey
-from analyzer.models import Project
+from jltc.models import Project
 from controller.models import (ActivityLog, JmeterInstance,
                                JmeterInstanceStatistic, LoadGenerator,
                                TestRunning)

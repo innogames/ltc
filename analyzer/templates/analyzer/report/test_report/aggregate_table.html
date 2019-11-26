@@ -17,7 +17,7 @@
             <tr>
                 {% url 'action_details' test.id row.action_id as a_url %}
                 <td><b><a href="{{ a_url }}"
-                            onclick="return popitup('{{ a_url }}')">{{ row.url }}</a></b>
+                            onclick="return popitup('{{ a_url }}')">{{ row.name }}</a></b>
                 </td>
                 {% for name, value in row.data.items %}
                 {% if name == "errors" %}

@@ -1,5 +1,5 @@
 <hr/>
-<h3 class="page-header">Overview <small>for the current test</small></h3>
+<h4 class="page-header">Overview <small>for the current test</small></h4>
 <hr/>
 <div class="row">
     <div class="col-3">
@@ -20,7 +20,7 @@
                         <span class="badge alert-danger">{{ e.errors }}</span>
                         <div style="word-wrap:break-word;">
                             <b>
-                                <a href="">{{ e.url }}</a>
+                                <a href="">{{ e.name }}</a>
                             </b>
                         </div>
                         {% endfor %}
@@ -33,7 +33,7 @@
         <div class="card border-light">
                 <div class="card-header">Top slowest actions:</div>
                 <div class="card-body">
-                    <div class="chart" id="top-avg-graph"></div>
+                    <div class="chart" id="top-mean-graph"></div>
                 </div>
         </div>
     </div>

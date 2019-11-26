@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 import datetime
 import json
-from analyzer.models import Project
+from jltc.models import Project, Test
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 import pandas as pd
@@ -9,6 +9,7 @@ from collections import defaultdict, OrderedDict
 # Create your models here.
 from administrator.models import SSHKey
 from pylab import np
+from jltc.models import TestData
 
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 
