@@ -4,7 +4,7 @@
 *.xml
 *.hg
 *.log
-settings.py
+local_settings.py
 desktop.ini
 .venv
 .vscode
