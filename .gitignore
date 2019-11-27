@@ -8,5 +8,5 @@ local_settings.py
 desktop.ini
 .venv
 .vscode
-logs
+logs/*.log
 migrations

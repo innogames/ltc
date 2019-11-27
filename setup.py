@@ -2,7 +2,7 @@
 
 """
 jltc setup
-Copyright (c) 2010, InnoGames GmbH
+Copyright (c) 2019, InnoGames GmbH
 """
 
 from setuptools import find_packages, setup
@@ -28,6 +28,9 @@ def get_version():
 def get_packages():
     yield '.'
     yield 'jltc'
+    yield 'analyzer'
+    yield 'online'
+    yield 'controller'
     for package in find_packages('jltc'):
         yield 'jltc.{}'.format(package)
 
