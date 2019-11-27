@@ -1,4 +1,3 @@
-import dataclasses
 import json
 
 from django.contrib import admin
