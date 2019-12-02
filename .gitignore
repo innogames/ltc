@@ -6,3 +6,4 @@
 *.log
 settings.py
 desktop.ini
+.venv

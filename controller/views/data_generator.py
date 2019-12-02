@@ -220,7 +220,7 @@ def generate_test_results_data(test_id,
                 url_data['count'] = df_url_gr_by_ts.success.count()
                 df_url_gr_by_ts_only_errors = df_url[(
                     df_url.success == False
-                )].groupby(pd.TimeGrouper(freq=data_resolution))
+                )].groupby(pd.Grouper(freq=data_resolution))
                 url_data[
                     'errors'] = df_url_gr_by_ts_only_errors.success.count()
                 url_data['test_id'] = test_id
@@ -266,7 +266,7 @@ def generate_test_results_data(test_id,
                 test_id=test_id,
                 data_resolution_id=data_resolution_id).exists():
             test_overall_data = pd.DataFrame()
-            df_gr_by_ts = df.groupby(pd.TimeGrouper(freq=data_resolution))
+            df_gr_by_ts = df.groupby(pd.Grouper(freq=data_resolution))
             test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
             test_overall_data['median'] = df_gr_by_ts.response_time.median()
             test_overall_data['count'] = df_gr_by_ts.response_time.count()

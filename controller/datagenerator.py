@@ -195,13 +195,13 @@ def generate_data(t_id):
                 print "Adding action data: " + url
                 df_url = df[(df.url == url)]
                 url_data = pd.DataFrame()
-                df_url_gr_by_ts = df_url.groupby(pd.TimeGrouper(freq='1Min'))
+                df_url_gr_by_ts = df_url.groupby(pd.Grouper(freq='1Min'))
                 url_data['avg'] = df_url_gr_by_ts.response_time.mean()
                 url_data['median'] = df_url_gr_by_ts.response_time.median()
                 url_data['count'] = df_url_gr_by_ts.success.count()
                 df_url_gr_by_ts_only_errors = df_url[(
                     df_url.success == False
-                )].groupby(pd.TimeGrouper(freq='1Min'))
+                )].groupby(pd.Grouper(freq='1Min'))
                 url_data[
                     'errors'] = df_url_gr_by_ts_only_errors.success.count()
                 url_data['test_id'] = test_id
@@ -224,11 +224,11 @@ def generate_data(t_id):
                         action_id=action_id,
                         data=data)
                     test_action_data.save()
-        
+
         zip_results_file(jmeter_results_file)
-        
+
         test_overall_data = pd.DataFrame()
-        df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
+        df_gr_by_ts = df.groupby(pd.Grouper(freq='1Min'))
         test_overall_data['avg'] = df_gr_by_ts.response_time.mean()
         test_overall_data['median'] = df_gr_by_ts.response_time.median()
         test_overall_data['count'] = df_gr_by_ts.response_time.count()

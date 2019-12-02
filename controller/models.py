@@ -193,12 +193,12 @@ class TestRunning(models.Model):
 
                 # Over time data
                 update_df = pd.DataFrame()
-                df_gr_by_ts = df.groupby(pd.TimeGrouper(freq='1Min'))
+                df_gr_by_ts = df.groupby(pd.Grouper(freq='1Min'))
                 update_df['avg'] = df_gr_by_ts.response_time.mean()
                 update_df['count'] = df_gr_by_ts.success.count()
                 update_df['weight'] = df_gr_by_ts.response_time.sum()
                 df_gr_by_ts_only_errors = df[(
-                    df.success == False)].groupby(pd.TimeGrouper(freq='1Min'))
+                    df.success == False)].groupby(pd.Grouper(freq='1Min'))
                 update_df['errors'] = df_gr_by_ts_only_errors.success.count()
                 new_data = {}
                 output_json = json.loads(
