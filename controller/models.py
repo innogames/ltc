@@ -1,18 +1,24 @@
 from __future__ import unicode_literals
+
 import datetime
 import json
-from jltc.models import Project, Test
+import re
+import logging
+
+from collections import OrderedDict, defaultdict
+
+import pandas as pd
+import paramiko
 from django.contrib.postgres.fields import JSONField
 from django.db import models
-import pandas as pd
-from collections import defaultdict, OrderedDict
+from pylab import np
+
 # Create your models here.
 from administrator.models import SSHKey
-from pylab import np
-from jltc.models import TestData
+from jltc.models import Configuration, Project, Test, TestData
 
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
-
+logger = logging.getLogger(__name__)
 
 class ProjectGraphiteSettings(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
@@ -305,6 +311,40 @@ class LoadGenerator(models.Model):
             status = 'danger'
             reason = 'high load'
         return {'status': status, 'reason': reason}
+
+    def refresh(self):
+        """SSH to loadgenerator and gether system data
+        """
+
+        logger.info('Refresh loadgenerator data: %s', self.hostname)
+        ssh_key = Configuration.objects.get(name='ssh_key_path').value
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        logger.info('ssh to %s', self.hostname)
+        ssh.connect(self.hostname, username='root', key_filename=ssh_key)
+        stdin, stdout, stderr = ssh.exec_command('cat /proc/meminfo')
+        memory_free = str(
+            int(re.search(
+                'MemFree:\s+?(\d+)', str(stdout.readlines())
+            ).group(1)) / 1024
+        )
+        stdin, stdout, stderr = ssh.exec_command('uptime')
+        load_avg = re.search(
+            'load average:\s+([0-9.]+?),\s+([0-9.]+?),\s+([0-9.]+)',
+            str(stdout.readlines())
+        )
+        ssh.close()
+        if load_avg:
+            la_1 = load_avg.group(1)
+            la_5 = load_avg.group(2)
+            la_15 = load_avg.group(3)
+        self.memory_free = memory_free
+        self.la_1 = la_1
+        self.la_5 = la_5
+        self.la_15 = la_15
+        self.active = True
+        self.save()
+
 
     class Meta:
         db_table = 'load_generator'
