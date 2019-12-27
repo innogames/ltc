@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.db.models.expressions import F
 
 from administrator.models import SSHKey
-from controller.models import (JmeterInstance, JmeterInstanceStatistic,
+from controller.models import (JmeterServer, JmeterInstanceStatistic,
                                TestRunning)
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
             # Connect and gather JAVA metrics from jmeter remote instances
         jmeter_instances = list(
-            JmeterInstance.objects.annotate(
+            JmeterServer.objects.annotate(
                 hostname=F('load_generator__hostname'))
             .values('hostname', 'pid', 'project_id', 'threads_number',
                     'test_running_id'))

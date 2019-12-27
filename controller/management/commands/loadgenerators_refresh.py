@@ -3,7 +3,7 @@ import threading
 
 from django.core.management.base import BaseCommand
 
-# from adminapi.dataset import Query
+from adminapi.dataset import Query
 from controller.models import LoadGenerator
 from jltc.models import Configuration
 
@@ -14,22 +14,32 @@ def refresh(loadgenerator):
     """Update loadgenerator data
 
     Args:
-        loadgenerator (LoadGenerator): loadgenerator object
+        loadgenerator (LoadGenerator): loadgenerator hostname
     """
 
     loadgenerator.refresh()
 
 
 class Command(BaseCommand):
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'csv_file_path', type=str,
+            help='CSV with jmeter test results destination path'
+        )
+        parser.add_argument(
+            '-jenkins_build_path', '--jenkins_build_path',
+            type=str, help='Jenkins build destination path',
+        )
+
     def handle(self, *args, **options):
         threads = []
 
-        # Put here list of external load generation hosts
-        #hosts = Query({
-        #    'function': 'loadgenerator',
-        #    'state': 'online',
-        #    'servertype': 'vm',
-        #}, ['num_cpu', 'memory', 'hostname'])
+        hosts = Query({
+            'function': 'loadgenerator',
+            'state': 'online',
+            'servertype': 'vm',
+        }, ['num_cpu', 'memory', 'hostname'])
 
         for host in hosts:
             print(host)

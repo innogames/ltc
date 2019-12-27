@@ -37,6 +37,5 @@ class Command(BaseCommand):
                 )
             ).save()
             test.init(source='jenkins_build')
-
             test.status = Test.RUNNING
             test.analyze()

@@ -846,48 +846,6 @@ def stop_test(request, running_test_id):
     return JsonResponse(response, safe=False)
 
 
-def jmeter_simple_writer(filename):
-    template = \
-    """
-    <ResultCollector guiclass="SimpleDataWriter" testclass="ResultCollector" testname="results writer"
-                 enabled="true">
-    <boolProp name="ResultCollector.error_logging">false</boolProp>
-    <objProp>
-        <name>saveConfig</name>
-        <value class="SampleSaveConfiguration">
-            <time>true</time>
-            <latency>true</latency>
-            <timestamp>true</timestamp>
-            <success>true</success>
-            <label>true</label>
-            <code>true</code>
-            <message>false</message>
-            <threadName>false</threadName>
-            <dataType>false</dataType>
-            <encoding>false</encoding>
-            <assertions>false</assertions>
-            <subresults>false</subresults>
-            <responseData>false</responseData>
-            <samplerData>false</samplerData>
-            <xml>false</xml>
-            <fieldNames>true</fieldNames>
-            <responseHeaders>false</responseHeaders>
-            <requestHeaders>false</requestHeaders>
-            <responseDataOnError>false</responseDataOnError>
-            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
-            <assertionsResultsToSave>0</assertionsResultsToSave>
-            <bytes>true</bytes>
-            <threadCounts>true</threadCounts>
-        </value>
-    </objProp>
-    <stringProp name="filename">{0}</stringProp>
-    <stringProp name="TestPlan.comments">Added automatically</stringProp>
-    </ResultCollector>
-    <hashTree/>
-    """.format(filename)
-    return template
-
-
 def splitstring(string):
     """
     >>> string = 'apple orange "banana tree" green'
@@ -901,32 +859,6 @@ def splitstring(string):
         return newstring.split() + [quoted_item]
     else:
         return string.split()
-
-
-def prepare_test_plan(workspace, testplan_dest, result_dest):
-    new_testplan = ''
-    with open(testplan_dest, 'r') as src_jmx:
-        source_lines = src_jmx.readlines()
-        closing = source_lines.pop(-1)
-        closing = source_lines.pop(-1) + closing
-        if "<hashTree/>" in source_lines[-1]:
-            source_lines.pop(-1)
-            source_lines.pop(-1)
-            source_lines.pop(-1)
-            source_lines.pop(-1)
-        closing = source_lines.pop(-1) + closing
-        fd, fname = tempfile.mkstemp('.jmx', 'new_', workspace)
-        os.close(fd)
-        os.chmod(fname, 644)
-        # Destination of test plan
-        new_testplan = fname
-        file_handle = open(new_testplan, "w")
-        file_handle.write(''.join(source_lines))
-        file_handle.write(
-            ''.join(jmeter_simple_writer(result_dest)))
-        file_handle.write(closing)
-        file_handle.close()
-    return new_testplan
 
 
 def update_test_graphite_data(test_id):

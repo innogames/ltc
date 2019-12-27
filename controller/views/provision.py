@@ -15,29 +15,13 @@ from django.shortcuts import render
 
 from administrator.models import SSHKey
 from jltc.models import Project
-from controller.models import (ActivityLog, JmeterInstance,
-                               JmeterInstanceStatistic, LoadGenerator,
-                               TestRunning)
-from controller.views.controller_views import prepare_test_plan
+from controller.models import (
+    ActivityLog, JmeterServer,
+    LoadGenerator,
+    TestRunning
+)
 from django.forms.models import model_to_dict
 logger = logging.getLogger(__name__)
-
-
-def get_avg_thread_malloc_for_project(project_id, threads_num):
-    data = JmeterInstanceStatistic.objects.filter(project_id=project_id, data__contains=[{'threads_number': threads_num}]). \
-        annotate(mem_alloc_for_thread=(RawSQL("((data->>%s)::numeric)", ('S0U',)) +
-                                       RawSQL("((data->>%s)::numeric)", ('S1U',)) +
-                                       RawSQL("((data->>%s)::numeric)", ('EU',)) +
-                                       RawSQL("((data->>%s)::numeric)", ('OU',)))/1024/RawSQL("((data->>%s)::numeric)", ('threads_number',))). \
-        aggregate(avg_mem_alloc_for_thread=Avg(
-            F('mem_alloc_for_thread'), output_field=FloatField()))
-    logger.debug("test_jmeter_instances_info: {}".format(str(data)))
-    v = data['avg_mem_alloc_for_thread']
-    logger.debug("Estimated MB per thread: {}".format(str(v)))
-    if v is None:
-        v = 10
-    return v
-
 
 def get_load_generators_data(request):
     """
@@ -46,7 +30,7 @@ def get_load_generators_data(request):
 
     data = []
     for load_generator in LoadGenerator.objects.annotate(
-            jmeter_instances_count=Count('jmeterinstance__id')
+            jmeter_servers_count=Count('jmeterserver_id')
         ).filter(
             active=True
         ):
@@ -61,7 +45,7 @@ def get_load_generators_data(request):
 
 def get_load_generator_data(request, load_generator_id):
     load_generator = LoadGenerator.objects.get(id=load_generator_id)
-    jmeter_instances = JmeterInstance.objects.annotate(
+    jmeter_instances = JmeterServer.objects.annotate(
         project_name=F('project__project_name')).filter(
             load_generator_id=load_generator_id).values(
                 'pid', 'port', 'jmeter_dir', 'project_name', 'threads_number',
@@ -448,12 +432,12 @@ def stop_test_for_project(project_name, gather_errors_data=False):
     for test in tests_running:
         test_running_id = test.id
         logger.info('Stop test : {}'.format(test_running_id))
-        jmeter_instances = JmeterInstance.objects.filter(
+        jmeter_instances = JmeterServer.objects.filter(
             test_running_id=test_running_id).values(
                 'pid', 'load_generator__hostname', 'load_generator_id',
                 'jmeter_dir')
         if gather_errors_data:
-            load_generators = JmeterInstance.objects.filter(
+            load_generators = JmeterServer.objects.filter(
                 test_running_id=test_running_id).values(
                     'jmeter_dir', 'load_generator__hostname').distinct()
             for load_generator in load_generators:

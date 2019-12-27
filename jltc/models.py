@@ -1,21 +1,27 @@
+import datetime
 import json
 import logging
+import math
 import os
+import re
+import tempfile
 import zipfile
 from collections import OrderedDict, defaultdict
-import datetime
-import pandas as pd
+from os.path import dirname as up
+from xml.etree.ElementTree import ElementTree
+
 import numpy as np
-import re
+import pandas as pd
 from django.apps import apps
 from django.db import models
 from django.db.models import Avg, FloatField, Func, Max, Min, Sum
 from django.db.models.expressions import F, RawSQL
 from pandas import DataFrame
-from os.path import dirname as up
-from analyzer.models import (Action, TestActionData, TestData,
-                             TestDataResolution, TestActionAggregateData)
-from xml.etree.ElementTree import ElementTree
+
+from analyzer.models import (Action, TestActionAggregateData, TestActionData,
+                             TestData, TestDataResolution)
+from controller.models import JmeterServerData
+from controller.utils import jmeter_simple_writer
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +49,38 @@ class Project(models.Model):
     def __str__(self):
         return self.name
 
+    def get_thread_malloc(self):
+        """Return avg memory allocation per thread for the current project
+
+        Returns:
+            int: MB
+        """
+
+        max_threads = JmeterServerData.objects.filter(
+            project=self
+        ).annotate(
+            threads=RawSQL("((data->>%s)::numeric)",
+            ('threads_number',))
+        ).aggregate(max_threads=Max(
+                F('threads'), output_field=FloatField()
+            )
+        )
+
+        data = JmeterServerData.objects.filter(
+            project=self, data__contains=[{'threads_number': max_threads}]
+        ).annotate(mem_per_thread=(
+                RawSQL("((data->>%s)::numeric)", ('S0U',)) +
+                RawSQL("((data->>%s)::numeric)", ('S1U',)) +
+                RawSQL("((data->>%s)::numeric)", ('EU',)) +
+                RawSQL("((data->>%s)::numeric)", ('OU',))
+            )/1024/RawSQL("((data->>%s)::numeric)", ('threads_number',))
+        ).aggregate(thread_malloc=Avg(
+                F('thread_malloc'), output_field=FloatField()
+            )
+        )
+        thread_malloc = int(math.ceil(data['thread_malloc']))
+        logger.info('Estimated malloc (MB) per thread: %s', thread_malloc)
+        return thread_malloc
 
 class Test(models.Model):
     CREATED = 'C'
@@ -60,6 +98,7 @@ class Test(models.Model):
     status = models.CharField(
         max_length=12, choices=STATUSES, default=CREATED
     )
+    threads = models.IntegerField(default=0)
     started_at = models.DateTimeField(null=True, db_index=True)
     finished_at = models.DateTimeField(null=True, db_index=True)
 
@@ -186,6 +225,78 @@ class Test(models.Model):
         data = data.order_by('started_at')
         return list(data)
 
+    def prepare_test_plan(self):
+        """Prepares test plan by adding Jmeter Simple CSV write at the end of
+        .jmx file
+        """
+
+        testplan = TestFile.objects.filter(
+            test=self, file_type=TestFile.TESTPLAN_FILE
+        ).first()
+        result_file = TestFile.objects.filter(
+            test=self, file_type=TestFile.MAIN_RESULT_CSV_FILE
+        ).first()
+        if testplan:
+            with open(testplan.path, 'r') as src_jmx:
+                source_lines = src_jmx.readlines()
+                closing = source_lines.pop(-1)
+                closing = source_lines.pop(-1) + closing
+                if "<hashTree/>" in source_lines[-1]:
+                    source_lines.pop(-1)
+                    source_lines.pop(-1)
+                    source_lines.pop(-1)
+                    source_lines.pop(-1)
+                closing = source_lines.pop(-1) + closing
+                fd, fname = tempfile.mkstemp('.jmx', 'new_')
+                os.close(fd)
+                os.chmod(fname, 644)
+                # Destination of test plan
+                testplan.path = fname
+                file_handle = open(testplan.path, "w")
+                logger.info('New testplan: %s', testplan.path)
+                file_handle.write(''.join(source_lines))
+                file_handle.write(
+                    ''.join(jmeter_simple_writer(result_file)))
+                file_handle.write(closing)
+                file_handle.close()
+        return testplan.save()
+
+
+    def find_loadgenerators(self):
+        THREAD_COUNT_CONFIG = {
+            1: 400,
+            2: 400,
+            3: 300,
+            4: 300,
+            5: 200,
+            6: 200,
+        }
+        thread_malloc = self.project.get_thread_malloc()
+        threads_per_jmeter_server = THREAD_COUNT_CONFIG.get(thread_malloc, 100)
+        logger.info(
+            'Estimated threads per Jmeter server: %s',
+            threads_per_jmeter_server
+        )
+        jmeter_servers_count = int(math.ceil(float(self.threads) /
+                                             threads_per_jmeter_server)
+        )
+        jmeter_server_malloc = int(math.ceil(
+            thread_malloc * threads_per_jmeter_server * 1.2
+        ))
+        malloc_total = math.ceil(
+            jmeter_servers_count * jmeter_server_malloc
+        )
+        jmeter_servers_per_loadgenerator = {}
+        for loadgenerator in LoadGenerator.objects.all():
+            jmeter_servers_per_loadgenerator[
+                loadgenerator.hostname
+            ] = math.ceil(loadgenerator.memory_free/(jmeter_server_malloc))
+        loadgenerators = sorted(
+            jmeter_servers_per_loadgenerator,
+            key=jmeter_servers_per_loadgenerator.get,
+            reverse=True
+        )
+
 
 class TestFile(models.Model):
     ONLINE_RESULT_CSV_FILE = 'O'
@@ -277,7 +388,7 @@ class TestFile(models.Model):
         return data
 
     def parse_csv(self, data_resolution='1Min', csv_file_fields=[]):
-        """Parse Jmeter .csv result file and put aggregate data to database
+        """Parse Jmeter .csv result file and put aggregate data to database.
 
         Args:
             data_resolution (str, optional): Data resolution

@@ -65,7 +65,7 @@ class LoadGenerators extends DashboardElement {
                 </tr>
                 </thead>`;
                 $.each(response, function (i, loadgenerator) {
-                    var jmeter_instances_count = loadgenerator['jmeter_instances_count'];
+                    var jmeter_instances_count = loadgenerator['jmeter_servers_count'];
                     var jmeter_instances_label = 'info'
                     if (jmeter_instances_count >= 5) jmeter_instances_label = 'danger';
                     else if (jmeter_instances_count < 5 && jmeter_instances_count > 2) jmeter_instances_label = 'warning';
