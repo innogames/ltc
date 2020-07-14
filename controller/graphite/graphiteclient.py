@@ -4,22 +4,14 @@ import hmac
 import json
 import sys
 import time
-import logging
-from urllib2 import (
+from urllib.request import (
     HTTPBasicAuthHandler,
     HTTPPasswordMgrWithDefaultRealm,
-    HTTPSHandler,
     build_opener,
     install_opener,
     urlopen,
     quote,
 )
-from ssl import (
-    CERT_NONE,
-    create_default_context
-)
-
-logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser(description='Graphite metric extraction')
 parser.add_argument('-u', '--username', help='Username', default='graphite')
@@ -46,10 +38,10 @@ class GraphiteClient(object):
 
     def _make_token(self, username, password):
         timestamp = str(int(time.time()))
-        h = hmac.new(password, digestmod=hashlib.sha256)
-        h.update(timestamp)
-        h.update(':')
-        h.update(username)
+        h = hmac.new(bytes(password, 'utf-8'), digestmod=hashlib.sha256)
+        h.update(timestamp.encode('utf-8'))
+        h.update(':'.encode('utf-8'))
+        h.update(username.encode('utf-8'))
         return '{}:{}:{}'.format(h.hexdigest(), timestamp, username)
 
     def query(self, query, ts_start, ts_end):
@@ -61,16 +53,12 @@ class GraphiteClient(object):
             '__auth_token': self.token,
             'target': query,
             'format': 'json',
-            'from': ts_start,
-            'until': ts_end,
+            'from': str(ts_start),
+            'until': str(ts_end),
         }
         url = '{}/render?'.format(self.url)
-        for k, v in args.iteritems():
-            print k
-            print v
+        for k, v in args.items():
             url += '{}={}&'.format(quote(k), quote(v))
-
-        logger.debug('Query URL is {}'.format(url))
 
         # Basic auth header
         password_mgr = HTTPPasswordMgrWithDefaultRealm()
@@ -81,17 +69,10 @@ class GraphiteClient(object):
             self.password,
         )
         auth_handler = HTTPBasicAuthHandler(password_mgr)
-
-        # Ignore ssl cert check
-        ctx = create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = CERT_NONE
-        ssl_handler = HTTPSHandler(context=ctx)
-
-        opener = build_opener(ssl_handler, auth_handler)
+        opener = build_opener(auth_handler)
         install_opener(opener)
 
-        result = json.loads(urlopen(url).read())
+        result = json.loads(urlopen(url).read().decode('utf-8'))
         return result
 
 

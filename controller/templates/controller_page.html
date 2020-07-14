@@ -112,6 +112,10 @@
                         <input type="text" class="form-control" id="destination_{{ proxy.id }}" value="{{ proxy.destination }}">
                 </div>
                 <div class="form-group">
+                    <label for="destination_port_{{ proxy.id }}">destination port:</label>
+                    <input type="text" class="form-control" id="destination_port_{{ proxy.id }}" value="{{ proxy.destination_port }}">
+                </div>
+                <div class="form-group">
                 <label for="delay_{{ proxy.id }}">delay:</label>
                 <input type="text" class="form-control" id="delay_{{ proxy.id }}" value="{{ proxy.delay }}">
                 </div>
@@ -245,6 +249,7 @@
                           data: {
                           port: $('#port_'+proxy_id).val(),
                           destination: $('#destination_'+proxy_id).val(),
+                          destination_port: $('#destination_port_'+proxy_id).val(),
                           delay: $('#delay_'+proxy_id).val(),
                           csrfmiddlewaretoken: '{{ csrf_token }}'
                           },

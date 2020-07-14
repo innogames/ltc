@@ -15,8 +15,8 @@ def generate_confluence_graph(project,
 	<ac:parameter ac:name="xtitle">display_name</ac:parameter>
 	<ac:parameter ac:name="aggregation">average,median</ac:parameter>
 	<ac:parameter ac:name="type">{0}</ac:parameter>
-	<ac:parameter ac:name="width">1400</ac:parameter>
-	<ac:parameter ac:name="height">400</ac:parameter>
+	<ac:parameter ac:name="width">1200</ac:parameter>
+	<ac:parameter ac:name="height">300</ac:parameter>
 	<ac:parameter ac:name="column">display_name</ac:parameter>
 	<ac:parameter ac:name="pieKeys">display_name</ac:parameter>
 	<ac:parameter ac:name="minvalue">0</ac:parameter>
@@ -33,13 +33,13 @@ def generate_confluence_graph(project,
 	<tr>
 	<th></th>
 	'''.format(type)
-	for row in data:
+	for row in reversed(data):
 		html += "<th>{0}</th>".format(row['display_name'])
 	html += "</tr>"
 	for metric_name in metric_names:
 		html += "<tr>"
 		html += "<td>{0}</td>".format(metric_name)
-		for row in data:
+		for row in reversed(data):
     			html += "<td>{0}</td>".format(row[metric_name])
 		html += "</tr>"
 	html += '''

@@ -7,6 +7,7 @@ from django.views.decorators.cache import never_cache
 from django.views.generic import TemplateView
 from os.path import basename
 from administrator.models import User, Configuration
+from analyzer.models import Project
 from django.views.static import serve
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ class HomePageView(TemplateView):
             user_id = u.id
         return render(request, 'index.html', {
             'user': u,
+            'projects': Project.objects.all().order_by('project_name')
         })
 
 

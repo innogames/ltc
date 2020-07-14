@@ -47,9 +47,9 @@
     </div>
     <div data-role="header">
         <h4>
-            <img src="{% static 'images/innogames_logo.png' %}" alt="logo" width="40" height="30" />
+            <img src="{% static 'images/innogames_logo.png' %}" alt="logo" width="25" height="18" />
             <font color="#37742f" face="calibri">
-                <b>Load Testing Center</b>
+                    <a href="https://github.com/innogames/JMeter-Control-Center"><b>Load Testing Center</b></a>
             </font>
         </h4>
     </div>
@@ -75,6 +75,8 @@
                 <a href='#administrator'>
                     <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> ADMINISTRATOR</a>
             </li>
+            <button id="test_result_upload_btn" class="btn btn-success btn-small" onclick="return popitup('analyzer/upload/test_result_file/')">
+                <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Upload file with test results</button>
             <div class="greeting"></div>
         </ul>
         <div id="dashboard">
@@ -82,7 +84,11 @@
         </div>
         <div id="analyzer">
             <hr/>
-            <select name="select_project_menu" id="select_project_menu" class="selectpicker">
+            <select name="analyzer-select-project" id="analyzer-select-project" class="selectpicker">
+                <option disabled selected value="Select project">Select project</option>
+                {% for project in projects %}
+                    <option value="{{ project.id }}">{{ project.project_name }}</option>
+                {% endfor %}
             </select>
             <hr/>
             <article id="analyzer_tabs" class="tabs">
@@ -97,7 +103,7 @@
                 </ul>
 
                 <div id="analyze">
-                    <div id="analyze_page"></div>
+                    <div id="analyzer_page"></div>
                 </div>
                 <div id="history">
                     <div id="history_project_page"></div>
@@ -127,7 +133,7 @@
     <script src="{% static 'js/jquery.tablesorter.min.js' %}"></script>
     <script src="{% static 'js/jquery.tablesorter.widgets.min.js' %}"></script>
     <script src="{% static 'js/main_script.js' %}"></script>
-    <script>
+    <script type="text/javascript">
         $body = $("body");
         var thehours = new Date().getHours();
         var themessage;
@@ -146,6 +152,31 @@
         }
 
         $('.greeting').append(themessage).append("<b>{{ user.login }}</b>");
+
+        $('#analyzer-select-project').on('change', function () {
+            selected_project = $(this).find("option:selected").val();
+            $.ajax({
+                url: "/analyzer/history",
+                type: "get",
+                success: function (response) {
+                    $("#history_project_page").html(response);
+                },
+                error: function (xhr) {
+                    //Do Something to handle error
+                }
+            });
+            $.ajax({
+                url: "/analyzer/analyze",
+                type: "get",
+                success: function (response) {
+                    $("#analyzer_page").html(response);
+                },
+                error: function (xhr) {
+                    //Do Something to handle error
+                }
+            });
+            $(window).trigger('resize');
+        });
 
     </script>
 </body>

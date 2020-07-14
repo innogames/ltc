@@ -87,6 +87,17 @@
             </div>
 
         </row>
+        <row>
+            <div class="panel panel-danger">
+                <div class="panel-heading">Errors:</div>
+                <div class="panel-body fixed-panel">
+                    {% for test_error in test_errors %} 
+                    <li class="list-group-item"><span class="badge alert-danger">{{ test_error.count }}</span><b>Code: </b>{{ test_error.code }}<b> Text: </b> {{ test_error.text }}</li>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </row>
     </div>
 </div>
 <script>

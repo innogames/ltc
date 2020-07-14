@@ -6,6 +6,7 @@ from django.contrib import admin
 # Create your models here.
 from administrator.models import JMeterProfile, User
 
+
 class Project(models.Model):
     project_name = models.CharField(max_length=100)
     jmeter_parameters = JSONField(null=True, blank=True)
@@ -20,12 +21,22 @@ class Project(models.Model):
     script_post = models.TextField(null=True, blank=True)
     show = models.BooleanField(default=True)
     confluence_space = models.TextField(null=True, blank=True)
+    confluence_page = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'project'
 
     def __str__(self):
         return self.project_name
+
+
+
+class TestDataResolution(models.Model):
+    frequency = models.CharField(max_length=100)
+    per_sec_divider = models.IntegerField(default=60)
+
+    class Meta:
+        db_table = 'test_data_resolution'
 
 
 class Test(models.Model):
@@ -39,11 +50,12 @@ class Test(models.Model):
     build_number = models.IntegerField(default=0)
     show = models.BooleanField(default=True)
     started_by = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
+    data_resolution = models.CharField(max_length=100, default='1Min')
 
     class Meta:
         db_table = 'test'
         index_together = [
-            ("show", "project", "start_time"),
+            ('show', 'project', 'start_time'),
         ]
 
     def __str__(self):
@@ -52,6 +64,7 @@ class Test(models.Model):
 
 class TestData(models.Model):
     test = models.ForeignKey(Test)
+    data_resolution = models.ForeignKey(TestDataResolution, default=1)
     source = models.CharField(max_length=100, default='default')
     data = JSONField()
 
@@ -60,46 +73,44 @@ class TestData(models.Model):
 
 
 class Action(models.Model):
-    url = models.CharField(max_length=100)
+    url = models.TextField()
     project = models.ForeignKey(Project, on_delete=models.CASCADE, default=1)
-    description = models.CharField(max_length=400, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'action'
         unique_together = (('url', 'project'))
 
 
+class Error(models.Model):
+    text = models.TextField(db_index=True)
+    code = models.CharField(max_length=400, null=True, blank=True)
+
+    class Meta:
+        db_table = 'error'
+
+
+class TestError(models.Model):
+    test = models.ForeignKey(Test)
+    action = models.ForeignKey(Action)
+    error = models.ForeignKey(Error)
+    count = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'test_error'
 
 
 class TestActionData(models.Model):
     test = models.ForeignKey(Test)
+    data_resolution = models.ForeignKey(TestDataResolution, default=1)
     action = models.ForeignKey(Action, null=True, blank=True)
     data = JSONField()
 
     class Meta:
         db_table = 'test_action_data'
         index_together = [
-            ("test", "action"),
+            ('test', 'action','data_resolution'),
         ]
-
-
-class Aggregate(models.Model):
-    test = models.ForeignKey(Test)
-    action = models.ForeignKey(Action, null=True, blank=True)
-    average = models.FloatField()
-    median = models.FloatField()
-    percentile_75 = models.FloatField()
-    percentile_90 = models.FloatField()
-    percentile_99 = models.FloatField()
-    maximum = models.FloatField()
-    minimum = models.FloatField()
-    count = models.IntegerField(default=0)
-    errors = models.IntegerField(default=0, null=True, blank=True)
-    weight = models.FloatField()
-
-    class Meta:
-        db_table = 'aggregate'
-        unique_together = (('test', 'action'))
 
 
 class TestAggregate(models.Model):
@@ -118,7 +129,7 @@ class TestActionAggregateData(models.Model):
     class Meta:
         db_table = 'test_action_aggregate_data'
         index_together = [
-            ("test", "action"),
+            ('test', 'action'),
         ]
 
 
@@ -132,6 +143,7 @@ class Server(models.Model):
 
 class ServerMonitoringData(models.Model):
     test = models.ForeignKey(Test)
+    data_resolution = models.ForeignKey(TestDataResolution, default=1)
     source = models.CharField(max_length=100, default='default')
     server = models.ForeignKey(Server)
     data = JSONField()
@@ -139,9 +151,16 @@ class ServerMonitoringData(models.Model):
     class Meta:
         db_table = 'server_monitoring_data'
         index_together = [
-            ("test", "server", 'source'),
+            ('test', 'server', 'source','data_resolution'),
         ]
 
 
+class TestResultFile(models.Model):
+    #project = models.ForeignKey(Project, on_delete=models.CASCADE, default=1)
+    #test = models.ForeignKey(Test)
+    file = models.FileField(upload_to='test_result_files/')
 
+    #uploaded_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        db_table = 'test_result_file'

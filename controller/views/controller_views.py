@@ -1,4 +1,3 @@
-#
 import json
 import os
 import subprocess
@@ -15,7 +14,6 @@ import select
 
 import shutil
 
-from controller.datagenerator import generate_data, parse_results_in_dir
 from administrator.models import JMeterProfile, SSHKey
 
 if _platform == "linux" or _platform == "linux2":
@@ -66,8 +64,11 @@ def parse_results(request):
 def stop_proxy(request, proxy_id):
     p = Proxy.objects.get(id=proxy_id)
     if p.pid != 0:
-        proxy_process = psutil.Process(p.pid)
-        proxy_process.terminate()
+        try:
+            proxy_process = psutil.Process(p.pid)
+            proxy_process.terminate()
+        except psutil.NoSuchProcess:
+            logger.info("Process {} is not exists anymore".format(p.pid))
         p.started = False
         p.pid = 0
         p.save()
@@ -95,8 +96,8 @@ def start_proxy(request, proxy_id):
         p.destination_port = destination_port
         p.started = True
         p.save()
-    out = open('/tmp/proxy_output_' + str(proxy_id), 'w')
-    proxy_script = "proxy.py"
+    out = open('/var/lib/jltc/logs/proxy_output_' + str(proxy_id), 'w')
+    proxy_script = "../proxy.py"
     #if _platform == "linux" or _platform == "linux2":
     #	proxy_script = "proxy_linux.py"
     env = dict(os.environ, **{'PYTHONUNBUFFERED': '1'})
@@ -172,9 +173,10 @@ def jri_list(request, project_id):
 def get_running_tests(request):
     running_tests_data = list(
         TestRunning.objects.annotate(project_name=F('project__project_name'))
-        .annotate(current_time=Value(time.time() * 1000, output_field=IntegerField())).values(
-            'project_name', 'id', 'start_time', 'current_time',
-            'jmeter_remote_instances', 'duration'))
+        .annotate(current_time=Value(
+            time.time() * 1000, output_field=IntegerField())).values(
+                'project_name', 'id', 'start_time', 'current_time',
+                'jmeter_remote_instances', 'duration'))
     return JsonResponse(running_tests_data, safe=False)
 
 
@@ -600,10 +602,12 @@ def start_test(request, project_id):
     test_id = 0
     if request.method == 'POST':
         # Create dir for new test:
-        last_test_id = Test.objects.filter(
-            project_id=project_id).order_by("-id")[0]
+        last_test_id = 0
+        if Test.objects.filter(project_id=project_id).exists():
+            last_test_id = Test.objects.filter(
+                project_id=project_id).order_by("-id")[0].id
         running_test_dir = os.path.join('/tmp/', 'jltc', project.project_name,
-                                        str(last_test_id.id + 1))
+                                        str(last_test_id + 1))
         running_test_results_dir = os.path.join(running_test_dir, 'results/')
         running_test_logs_dir = os.path.join(running_test_dir, 'logs/')
         running_test_testplan_dir = os.path.join(running_test_dir, 'testplan/')
@@ -620,9 +624,9 @@ def start_test(request, project_id):
         if os.path.exists(running_test_dir):
             shutil.rmtree(running_test_dir)
         os.makedirs(running_test_dir)
-        os.mkdir(running_test_testplan_dir, 0777)
-        os.mkdir(running_test_logs_dir, 0777)
-        os.mkdir(running_test_results_dir, 0777)
+        os.mkdir(running_test_testplan_dir, 777)
+        os.mkdir(running_test_logs_dir, 777)
+        os.mkdir(running_test_results_dir, 777)
 
         test_plan_params_flag = ""
         test_plan_params_str = ""
@@ -640,17 +644,18 @@ def start_test(request, project_id):
         jmeter_params = json.loads(
             json.dumps(project.jmeter_parameters, indent=4, sort_keys=True))
         test_plan_params_arg = []
-        test_plan_params_str = ""
-        for jmeter_param in jmeter_params:
-            test_plan_params_arg.append(
-                                  test_plan_params_flag + \
-                                  jmeter_param.get('p_name') + \
-                                  '=' + \
-                                  jmeter_param.get('value'))
-            test_plan_params_str += test_plan_params_flag + \
-                                  jmeter_param.get('p_name') + \
-                                  '=' + \
-                                  jmeter_param.get('value')
+        test_plan_params_str = ''
+        if jmeter_params:
+            for jmeter_param in jmeter_params:
+                test_plan_params_arg.append(
+                                    test_plan_params_flag + \
+                                    jmeter_param.get('p_name') + \
+                                    '=' + \
+                                    jmeter_param.get('value'))
+                test_plan_params_str += test_plan_params_flag + \
+                                    jmeter_param.get('p_name') + \
+                                    '=' + \
+                                    jmeter_param.get('value')
         jmeter_profile_id = request.POST.get('jmeter_profile_id', '')
         jmeter_profile = JMeterProfile.objects.get(id=jmeter_profile_id)
         test_plan_destination = request.POST.get('test_plan_destination', '{}')
@@ -659,36 +664,13 @@ def start_test(request, project_id):
         project.jmeter_profile_id = jmeter_profile_id
         project.test_plan_destination = test_plan_destination
         project.save()
-        '''From Yandex.Tank plugin'''
-        with open(test_plan_destination, 'r') as src_jmx:
-            source_lines = src_jmx.readlines()
-        try:
-            closing = source_lines.pop(-1)
-            closing = source_lines.pop(-1) + closing
-            closing = source_lines.pop(-1) + closing
-        except Exception, exc:
-            raise RuntimeError("Failed to find the end of JMX XML: %s" % exc)
-
-        fd, fname = tempfile.mkstemp('.jmx', 'new_', running_test_testplan_dir)
-        os.close(fd)
-        os.chmod(fname, 0644)
-        #result_file_path = running_test_results_dir+'results.csv'
-
-        # Destination of test plan
-        test_plan_destination = fname
-        file_handle = open(test_plan_destination, "wb")
-        file_handle.write(''.join(source_lines))
-        file_handle.write(
-            ''.join(jmeter_simple_writer(result_file_destination)))
-        file_handle.write(closing)
-        file_handle.close()
+        prepare_test_plan(
+            running_test_testplan_dir,
+            test_plan_destination,
+            result_file_destination
+        )
         #project.jmeter_parameters = json.loads(jmeter_parameters)
-        java_exec = ""
-        if _platform == "linux" or _platform == "linux2":
-            java_exec = "java"
-        else:
-            java_exec = "C:\\Program Files\\Java\\jdk1.8.0_60\\bin\\java.exe"
-        jmeter_path = jmeter_profile.path + "/bin/ApacheJMeter.jar"
+        java_exec = 'java'
         running_test_jris = []
         if jris is not None:
             for jri in jris:
@@ -714,7 +696,7 @@ def start_test(request, project_id):
 
                     stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
                     output = stdout.read()
-                    text_file = open(running_test_log_file_destination, "w")
+                    text_file = open(running_test_log_file_destination, "wb")
                     text_file.write(output)
                     text_file.close()
                     run_jmeter_server_cmd = 'nohup java {0} -jar "{1}/bin/ApacheJMeter.jar" "$@" "-Djava.rmi.server.hostname={2}" -Dserver_port={3} -s -Jpoll={4} > /dev/null 2>&1 '.\
@@ -735,8 +717,9 @@ def start_test(request, project_id):
         args = [java_exec, '-jar']
         args += splitstring(jmeter_profile.jvm_args_main)
         args += [
-            jmeter_path, "-n", "-t", test_plan_destination, '-j',
-            running_test_log_file_destination, jris_str,
+            jmeter_profile.jmeter_jar_path(), "-n", "-t",
+            test_plan_destination, '-j', running_test_log_file_destination,
+            jris_str,
             test_plan_params_str.lstrip(),
             '-Jjmeter.save.saveservice.default_delimiter=,'
         ]
@@ -758,7 +741,8 @@ def start_test(request, project_id):
         else:
             jmeter_process = subprocess.Popen(
                 args,
-                executable=java_exec, )
+                executable=java_exec,
+            )
         pid = jmeter_process.pid
         start_time = int(time.time() * 1000)
         t = TestRunning(
@@ -772,7 +756,8 @@ def start_test(request, project_id):
             jmeter_remote_instances=running_test_jris,
             workspace=running_test_dir,
             build_number=0,
-            is_running=True)
+            is_running=True
+        )
         t.save()
         test_id = t.id
 
@@ -793,7 +778,6 @@ def start_test(request, project_id):
 def wait_for_finished_test(request, t, jmeter_process):
     ''' Check if test is still running'''
     while t.is_running:
-
         retcode = jmeter_process.poll()
         logger.info(
             "Check if JMeter process is still exists, current state: {0}".
@@ -910,109 +894,173 @@ def splitstring(string):
         return string.split()
 
 
+def prepare_test_plan(workspace, testplan_dest, result_dest):
+    new_testplan = ''
+    with open(testplan_dest, 'r') as src_jmx:
+        source_lines = src_jmx.readlines()
+        closing = source_lines.pop(-1)
+        closing = source_lines.pop(-1) + closing
+        if "<hashTree/>" in source_lines[-1]:
+            source_lines.pop(-1)
+            source_lines.pop(-1)
+            source_lines.pop(-1)
+            source_lines.pop(-1)
+        closing = source_lines.pop(-1) + closing
+        fd, fname = tempfile.mkstemp('.jmx', 'new_', workspace)
+        os.close(fd)
+        os.chmod(fname, 644)
+        # Destination of test plan
+        new_testplan = fname
+        file_handle = open(new_testplan, "w")
+        file_handle.write(''.join(source_lines))
+        file_handle.write(
+            ''.join(jmeter_simple_writer(result_dest)))
+        file_handle.write(closing)
+        file_handle.close()
+    return new_testplan
+
+
 def update_test_graphite_data(test_id):
-    graphite_url = Configuration.objects.get(name='graphite_url').value
-    graphite_user = Configuration.objects.get(name='graphite_user').value
-    graphite_password = Configuration.objects.get(name='graphite_pass').value
-    gc = graphiteclient.GraphiteClient(
-        graphite_url,
-        graphite_user,
-        str(graphite_password)
-    )
+    if Configuration.objects.filter(name='graphite_url').exists():
+        graphite_url = Configuration.objects.get(name='graphite_url').value
+        graphite_user = Configuration.objects.get(name='graphite_user').value
+        graphite_password = Configuration.objects.get(
+            name='graphite_pass').value
 
-    test = Test.objects.get(id=test_id)
-    for parameter in test.parameters:
-        if 'MONITOR_HOSTS' in parameter:
-            hosts_for_monitoring = parameter['MONITOR_HOSTS'].split(',')
-        if 'WORLD_ID' in parameter:
-            world_id = parameter['WORLD_ID']
-    
-    start_time = datetime.datetime.fromtimestamp(test.start_time/1000).strftime("%H:%M_%Y%m%d")
-    end_time = datetime.datetime.fromtimestamp(test.end_time/1000).strftime("%H:%M_%Y%m%d")
-    game_short_name = hosts_for_monitoring[0].split(".",1)[1] 
-    for server_name in hosts_for_monitoring:
-        server = Server.objects.get(server_name=server_name)
+        test = Test.objects.get(id=test_id)
+        world_id = ""
 
-        query = 'aliasSub(stacked(asPercent(nonNegativeDerivative(groupByNode(servers.{' + server_name.replace('.','_') + '}.system.cpu.{user,system,iowait,irq,softirq,nice,steal},4,"sumSeries")),nonNegativeDerivative(sum(servers.' + server_name.replace('.','_') + '.system.cpu.{idle,time})))),".*Derivative\((.*)\),non.*","CPU_\\1")'
-        results = gc.query(
-            query,
-            start_time,
-            end_time,
-        )
-        data = {}
-        for res in results:
-            metric = res['target']
-            for p in res['datapoints']:
-                ts = str(datetime.datetime.fromtimestamp(p[1]))
-                if ts not in data:
-                    t = {}
-                    t['timestamp'] = ts
-                    t[metric] = p[0]
-                    data[ts] = t
-                else:
-                    t = data[ts]
-                    t[metric] = p[0]
-                    data[ts] = t
-        ServerMonitoringData.objects.filter(server_id=server.id, test_id=test.id, source='graphite').delete()
-        for d in data:
-            server_monitoring_data = ServerMonitoringData(
-                test_id=test.id, server_id=server.id, data=data[d], source='graphite'
-            )
-            server_monitoring_data.save()
+        start_time = datetime.datetime.fromtimestamp(
+            test.start_time / 1000 + 3600).strftime("%H:%M_%Y%m%d")
+        end_time = datetime.datetime.fromtimestamp(
+            test.end_time / 1000 + 3600).strftime("%H:%M_%Y%m%d")
 
-    webservers_mask = '{}w*_{}'.format(world_id, game_short_name)
-    if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_avg_request').exists():
-        query = 'alias(avg(servers.' + webservers_mask + '.software.gentime.TimeSiteAvg),"avg")'
-        ProjectGraphiteSettings(project_id=test.project_id, name='gentime_avg_request',value=query).save()
-    if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_median_request').exists():
-        query = 'alias(avg(servers.' + webservers_mask + '.software.gentime.TimeSiteMed),"median")'
-        ProjectGraphiteSettings(project_id=test.project_id, name='gentime_median_request',value=query).save()
-    if not ProjectGraphiteSettings.objects.filter(project_id=test.project_id, name='gentime_req_per_sec_request').exists():
-        query = 'alias(sum(servers.' + webservers_mask + '.software.gentime.SiteReqPerSec),"rps")'
-        ProjectGraphiteSettings(project_id=test.project_id, name='gentime_req_per_sec_request',value=query).save()
+        gc = graphiteclient.GraphiteClient(graphite_url, graphite_user,
+                                           str(graphite_password))
 
-    query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_avg_request').value
-    results = gc.query(
-        query,
-        start_time,
-        end_time,
-    )
-    # Ugly bullshit
-    query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_median_request').value
-    results_median = gc.query(
-        query,
-        start_time,
-        end_time,
-    )
-    results.append(results_median[0])
+        for parameter in test.parameters:
+            if 'MONITOR_HOSTS' in parameter:
+                if parameter['MONITOR_HOSTS']:
+                    hosts_for_monitoring = parameter['MONITOR_HOSTS'].split(
+                        ',')
+                    game_short_name = hosts_for_monitoring[0].split(".", 1)[1]
+                    for server_name in hosts_for_monitoring:
+                        if not Server.objects.filter(server_name=server_name).exists():
+                            server = Server(server_name=server_name)
+                            server.save()
+                        else:
+                            server = Server.objects.get(server_name=server_name)
+                        server_name = server_name.replace('.', '_').replace(
+                            '_ig_local', '')
+                        logger.info('Try to get monitroing data for: {}'.
+                                    format(server_name))
+                        query = 'aliasSub(stacked(asPercent(nonNegativeDerivative(groupByNode(servers.{' + server_name + '}.system.cpu.{user,system,iowait,irq,softirq,nice,steal},4,"sumSeries")),nonNegativeDerivative(sum(servers.' + server_name + '.system.cpu.{idle,time})))),".*Derivative\((.*)\),non.*","CPU_\\1")'
+                        results = gc.query(
+                            query,
+                            start_time,
+                            end_time, )
+                        data = {}
+                        for res in results:
+                            metric = res['target']
+                            for p in res['datapoints']:
+                                ts = str(datetime.datetime.fromtimestamp(p[1]))
+                                if ts not in data:
+                                    t = {}
+                                    t['timestamp'] = ts
+                                    t[metric] = p[0]
+                                    data[ts] = t
+                                else:
+                                    t = data[ts]
+                                    t[metric] = p[0]
+                                    data[ts] = t
+                        ServerMonitoringData.objects.filter(
+                            server_id=server.id,
+                            test_id=test.id,
+                            source='graphite').delete()
+                        for d in data:
+                            server_monitoring_data = ServerMonitoringData(
+                                test_id=test.id,
+                                server_id=server.id,
+                                data=data[d],
+                                source='graphite')
+                            server_monitoring_data.save()
+            if 'WORLD_ID' in parameter:
+                world_id = parameter['WORLD_ID']
 
-    query = ProjectGraphiteSettings.objects.get(project_id=test.project_id, name='gentime_req_per_sec_request').value
-    results_rps = gc.query(
-        query,
-        start_time,
-        end_time,
-    )
-    results.append(results_rps[0])
-    data = {}
-    for res in results:
-        metric = res['target']
-        for p in res['datapoints']:
-            ts = str(datetime.datetime.fromtimestamp(p[1]))
-            if ts not in data:
-                t = {}
-                t['timestamp'] = ts
-                t[metric] = p[0]
-                data[ts] = t
-            else:
-                t = data[ts]
-                t[metric] = p[0]
-                data[ts] = t
-    TestData.objects.filter(test_id=test.id, source='graphite').delete()
-    for d in data:
-        test_data = TestData(
-            test_id=test.id, data=data[d], source='graphite'
-        )
-        test_data.save()
+        if world_id:
+            webservers_mask = '{}w*_{}'.format(world_id, game_short_name)
+        else:
+            webservers_mask = 'example'
+
+        if not ProjectGraphiteSettings.objects.filter(
+                project_id=test.project_id,
+                name='gentime_avg_request').exists():
+            query = 'alias(avg(servers.' + webservers_mask + '.software.gentime.TimeSiteAvg),"avg")'
+            ProjectGraphiteSettings(
+                project_id=test.project_id,
+                name='gentime_avg_request',
+                value=query).save()
+        if not ProjectGraphiteSettings.objects.filter(
+                project_id=test.project_id,
+                name='gentime_median_request').exists():
+            query = 'alias(avg(servers.' + webservers_mask + '.software.gentime.TimeSiteMed),"median")'
+            ProjectGraphiteSettings(
+                project_id=test.project_id,
+                name='gentime_median_request',
+                value=query).save()
+        if not ProjectGraphiteSettings.objects.filter(
+                project_id=test.project_id,
+                name='gentime_req_per_sec_request').exists():
+            query = 'alias(sum(servers.' + webservers_mask + '.software.gentime.SiteReqPerSec),"rps")'
+            ProjectGraphiteSettings(
+                project_id=test.project_id,
+                name='gentime_req_per_sec_request',
+                value=query).save()
+        if webservers_mask != 'example':
+            query = ProjectGraphiteSettings.objects.get(
+                project_id=test.project_id, name='gentime_avg_request').value
+            results = gc.query(
+                query,
+                start_time,
+                end_time, )
+            # Ugly bullshit
+            query = ProjectGraphiteSettings.objects.get(
+                project_id=test.project_id, name='gentime_median_request').value
+            results_median = gc.query(
+                query,
+                start_time,
+                end_time, )
+            results.append(results_median[0])
+
+            query = ProjectGraphiteSettings.objects.get(
+                project_id=test.project_id,
+                name='gentime_req_per_sec_request').value
+            results_rps = gc.query(
+                query,
+                start_time,
+                end_time, )
+            results.append(results_rps[0])
+            data = {}
+            for res in results:
+                metric = res['target']
+                for p in res['datapoints']:
+                    ts = str(datetime.datetime.fromtimestamp(p[1]))
+                    if ts not in data:
+                        t = {}
+                        t['timestamp'] = ts
+                        t[metric] = p[0]
+                        data[ts] = t
+                    else:
+                        t = data[ts]
+                        t[metric] = p[0]
+                        data[ts] = t
+            TestData.objects.filter(test_id=test.id, source='graphite').delete()
+            for d in data:
+                test_data = TestData(
+                    test_id=test.id, data=data[d], source='graphite')
+                test_data.save()
+    else:
+        logger.info('Skipping update of graphite data')
     return True
 
 
@@ -1020,42 +1068,37 @@ def update_gentime_graphite_metric(test_id):
     graphite_url = Configuration.objects.get(name='graphite_url').value
     graphite_user = Configuration.objects.get(name='graphite_user').value
     graphite_password = Configuration.objects.get(name='graphite_pass').value
-    gc = graphiteclient.GraphiteClient(
-        graphite_url,
-        graphite_user,
-        str(graphite_password)
-    )
+    gc = graphiteclient.GraphiteClient(graphite_url, graphite_user,
+                                       str(graphite_password))
 
     test = Test.objects.get(id=test_id)
     for parameter in test.parameters:
         if 'WORLD_ID' in parameter:
             world_id = parameter['WORLD_ID']
-    
-    start_time = datetime.datetime.fromtimestamp(test.start_time/1000).strftime("%H:%M_%Y%m%d")
-    end_time = datetime.datetime.fromtimestamp(test.end_time/1000).strftime("%H:%M_%Y%m%d")
-        
+
+    start_time = datetime.datetime.fromtimestamp(
+        test.start_time / 1000).strftime("%H:%M_%Y%m%d")
+    end_time = datetime.datetime.fromtimestamp(
+        test.end_time / 1000).strftime("%H:%M_%Y%m%d")
+
     query = 'alias(avg(servers.' + world_id + 'w*_foe' + '.software.gentime.TimeSiteAvg),"avg")'
     results = gc.query(
         query,
         start_time,
-        end_time,
-    )
+        end_time, )
     # Ugly bullshit
     query = 'alias(avg(servers.' + world_id + 'w*_foe' + '.software.gentime.TimeSiteMed),"median")'
-    print query
     results_median = gc.query(
         query,
         start_time,
-        end_time,
-    )
+        end_time, )
     results.append(results_median[0])
 
-    query = 'alias(sum(servers.' + world_id+ 'w*_foe' + '.software.gentime.SiteReqPerSec),"rps")'
+    query = 'alias(sum(servers.' + world_id + 'w*_foe' + '.software.gentime.SiteReqPerSec),"rps")'
     results_rps = gc.query(
         query,
         start_time,
-        end_time,
-    )
+        end_time, )
     results.append(results_rps[0])
     data = {}
     for res in results:
@@ -1073,15 +1116,15 @@ def update_gentime_graphite_metric(test_id):
                 data[ts] = t
     TestData.objects.filter(test_id=test.id, source='graphite').delete()
     for d in data:
-        test_data = TestData(
-            test_id=test.id, data=data[d], source='graphite'
-        )
+        test_data = TestData(test_id=test.id, data=data[d], source='graphite')
         test_data.save()
     return data
+
 
 def get_graphite_gentime(request, test_id):
     data = update_gentime_graphite_metric(test_id)
     return JsonResponse(data, safe=False)
+
 
 def update_graphite_metric(request, test_id):
     response = []

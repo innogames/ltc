@@ -1,9 +1,8 @@
 from __future__ import unicode_literals
 
+import os
+
 from django.db import models
-
-# Create your models here.
-
 
 
 class JMeterProfile(models.Model):
@@ -15,6 +14,15 @@ class JMeterProfile(models.Model):
 
     class Meta:
         db_table = 'jmeter_profile'
+
+    def jmeter_jar_path(self):
+        jmeter_jar_path = []
+        jmeter_jar_path.append(self.path)
+        if 'bin' not in self.path:
+            jmeter_jar_path.append('bin')
+        if 'ApacheJMeter' not in self.path:
+            jmeter_jar_path.append('ApacheJMeter.jar')
+        return os.path.join(*jmeter_jar_path)
 
 
 class Configuration(models.Model):
@@ -31,6 +39,7 @@ class SSHKey(models.Model):
     path = models.CharField(max_length=1000, default="")
     description = models.CharField(max_length=1000, default="")
     default = models.BooleanField(default=True)
+
     class Meta:
         db_table = 'ssh_key'
 

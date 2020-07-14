@@ -4,4 +4,6 @@
 *.xml
 *.hg
 *.log
+settings.py
 desktop.ini
+.venv

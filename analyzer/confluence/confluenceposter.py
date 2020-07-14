@@ -1,4 +1,7 @@
-import xmlrpclib
+from xmlrpc import client
+from xmlrpc.client import ServerProxy
+from xmlrpc.client import Fault
+
 import logging as log
 
 WIKI_URL = None
@@ -14,7 +17,7 @@ class ConfluenceError(Exception):
 
 class ConfluencePoster(object):
 	def __init__(self, base_url, username, password):
-		self._client = xmlrpclib.ServerProxy(base_url + '/rpc/xmlrpc')
+		self._client = ServerProxy(base_url + '/rpc/xmlrpc')
 		self._username = username
 		self._password = password
 
@@ -22,7 +25,7 @@ class ConfluencePoster(object):
 		try:
 			self._token = self._client.confluence2.login(
 				self._username, self._password)
-		except xmlrpclib.Fault as e:
+		except Fault as e:
 			if 'AuthenticationFailedException' in e.faultString:
 				raise ConfluenceError('Confluence login failed.')
 

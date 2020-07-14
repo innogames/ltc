@@ -19,7 +19,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'u$nzv-0fbj0-an^@qe54^xk_5^sts_kyocef%au2qmkd_^3i00'
+SECRET_KEY = 'SECRET_KEY'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -85,7 +85,7 @@ DATABASES = {
         'OPTIONS': {
             'options': '-c search_path=jltc'
         },
-        'NAME': 'postgres',
+        'NAME': 'ltc',
         'USER': 'postgres',
         'PASSWORD': 'postgres',
         'HOST': 'localhost',
@@ -173,7 +173,7 @@ LOGGING = {
             'formatter': 'main_formatter',
             'filters': ['require_debug_false'],
         },
-         'debug_file': {
+        'debug_file': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': 'logs/main_debug.log',

@@ -1,8 +1,9 @@
 from django.conf.urls import url
 from . import views
-
+app_name = 'analyzer'
 urlpatterns = [
     url(r'^projects_list', views.projects_list),
+    url(r'^data_resolutions_list', views.data_resolutions_list),
     url(r'^analyze$', views.Analyze.as_view()),
     url(r'^history$', views.History.as_view()),
     url(r'^dashboard', views.dashboard),
@@ -27,12 +28,15 @@ urlpatterns = [
     url(r'^test/(?P<test_id>\d+)/action/(?P<action_id>\d+)/rtot/$',
         views.action_rtot),
     url(r'^test/(?P<source>[\w\-]+)/(?P<test_id>\d+)/servers/$', views.test_servers),
+    url(r'^test/(?P<test_id>\d+)/edit/$', views.test_edit_page),
     url(r'^test/(?P<test_id>\d+)/change/$', views.test_change),
     url(r'^test/(?P<test_id>\d+)/get_test_rtot_data/$', views.test_rtot_data),
     url(r'^test/(?P<test_id>\d+)/get_compare_data/$',
         views.compare_tests_avg),
     url(r'^test/(?P<test_id>\d+)/(?P<num_of_tests>\d+)/compare_cpu/$',
         views.compare_tests_cpu),
+    url(r'^test/(?P<test_id>\d+)/compare_count/$',
+        views.compare_tests_count),
     url(r'^test/(?P<test_id>\d+)/(?P<top_number>\d+)/top_avg/$',
         views.test_top_avg),
     url(r'^test/(?P<test_id>\d+)/top_errors/$', views.test_top_errors),
@@ -45,10 +49,9 @@ urlpatterns = [
     url(r'^test/(?P<test_id>\d+)/get_server_monitoring_data', views.server_monitoring_data),
     url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_report/$',
         views.tests_compare_report),
-    url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_report_2/$',
-        views.tests_compare_report_2),
     url(r'^test/(?P<test_id>\d+)/action_graphs/$',
         views.action_graphs),
     url(r'^test/(?P<test_id_1>\d+)/(?P<test_id_2>\d+)/compare_aggregate_data/$',
-        views.tests_compare_aggregate),
+        views.tests_compare_aggregate_new),
+    url(r'^upload/test_result_file/$', views.upload_test_result_file, name='upload_test_result_file'),
 ]

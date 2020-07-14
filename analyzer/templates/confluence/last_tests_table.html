@@ -17,12 +17,12 @@
     </thead>
     {% for row in last_tests %}
     <tr>
-            <td>{{ print_timestamp row.start_time }}</td>
+            <td>{% print_timestamp row.start_time %}</td>
             <td>
-                    <strong><ac:link><ri:page ri:content-title="{{ row.display_name }}"/></ac:link></strong>
+                <strong><ac:link><ri:page ri:content-title="{{ row.prefix }} - {{ row.display_name }}"/><ac:plain-text-link-body><![CDATA[{{ row.display_name }}]]></ac:plain-text-link-body></ac:link></strong>
             </td>
             <td>
-                                        {% for parameter in row.parameters %}     
+                                        {% for parameter in row.parameters %}
                                         {% for name, value in parameter.items %}
                                             {% if name == "THREAD_COUNT" %}
                                             {{ value }}
@@ -42,11 +42,11 @@
             <td>
                     {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
                     {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
-                    
-                    {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff <= 0 %}<font color="green">(<span>↓</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs > 0 %} <font color="red">(<span>↑</span> {{ avg_diff }} %) </font>  {% endif %}
+
+                    {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff <= 0 %}<font color="green">(<span>&#8595;</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs > 0 %} <font color="red">(<span>&#8593;</span> {{ avg_diff }} %) </font>  {% endif %}
             </td>
             <td>
-                    {% if row.result == "success" %} 
+                    {% if row.result == "success" %}
                     <ac:structured-macro ac:macro-id="9350e8a6-69dd-401d-92bd-67a46023de9b" ac:name="status" ac:schema-version="1">
                             <ac:parameter ac:name="colour">Green</ac:parameter>
                             <ac:parameter ac:name="title">Success</ac:parameter>

@@ -1,325 +1,195 @@
-<hr/>
+{% load static %}
+<hr />
 <div class="row">
     <div class="col-xs-9">
         <div class="panel panel-default">
             <div class="panel-heading">
-                    <h3 class="panel-title">
-                            Last tests:</h3>
-                        <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
-                       </div>
+                <h3 class="panel-title">
+                    Last tests:</h3>
+                <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+            </div>
             <div class="panel-body">
-            <article id="dashboard_tabs" class="tabs"  >
+                <article id="dashboard_tabs" class="tabs">
                     <ul>
-                        <li><a href='#new_tests_all'><span class="glyphicon glyphicon-th" aria-hidden="true"></span> Last 10 tests</a></li>
-                        <li><a href='#new_tests_by_project'><span class="glyphicon glyphicon-th-large" aria-hidden="true"></span> Last tests in projects</a></li>
-                    </ul>    
+                        <li><a href='#new_tests_all'><span class="glyphicon glyphicon-th" aria-hidden="true"></span>
+                                Last 10 tests</a></li>
+                        <li><a href='#new_tests_by_project'><span class="glyphicon glyphicon-th-large"
+                                    aria-hidden="true"></span> Last tests in projects</a></li>
+                    </ul>
                     <div id="new_tests_all">
-                {% if last_tests %}
-                <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Project</th>
-                            <th>Test name</th>
-                            <th>Virtual Users #</th>
-                            <th>Duration</th>
-                            <th>Success requests</th>
-                            <th>Avg. response times</th>
-                            <th>Result</th>
-                        </tr>
-                    </thead>
-                    {% for row in last_tests %}
-                    <tr>
+                        {% if last_tests %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Project</th>
+                                        <th>Test name</th>
+                                        <th>Virtual Users #</th>
+                                        <th>Duration</th>
+                                        <th>Success requests</th>
+                                        <th>Avg. response times</th>
+                                        <th>Result</th>
+                                    </tr>
+                                </thead>
+                                {% for row in last_tests %}
+                                <tr>
 
-                            <td>
-                                {{ row.project_name }}
-                            </td>
-                            <td>
-                                <b><a href=""  onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
-                            </td>
-                            <td>
-                                {% for parameter in row.parameters %}     
-                                {% for name, value in parameter.items %}
-                                    {% if name == "THREAD_COUNT" %}
-                                    {{ value }}
-                                    {% endif %}
-                                {% endfor %}
-                                {% endfor %}
-                            </td>
-                            <td>
-                                {% for parameter in row.parameters %}     
-                                {% for name, value in parameter.items %}
-                                    {% if name == "DURATION" %}
-                                    {% seconds_to_time value %}
-                                    {% endif %}
-                                {% endfor %}
-                                {% endfor %}
-                            </td>
-                            <td>
-                                    {% if row.success_requests > 98 %}
-                                    <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                    {% elif row.success_requests <= 98 and row.success_requests > 95  %}
-                                    <font color="yellow"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                    {% else %}
-                                    <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
-                                    {% endif %}
-                            </td>
-                            <td>
-                                    {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
-                                    {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
-                                    
-                                    {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff <= 0 %}<font color="green"></0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs > 0 %} <font color="red"></0>(<span>&#8593;</span> {{ avg_diff }} %) </font>  {% endif %}
-                            </td>
-                            <td>
-                               <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
-
-                            </td>
-
-                    </tr>
-                    {% endfor %}
-                </table>
-                </div>
-                {% else %}
-                    <b>No data</b>
-                {% endif %}
-            </div>   
-            <div id="new_tests_by_project">
-                    {% if last_tests_by_project %}
-                    <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Project</th>
-                                <th>Test name</th>
-                                <th>Success requests</th>
-                                <th>Avg. response times</th>
-                                <th>Result</th>
-                            </tr>
-                        </thead>
-                        {% for row in last_tests_by_project %}
-                        <tr>
-    
-                                <td>
-                                    {{ row.project_name }}
-                                </td>
-                                <td>
-                                    <b><a href=""  onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
-                                </td>
-                                <td>
+                                    <td>
+                                        {{ row.project_name }}
+                                    </td>
+                                    <td>
+                                        <b><a href="" onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
+                                    </td>
+                                    <td>
+                                        {% for parameter in row.parameters %}
+                                        {% for name, value in parameter.items %}
+                                        {% if name == "THREAD_COUNT" %}
+                                        {{ value }}
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% for parameter in row.parameters %}
+                                        {% for name, value in parameter.items %}
+                                        {% if name == "DURATION" %}
+                                        {% seconds_to_time value %}
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>
                                         {% if row.success_requests > 98 %}
-                                         <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                        <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                        {% elif row.success_requests <= 98 and row.success_requests > 95  %}
+                                        <font color="yellow"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                        {% else %}
+                                        <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
+                                        {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
+                                        {{ row.test_avg_response_times|floatformat }} ms {% if avg_diff <= 0 %}<font
+                                            color="green">
+                                            </0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font>
+                                        {% elif avg_diff_abs > 0 %} <font color="red">
+                                            </0>(<span>&#8593;</span> {{ avg_diff }} %) </font> {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
+
+                                    </td>
+
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% else %}
+                        <b>No data</b>
+                        {% endif %}
+                    </div>
+                    <div id="new_tests_by_project">
+                        {% if last_tests_by_project %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Project</th>
+                                        <th>Test name</th>
+                                        <th>Success requests</th>
+                                        <th>Avg. response times</th>
+                                        <th>Result</th>
+                                    </tr>
+                                </thead>
+                                {% for row in last_tests_by_project %}
+                                <tr>
+                                    <td>
+                                        {{ row.project_name }}
+                                    </td>
+                                    <td>
+                                        <b><a href="" onclick="testReport({{ row.id }})">{{  row.display_name }}</a></b>
+                                    </td>
+                                    <td>
+                                        {% if row.success_requests > 98 %}
+                                        <font color="green"><b>{{ row.success_requests|floatformat }} % </b></font>
                                         {% else  %}
                                         <font color="red"><b>{{ row.success_requests|floatformat }} % </b></font>
                                         {% endif %}
-                                </td>
-                                <td>
+                                    </td>
+                                    <td>
                                         {% get_percentage_rel row.prev_test_avg_response_times row.test_avg_response_times as avg_diff %}
                                         {% get_percentage_abs row.prev_test_avg_response_times row.test_avg_response_times as avg_diff_abs %}
-                                        
-                                        {{ row.test_avg_response_times|floatformat }} ms  {% if avg_diff <= 0 %}<font color="green"></0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font> {% elif avg_diff_abs > 0 %} <font color="red"></0>(<span>&#8593;</span> {{ avg_diff }} %) </font>  {% endif %}
-                                </td>
-                                <td>
-                                   <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
-    
-                                </td>
-    
-                        </tr>
-                        {% endfor %}
-                    </table>
-                    </div>
-                    {% else %}
+                                        {{ row.test_avg_response_times|floatformat }} ms {% if avg_diff <= 0 %}<font
+                                            color="green">
+                                            </0>(<span>&#8595;</span> {{ avg_diff_abs }} %) </font>
+                                        {% elif avg_diff_abs > 0 %} <font color="red">
+                                            </0>(<span>&#8593;</span> {{ avg_diff }} %) </font> {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge alert-{{ row.result }}">{{ row.result }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% else %}
                         <b>No data</b>
-                    {% endif %}
-                </div>   
+                        {% endif %}
+                    </div>
             </div>
         </div>
- 
     </div>
-        <div class="col-xs-3">
-         <div class="panel panel-default">
-                        <div class="panel-heading">
-                                <h3 class="panel-title">
-                                        Running tests:</h3>
-                                    <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
-                                 
-                            </div>
-                        <div class="panel-body">
-                            <div id="running_tests_list"></div>
-                        </div>
-                    </div>
-                <div class="panel panel-default">
-                        <div class="panel-heading">
-                                <h3 class="panel-title">
-                                        Active load generators:</h3>
-                                    <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
-                                 
-                           </div>
-                        <div class="panel-body">
-                            <div id="load_generators_list"></div>
-                        </div>
-                    </div>
+    <div class="col-xs-3">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    Running tests:</h3>
+                <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+            </div>
+            <div class="panel-body">
+                <div id="running_tests_list"></div>
+            </div>
         </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    Active load generators:</h3>
+                <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+            </div>
+            <div class="panel-body">
+                <div id="load_generators_list"></div>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="row">
-        <div class="col-xs-3">
-               
-        </div>
-
-     
+    <div class="col-xs-3">
+    </div>
 </div>
 <div class="row">
     <div class="col-xs-12">
         <div class="panel panel-default">
-                <div class="panel-heading">
-                        <h3 class="panel-title">
-                               Graphs:</h3>
-                            <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
-                         
-                    </div>
-        <div class="panel-body">
-
-           
-            <hr/>
-            {% for project in projects_list %}
-            {% if project.show == True %}
-            <div id="overall_{{ project.id }}"></div>
-            <script>
-            overall_graph_{{ project.id }} = c3.generate({
-            size: {
-            height: 200,
-            },
-            data: {
-            url:  '/analyzer/project/{{ project.id }}/project_history/',
-            mimeType: 'json',
-            keys: {
-            x: 'test_name',
-            value: ['Average', 'Median'],
-            },
-            type: 'bar',
-
-            },
-            axis: {
-            x: {
-            type: 'category',
-            },
-            y: {
-            max: 500,
-            padding: {
-            top: 0,
-            bottom: 0
-            },
-            label: 'response times (ms)',
-            },
-            },
-            title: {
-                text: '{{ project.project_name }}'
-            },
-            zoom: {
-            enabled: true
-            },
-            legend: {
-            position: 'right'
-            },
-            bindto: '#overall_{{ project.id }}'
-            });
-            </script>
-            {% endif %}
-            {% endfor %}
-        </div>
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    Graphs:</h3>
+                <span class="pull-right clickable"><i class="glyphicon glyphicon-minus"></i></span>
+            </div>
+            <div class="panel-body">
+                <hr />
+                {% for project in projects_list %}
+                {% if project.show == True %}
+                <div id="overall_{{ project.id }}"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-$("#dashboard_tabs").tabs();
-function updateLoadGeneratorsTable()
-{
-          $.ajax({
-              url: "/controller/load_generators/get_data/",
-              type: "get",
-              success: function(response) {
-                $("#load_generators_list").empty();
-                var loadgenerators_table = '<div class="table-responsive"><table class="table">' +
-                                '<thead>' +
-                                    '<tr>' + 
-                                        '<th>Host</th>' +
-                                        '<th>Free memory</th>' +
-                                        '<th>Load</th>' +
-                                        '<th>Jmeter Instances</th>' +
-                                        '<th>Status</th>' +
-                                    '</tr>' +
-                                '</thead>'
-                $.each(response, function(i, obj) {
-                var host_id = obj['id'];
-                var hostname = obj['hostname'];
-                var status = obj['status'];
-                var reason = obj['reason'];
-                var memory_free = obj['memory_free'];
-                var jmeter_instances_count = obj['jmeter_instances_count'];
-                var jmeter_instances_label = "info"
-                if (jmeter_instances_count>=5) jmeter_instances_label = "danger";
-                else if (jmeter_instances_count<5 && jmeter_instances_count > 2) jmeter_instances_label = "warning";
-                var load = obj['la_5'];
-                loadgenerators_table += '<tr><td><a href="/controller/load_generator/'+ host_id +'/get_data/" onclick="return popitup(\'/controller/load_generator/'+ host_id +'/get_data/\')">'+hostname+'</a></td>'+ '<td>'+memory_free+'</td>' + '<td>'+load+'</td>' + '<td><span class="label label-'+ jmeter_instances_label + '">' + jmeter_instances_count + '</span></td>' + '<td><span class="label label-'+status+'">' + reason+'</span></td></tr>';
-                
-                
-                });
-                loadgenerators_table += '</table></div>';
-                $("#load_generators_list").append(loadgenerators_table);
-                 
-               },
-              error: function(xhr) {
-              }
-            });
-}
-function updateRunningTestsTable()
-{
-          $.ajax({
-              url: "/controller/running_tests/get_data/",
-              type: "get",
-              success: function(response) {
-                $("#running_tests_list").empty();
-                var running_tests_table = '<div class="table-responsive"><table class="table">' +
-                                '<thead>' +
-                                    '<tr>' + 
-                                        '<th>Project</th>' +
-                                        '<th>Test ID</th>' +
-                                        //'<th>Remote instances</th>' +
-                                        '<th>Progress</th>' +
-                                    '</tr>' +
-                                '</thead>'
-                $.each(response, function(i, obj) {
-                var project_name = obj['project_name'];
-                var start_time = obj['start_time'];
-                var current_time = obj['current_time'];
-                var duration = obj['duration'];
-                var id = obj['id'];
-                var jmeter_remote_instances = obj['jmeter_remote_instances'];
-
-                
-                var progress = Math.round(((current_time - start_time)/1000)*100/duration)
-                if(progress>100)progress=100;
-                var progress_bar = '<div class="progress">' + 
-                                   '<div class="progress-bar progress-bar-striped active" role="progressbar"' +
-                                   'aria-valuenow="'+progress+'" aria-valuemin="0" aria-valuemax="100" style="width:'+progress+'%">' +
-                                    progress +'%' +
-                                   '</div></div>'
-                running_tests_table += '<tr><td>'+project_name+'</td>'+ '<td>'+id+'</td>' + '<td>'+progress_bar+'</td></tr>';
-                });
-                running_tests_table += '</table></div>';
-                $("#running_tests_list").append(running_tests_table);
-                 
-               },
-              error: function(xhr) {
-              }
-            });
-}   
-updateLoadGeneratorsTable();
-updateRunningTestsTable();
- //  setInterval(function() {
- ///       updateLoadGeneratorsTable();
-  //      updateRunningTestsTable();
-///
- // }, 10000);
-
+<script src="{% static 'js/dashboard.js' %}"></script>
+<script type="text/javascript">
+    var projects = {{project_ids|safe}};
+    projects.forEach(function (projectId, index) {
+        drawProjectOverallGraph(projectId);
+    });
 </script>
