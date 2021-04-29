@@ -1,0 +1,4 @@
+include ./manage.py
+
+recursive-include ltc/*/templates *
+recursive-include ltc/*/static *
