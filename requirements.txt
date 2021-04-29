@@ -1,4 +1,4 @@
-Django==1.11.29
+Django==2.2
 matplotlib
 numpy
 pandas
@@ -6,5 +6,4 @@ paramiko
 psutil
 matplotlib
 scipy
-SQLAlchemy
-psycopg2
+psycopg2-binary

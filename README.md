@@ -1,5 +1,5 @@
 # Description
-JMeter Load Testing Center (codename `jltc`) - dashboard/report analyzer for load testing with JMeter (http://jmeter.apache.org/).
+Load Testing Center (codename `ltc`) - dashboard/report analyzer for load testing with JMeter (http://jmeter.apache.org/).
 
 Developed and used in Innogames GmbH (www.innogames.com) to provide load tests results.
 
@@ -98,8 +98,8 @@ Also probably will be needed to install the next packages:
 ### 3. Initialize the database
 Create your own or rename the example setting file jtlc/settings.py.example to jtlc/settings.py 
 
-First set the database engine (only PostgreSQL 9.5+) in your settings files; `jltc/settings.py` Of course, remember to install necessary database driver for your engine. Then define your credentials as well.
-By default jltc will use `jltc` schema in database, which needs to be created:
+First set the database engine (only PostgreSQL 9.5+) in your settings files; `ltc/settings.py` Of course, remember to install necessary database driver for your engine. Then define your credentials as well.
+By default ltc will use `ltc` schema in database, which needs to be created:
 
 `su - postgres`
 
@@ -107,9 +107,9 @@ By default jltc will use `jltc` schema in database, which needs to be created:
 
 `\c YOUR_DATABASE_NAME`
 
-`CREATE SCHEMA jltc AUTHORIZATION your_user_name;`
+`CREATE SCHEMA ltc AUTHORIZATION your_user_name;`
 
-Then execute in jltc folder:
+Then execute in ltc folder:
 
 `./manage.py makemigrations`
 
@@ -134,7 +134,7 @@ JMETER_DIR = /var/lib/jmeter/
 Job pre-build action example:
 ```
 duration=$((DURATION + RAMPUP))
-TEST_DATA=`python /var/lib/jltc/manage.py shell -c "import controller.views as views; print(views.prepare_test('"$JOB_NAME"','"$WORKSPACE"','"$JMETER_DIR"', '$THREAD_COUNT', '$duration', '$RAMPUP', testplan_file='"$TEST_PLAN"', jenkins_env={'JENKINS_HOME':'"$JENKINS_HOME"','JOB_NAME':'"$JOB_NAME"','BUILD_NUMBER':'"$BUILD_NUMBER"','BUILD_DISPLAY_NAME':'"$BUILD_NUMBER"'}));"`
+TEST_DATA=`python /var/lib/ltc/manage.py shell -c "import controller.views as views; print(views.prepare_test('"$JOB_NAME"','"$WORKSPACE"','"$JMETER_DIR"', '$THREAD_COUNT', '$duration', '$RAMPUP', testplan_file='"$TEST_PLAN"', jenkins_env={'JENKINS_HOME':'"$JENKINS_HOME"','JOB_NAME':'"$JOB_NAME"','BUILD_NUMBER':'"$BUILD_NUMBER"','BUILD_DISPLAY_NAME':'"$BUILD_NUMBER"'}));"`
 TEST_PLAN=`python -c 'import json,sys;data=dict('"$TEST_DATA"');print data["testplan"]'`
 
 echo "Test plan: $TEST_PLAN"

@@ -26,24 +26,24 @@ logger = logging.getLogger()
 
 db_engine = create_engine('postgresql://postgres:1234@localhost:5432/jmeter')
 db_connection = db_engine.connect()
-meta = sqlalchemy.MetaData(bind=db_connection, reflect=True, schema="jltc")
+meta = sqlalchemy.MetaData(bind=db_connection, reflect=True, schema="ltc")
 insp = reflection.Inspector.from_engine(db_engine)
 
 project_name = sys.argv[1]
 
-project = meta.tables['jltc.project']
-test = meta.tables['jltc.test']
-test_data = meta.tables['jltc.test_data']
-action = meta.tables['jltc.action']
-test_action_data = meta.tables['jltc.test_action_data']
-server = meta.tables['jltc.server']
-server_monitoring_data = meta.tables['jltc.server_monitoring_data']
-test_aggregate = meta.tables['jltc.test_aggregate']
-test_action_aggregate_data = meta.tables['jltc.test_action_aggregate_data']
-user = meta.tables['jltc.user']
-project_graphite_settings = meta.tables['jltc.project_graphite_settings']
-error = meta.tables['jltc.error']
-test_error = meta.tables['jltc.test_error']
+project = meta.tables['ltc.project']
+test = meta.tables['ltc.test']
+test_data = meta.tables['ltc.test_data']
+action = meta.tables['ltc.action']
+test_action_data = meta.tables['ltc.test_action_data']
+server = meta.tables['ltc.server']
+server_monitoring_data = meta.tables['ltc.server_monitoring_data']
+test_aggregate = meta.tables['ltc.test_aggregate']
+test_action_aggregate_data = meta.tables['ltc.test_action_aggregate_data']
+user = meta.tables['ltc.user']
+project_graphite_settings = meta.tables['ltc.project_graphite_settings']
+error = meta.tables['ltc.error']
+test_error = meta.tables['ltc.test_error']
 
 Session = sessionmaker(bind=db_engine)
 
