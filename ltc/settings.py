@@ -16,10 +16,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'ltc.base',
     'ltc.analyzer',
     'ltc.online',
     'ltc.controller',
-    'ltc.web',
     'ltc.administrator',
 ]
 
@@ -100,7 +100,7 @@ PROJECT_DIR = os.path.dirname(__file__)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'static')
 STATIC_URL = '/static/'
-STATICFILES_DIRS = (os.path.join(PROJECT_DIR, 'web', 'static'), )
+STATICFILES_DIRS = (os.path.join(PROJECT_DIR, 'base', 'static'), )
 
 
 LOGGING = {
