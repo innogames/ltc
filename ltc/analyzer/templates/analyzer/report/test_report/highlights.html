@@ -1,0 +1,132 @@
+<ul class="nav nav-tabs" id="test-report-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" id="compare-table-tab" data-bs-toggle="tab" data-bs-target="#compare_table" type="button" role="tab" aria-selected="true">Compare table</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="compare-highlights-tab" data-bs-toggle="tab" data-bs-target="#compare_highlights" type="button" role="tab">Compare highlights</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="compare_table" aria-labelledby="compare-table-tab">
+        <div class="card border-light">
+            <div class="card-header">Detailed comparasion table for tests: <b>{{ tests.0.id }}</b> vs. <b>{{ tests.1.id }}</b></div>
+            <div class="card-body">
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th colspan="2">mean</th>
+                            <th colspan="2">50%</th>
+                            <th colspan="2">90%</th>
+                            <th colspan="2">max</th>
+                            <th colspan="2">min</th>
+                            <th colspan="2">count</th>
+                            <th colspan="2">errors</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                            <tr>
+                                <td></td>
+                                <td><b>{{ tests.0 }}</b></td>
+                                <td><b>{{ tests.1 }}</b></td>
+                                <td><b>{{ tests.0 }}</b></td>
+                                <td><b>{{ tests.1 }}</b></td>
+                                <td><b>{{ tests.0 }}</b></td>
+                                <td><b>{{ tests.1 }}</b></td>
+                                <td><b>{{ tests.0 }}</b></td>
+                                <td><b>{{ tests.1 }}</b></td>
+                                <td><b>{{ tests.0 }}</b></td>
+                                <td><b>{{ tests.1 }}</b></td>
+                                <td><b>{{ tests.0 }}</b></td>
+                                <td><b>{{ tests.1 }}</b></td>
+                                <td><b>{{ tests.0 }}</b></td>
+                                <td><b>{{ tests.1 }}</b></td>
+                            </tr>
+                    {% for row in compare_table %}
+                    <tr>
+                        <td><b>{{ row.name }}</b></td>
+                        <td {% if row.mean_1 < row.mean_2 %} style="color:green" {% elif row.mean_1 > row.mean_2 %} style="color:red" {% else %} style="color:black" {% endif %}>{{ row.mean_1 }}</td>
+                        <td>{{ row.mean_2 }}</td>
+                        <td {% if row.p50_1 < row.p50_2 %} style="color:green" {% elif row.p50_1 > row.p50_2 %} style="color:red" {% else %} style="color:black"  {% endif %}>{{ row.p50_1 }}</td>
+                        <td>{{ row.p50_2 }}</td>
+                        <td {% if row.p90_1 < row.p90_2 %} style="color:green" {% elif row.p90_1 > row.p90_2 %} style="color:red" {% else %} style="color:black" {% endif %}>{{ row.p90_1 }}</td>
+                        <td>{{ row.p90_2 }}</td>
+                        <td {% if row.max_1 < row.max_2 %} style="color:green" {% elif row.max_1 > row.max_2 %} style="color:red" {% else %} style="color:black" {% endif %}>{{ row.max_1 }}</td>
+                        <td>{{ row.max_2 }}</td>
+                        <td>{{ row.min_1 }}</td>
+                        <td>{{ row.min_2 }}</td>
+                        <td>{{ row.count_1 }}</td>
+                        <td>{{ row.count_2 }}</td>
+                        <td {% if row.errors_1 < row.errors_2 %} style="color:green" {% elif row.errors_1 > row.errors_2 %} style="color:red" {% else %} style="color:black" {% endif %}>{{ row.errors_1 }}</td>
+                        <td>{{ row.errors_2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="compare_highlights" aria-labelledby="compare-highlights-tab">
+    {% if highlights.warning|length > 0 %}
+        <div class="card border-warning">
+            <div class="card-body">
+                <ul class="highlights">
+                    {% for h in highlights.warning %}
+                        {% if h.type == 'new_actions' %}
+                        <li>
+                            <span>action in {{ tests.1 }}</span>
+                            <b>{{ h.action.name }}</b> was not executed.
+                        </li>
+                        {% elif h.type == 'absent_actions' %}
+                        <li>
+                            <span>action in {{ tests.0 }}</span>
+                            <b>{{ h.action.name }}</b> was not executed.
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+    {% if highlights.success|length > 0 %}
+        <div class="card border-success">
+            <div class="card-body">
+                <ul class="highlights">
+                    {% for h in highlights.success %}
+                        {% if h.type == 'lower_response_times' %}
+                        <li>
+                            <span>response times</span>
+                            <b>{{ h.action.current_test.name }}</b> became faster on <b>{% get_percentage_abs h.action.current_test.data.mean h.action.other_test.data.mean %} % ({{ h.action.other_test.data.mean }} -> {{ h.action.current_test.data.mean }})</b>.
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+    {% if highlights.critical|length > 0 %}
+        <div class="card border-danger">
+                <div class="card-body">
+                <ul class="highlights">
+                    {% for h in highlights.critical %}
+                        {% if h.type == 'higher_response_times' %}
+                        <li>
+                                <span>response times</span>
+                                <span>{{ tests.0.display_name }}</span>
+                                <b>{{ h.action.current_test.name }}</b> became higher on <b>{% get_percentage_abs h.action.current_test.data.mean h.action.other_test.data.mean %} % ({{ h.action.other_test.data.mean }} -> {{ h.action.current_test.data.mean }})</b>.
+                        </li>
+                        {% elif h.type == 'lower_count' %}
+                        <li>
+                                <span>count</span>
+                                <span>{{ tests.0.display_name }}</span>
+                                <b>{{ h.action.current_test.name }}</b> was executed <b>{% get_percentage_abs h.action.current_test.data.count h.action.other_test.data.count %} %</b> less.
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    </div>
+</div>

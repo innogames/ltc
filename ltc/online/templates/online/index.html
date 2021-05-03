@@ -1,0 +1,63 @@
+{% extends 'ltc/base.html' %}
+{% load staticfiles %}
+{% block content %}
+<hr/>
+<form class="form-inline" method="GET">
+    <div class="col-2">
+        <select name="running_test_id" id="online_select_test" class="form-control form-control-sm">
+            <option disabled selected value="Select test">Select running test</option>
+            {% for test in tests %}
+                <option value="{{ test.id }}">{% if test.name %}{{ test.name }}{% else %}{{ test.project }} - {{ test.id }}{% endif %}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+<hr/>
+<ul class="nav nav-tabs" id="test-report-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" id="online-graphs-tab" data-bs-toggle="tab" data-bs-target="#online_graphs" type="button" role="tab" aria-selected="true">Graphs</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="online-tables-tab" data-bs-toggle="tab" data-bs-target="#online_tables" type="button" role="tab">Tables</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="online_graphs" aria-labelledby="online-graphs-tab">
+        <div class="row">
+            <div class="card border-light">
+                <div class="card-header"></div>
+                    <div class="chart" id="online_rtot">
+                <div class="card-body">
+                </div>
+            </div>
+        </div>
+    <div class="row">
+        <div class="col-6">
+            <div class="card border-light">
+                <div class="card-header"></div>
+                <div class="chart" id="online_rps">
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card border-light">
+                <div class="card-header"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <div class="tab-pane fade" id="online_tables" aria-labelledby="online-tables-tab">
+        <div class="card border-light">
+            <div class="card-header">Aggregate table:</div>
+            <div class="card-body">
+                <div id="online_aggregate_table">
+            </div>
+        </div>
+    </div>
+</div>
+<div id="page-data" data-csrf="{{ csrf_token }}"></div>
+{% endblock %}
+{% block script %}
+<script src="{% static 'js/online/online.js' %}"></script>
+{% endblock %}
