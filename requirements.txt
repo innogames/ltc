@@ -1,4 +1,4 @@
-Django==2.2.20
+Django==2.2.21
 matplotlib
 numpy
 pandas
