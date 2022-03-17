@@ -1,11 +1,9 @@
-Django==2.2.20
+Django==2.2.27
 matplotlib
 numpy
 pandas
 paramiko
 psutil
-matplotlib
 scipy
 psycopg2-binary
 djangorestframework
-git+https://github.com/innogames/serveradmin.git

@@ -5,6 +5,7 @@
 *.hg
 *.log
 local_settings.py
+igrequirements.txt
 
 desktop.ini
 .venv
