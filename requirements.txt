@@ -4,6 +4,6 @@ numpy
 pandas
 paramiko
 psutil
-matplotlib
 scipy
 psycopg2-binary
+djangorestframework
