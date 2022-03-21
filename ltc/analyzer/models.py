@@ -292,6 +292,8 @@ class GraphiteVariable(models.Model):
                     continue
                 l.append(v_[0])
         res = 0.0
+        if not l:
+            return str(float('{:.2f}'.format(res)))
         if self.function == GraphiteVariable.AVG:
             if len(l) > 0:
                 res = sum(l) / len(l)
