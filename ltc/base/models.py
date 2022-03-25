@@ -925,8 +925,8 @@ class TestFile(models.Model):
                 self.path, sep=',', index_col=0, chunksize=3000000
             )
             for chunk in chunks:
-                chunk.columns = csv_file_fields.split(',')
-                chunk = chunk[~chunk['URL'].str.contains('exclude_')]
+                chunk.columns = csv_file_fields
+                df = df[~df['url'].str.contains('exclude_', na=False)]
                 df = df.append(chunk)
         else:
             df = pd.read_csv(
