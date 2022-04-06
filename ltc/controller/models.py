@@ -184,7 +184,7 @@ class LoadGenerator(models.Model):
             [
                 'scp', '-i', ssh_key, '-r',
                 f'root@{hostname}:{errors_dir}',
-                test.remote_temp_path
+                test.temp_path,
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
