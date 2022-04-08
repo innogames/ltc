@@ -276,7 +276,7 @@ class Test(models.Model):
             return t[1]
         return self
 
-    def analyze(self, mode=''):
+    def analyze(self):
         logger.info(
             f'Parse and generate test data: {self.id}; status: {self.status}'
         )
@@ -926,8 +926,8 @@ class TestFile(models.Model):
             )
             for chunk in chunks:
                 chunk.columns = csv_file_fields
-                df = df[~df['url'].str.contains('exclude_', na=False)]
-                df = df.append(chunk)
+                filtered = chunk[~chunk['url'].str.contains('exclude_', na=False)]
+                df = df.append(filtered)
         else:
             df = pd.read_csv(
                 self.path, index_col=0, low_memory=False
