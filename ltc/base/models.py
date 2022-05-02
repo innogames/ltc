@@ -223,7 +223,13 @@ class Project(models.Model):
         del page_parent['version']
         del page_parent['contentStatus']
         for test in last_tests:
-            test.post_to_confluence(page_parent_id, page_parent, force=force)
+            try:
+                test.post_to_confluence(page_parent_id, page_parent, force=force)
+            except Exception as e:
+                logger.warning(
+                    f'error to generate report for test #{test.id}'
+                    f'exception: {e}'
+                )
 
         return content
 
