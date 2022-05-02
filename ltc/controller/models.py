@@ -226,8 +226,6 @@ class LoadGenerator(models.Model):
                 stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
                 if not test.remote_temp_path:
                     continue
-                if not os.path.exists(test.remote_temp_path):
-                    continue
                 logger.info(
                     f'Deleting tmp directory from {self.hostname}: '
                     f'{test.remote_temp_path}'
