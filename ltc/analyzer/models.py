@@ -201,41 +201,45 @@ class GraphiteVariable(models.Model):
         chart_values_max = None
         chart_values_min = None
 
-        # Build an simple html table
+        # Build a simple html table
         chart_table = '<table class="wrapped"><tbody>'
 
         # Table header
         chart_table += '<tr><th>Date</th>'
+        key = None
         for key, value in sorted(data.items()):
             chart_table += '<th>' + key + '</th>'
         chart_table += '</tr>\n'
 
         # chart rows
-        while len(data[key]) > 0:
-            timestamp = data[key][0][1]
-            chart_date = datetime.fromtimestamp(
-                timestamp
-            ).strftime('%Y-%m-%d %H:%M')
-            chart_table += '<tr><td>' + chart_date + '</td>'
+        # needs investigation:
+        # UnboundLocalError: local variable 'key' referenced before assignment
+        if key:
+            while len(data[key]) > 0:
+                timestamp = data[key][0][1]
+                chart_date = datetime.fromtimestamp(
+                    timestamp
+                ).strftime('%Y-%m-%d %H:%M')
+                chart_table += '<tr><td>' + chart_date + '</td>'
 
-            for key, value in sorted(data.items()):
-                val = value.pop(0)[0]
-                if val:
-                    this_row = round(val, 3)
-                else:
-                    this_row = 0.0
+                for key, value in sorted(data.items()):
+                    val = value.pop(0)[0]
+                    if val:
+                        this_row = round(val, 3)
+                    else:
+                        this_row = 0.0
 
-                chart_table += '<td>' + str(this_row) + '</td>'
+                    chart_table += '<td>' + str(this_row) + '</td>'
 
-                # Find min/max values.
-                if val:
-                    if not chart_values_max or chart_values_max < val:
-                        chart_values_max = val
+                    # Find min/max values.
+                    if val:
+                        if not chart_values_max or chart_values_max < val:
+                            chart_values_max = val
 
-                    if not chart_values_min or chart_values_min > val:
-                        chart_values_min = val
+                        if not chart_values_min or chart_values_min > val:
+                            chart_values_min = val
 
-            chart_table += '</tr>\n'
+                chart_table += '</tr>\n'
 
         # char footer
         chart_table += '</tbody></table>\n'

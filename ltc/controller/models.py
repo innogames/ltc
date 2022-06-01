@@ -184,7 +184,7 @@ class LoadGenerator(models.Model):
             [
                 'scp', '-i', ssh_key, '-r',
                 f'root@{hostname}:{errors_dir}',
-                test.remote_temp_path
+                test.temp_path,
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
@@ -200,7 +200,7 @@ class LoadGenerator(models.Model):
             [
                 'scp', '-i', ssh_key, '-r',
                 f'root@{hostname}:{logs_dir}',
-                os.path.join(test.remote_temp_path, f'{self.hostname}.log')
+                os.path.join(test.temp_path, f'{self.hostname}.log')
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
@@ -225,8 +225,6 @@ class LoadGenerator(models.Model):
                 cmds = [f'kill -9 {jmeter_server.pid}']
                 stdin, stdout, stderr = ssh.exec_command(' ; '.join(cmds))
                 if not test.remote_temp_path:
-                    continue
-                if not os.path.exists(test.remote_temp_path):
                     continue
                 logger.info(
                     f'Deleting tmp directory from {self.hostname}: '

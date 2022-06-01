@@ -223,7 +223,13 @@ class Project(models.Model):
         del page_parent['version']
         del page_parent['contentStatus']
         for test in last_tests:
-            test.post_to_confluence(page_parent_id, page_parent, force=force)
+            try:
+                test.post_to_confluence(page_parent_id, page_parent, force=force)
+            except Exception as e:
+                logger.warning(
+                    f'error to generate report for test #{test.id}'
+                    f'exception: {e}'
+                )
 
         return content
 
@@ -276,7 +282,7 @@ class Test(models.Model):
             return t[1]
         return self
 
-    def analyze(self, mode=''):
+    def analyze(self):
         logger.info(
             f'Parse and generate test data: {self.id}; status: {self.status}'
         )
@@ -926,8 +932,8 @@ class TestFile(models.Model):
             )
             for chunk in chunks:
                 chunk.columns = csv_file_fields
-                df = df[~df['url'].str.contains('exclude_', na=False)]
-                df = df.append(chunk)
+                filtered = chunk[~chunk['url'].str.contains('exclude_', na=False)]
+                df = df.append(filtered)
         else:
             df = pd.read_csv(
                 self.path, index_col=0, low_memory=False
