@@ -8,6 +8,7 @@ import signal
 import subprocess
 import tempfile
 import threading
+import time
 import zipfile
 from collections import OrderedDict, defaultdict
 from os.path import dirname as up
@@ -662,16 +663,7 @@ class Test(models.Model):
             '-Jjmeter.save.saveservice.default_delimiter=,'
         ]
         logger.info(f'Main jmeter cmd: {" ".join(args)}')
-        if self.duration > 0:
-            jmeter_process = subprocess.Popen(
-                args,
-                executable='java',
-                stdout=subprocess.PIPE,
-                preexec_fn=os.setsid,
-                close_fds=True,
-                #timeout=self.duration,
-            )
-        else:
+        for _ in range(3):
             jmeter_process = subprocess.Popen(
                 args,
                 executable='java',
@@ -679,13 +671,31 @@ class Test(models.Model):
                 preexec_fn=os.setsid,
                 close_fds=True,
             )
+            logger.info(
+                f'Jmeter process started: {jmeter_process.pid} '
+            )
+            startup_output = ''
+            while jmeter_process.poll() is None:
+                startup_output += jmeter_process.stdout.readline().decode(
+                    'utf-8'
+                ).lower()
+                if 'error' or 'successfully' in startup_output:
+                    break
+            logger.info(f'Startup output: {startup_output}')
+            if 'error' in startup_output:
+                logger.info(
+                    'Jmeter process failed, retrying in 5 seconds.'
+                )
+                time.sleep(5)
+            else:
+                break
         self.status = Test.RUNNING
         self.started_at = timezone.now()
         self.save()
         self.wait_for_finished(jmeter_process)
 
     def wait_for_finished(self, jmeter_process):
-        def cleanup_after_int(signum, frame):
+        def abort():
             logger.info(
                 f'JMeter process was aborted'
             )
@@ -696,15 +706,30 @@ class Test(models.Model):
             self.cleanup()
             return
 
+        def cleanup_after_int(signum, frame):
+            abort()
+
         signal.signal(signal.SIGINT, cleanup_after_int)
         signal.signal(signal.SIGTERM, cleanup_after_int)
+        err_track = 0
         ''' Check if test is still running'''
         if self.status == Test.RUNNING:
             while jmeter_process.poll() is None:
                 self.last_active = timezone.now()
                 self.save()
-                l = jmeter_process.stdout.readline()
-                logger.info(l)
+                output = jmeter_process.stdout.readline()
+                logger.info(output)
+                err_pattern = r'summary \+.+?Err:\s+\d+?\s+\((\d+?),'
+                err = re.findall(err_pattern, str(output))
+                if len(err) > 0:
+                    if int(err[0]) >= 90:
+                        err_track += 1
+                        logger.info('Error rate is too high.')
+                    else:
+                        err_track = 0
+                if err_track > 3:
+                    logger.info('Aborting test due to high error rate.')
+                    abort()
             # When the subprocess terminates there might be unconsumed output
             # that still needs to be processed.
             logger.info(jmeter_process.stdout.read())
@@ -718,6 +743,8 @@ class Test(models.Model):
 
     def stop(self, jmeter_process):
         logger.info(f'Stopping test {self.id}')
+        logger.info(f'Killing main jmeter process {jmeter_process.pid}')
+        call(['kill', '-9', f'{jmeter_process.pid}'])
         for loadgenerator in LoadGenerator.objects.all():
             loadgenerator.gather_errors_data(self)
             loadgenerator.gather_logs(self)
