@@ -1,4 +1,4 @@
-Django==2.2.27
+Django==3.2.19
 matplotlib
 numpy
 pandas
@@ -7,3 +7,5 @@ psutil
 scipy
 psycopg2-binary
 djangorestframework
+git+https://github.com/innogames/serveradmin.git@main
+netaddr

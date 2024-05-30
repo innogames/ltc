@@ -3,7 +3,7 @@ from django.apps import AppConfig
 
 class AdminConfig(AppConfig):
     name = 'ltc.admin'
-    label = 'ltc.admin'
+    label = 'ltc_admin'
 
     def ready(self):
         super().ready()
