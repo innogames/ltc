@@ -70,7 +70,7 @@ def dashboard_compare_tests(tests):
         ).aggregate(
             count_sum=Sum(F('count'), output_field=FloatField()),
             errors_sum=Sum(F('errors'), output_field=FloatField()),
-            mean=Sum(F('weight')) / Sum(F('count'))
+            mean=Sum(F('weight'), output_field=FloatField()) / Sum(F('count'), output_field=FloatField())
         )
 
         prev_test_data = TestActionAggregateData.objects.filter(
@@ -84,7 +84,7 @@ def dashboard_compare_tests(tests):
         ).aggregate(
             count_sum=Sum(F('count'), output_field=FloatField()),
             errors_sum=Sum(F('errors'), output_field=FloatField()),
-            mean=Sum(F('weight')) / Sum(F('count'))
+            mean=Sum(F('weight'), output_field=FloatField()) / Sum(F('count'), output_field=FloatField())
         )
         try:
             errors_percentage = (

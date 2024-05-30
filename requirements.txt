@@ -1,4 +1,4 @@
-Django==3.2.19
+Django~=4.2
 matplotlib
 numpy
 pandas
@@ -8,4 +8,5 @@ scipy
 psycopg2-binary
 djangorestframework
 git+https://github.com/innogames/serveradmin.git@main
+git+ssh://git@gitlab.innogames.de/sysadmins/igrestlogin.git
 netaddr

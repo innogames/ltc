@@ -120,7 +120,7 @@ class Project(models.Model):
                 annotate(weight=RawSQL("((data->>%s)::numeric)", ('weight',))). \
                 aggregate(count_sum=Sum(F('count'), output_field=FloatField()),
                         errors_sum=Sum(F('errors'), output_field=FloatField()),
-                        overall_avg=Sum(F('weight')) / Sum(F('count')))
+                        overall_avg=Sum(F('weight'), output_field=FloatField()) / Sum(F('count'), output_field=FloatField()))
 
             prev_test_data = TestActionAggregateData.objects. \
                 filter(test_id=prev_test_id). \
@@ -130,7 +130,7 @@ class Project(models.Model):
                 aggregate(
                     count_sum=Sum(F('count'), output_field=FloatField()),
                     errors_sum=Sum(F('errors'), output_field=FloatField()),
-                    overall_avg=Sum(F('weight')) / Sum(F('count'))
+                    overall_avg=Sum(F('weight'), output_field=FloatField()) / Sum(F('count'), output_field=FloatField())
                     )
             try:
                 errors_percentage = test_data['errors_sum'] * 100 / test_data[
@@ -266,7 +266,7 @@ class Test(models.Model):
     last_active = models.DateTimeField(null=True, db_index=True)
     is_locked = models.BooleanField(default=False)
     online_lines_analyzed = models.IntegerField(default=0)
-    vars = JSONField(default={})
+    vars = models.JSONField(default={})
 
     def __str__(self):
         return f'{self.project} - {self.id} {self.name}'

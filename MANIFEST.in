@@ -2,3 +2,5 @@ include ./manage.py
 
 recursive-include ltc/*/templates *
 recursive-include ltc/*/static *
+recursive-include ltc/base/utils *
+recursive-include ltc *

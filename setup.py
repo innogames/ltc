@@ -18,13 +18,6 @@ def get_version():
         environ.get('BUILD_NUMBER', '1'))
 
 
-def get_packages():
-    yield '.'
-    yield 'ltc'
-    for package in find_packages('ltc'):
-        yield 'ltc.{}'.format(package)
-
-
 setup(
     name='ltc',
     description='InnoGames GmbH Load Test Center',
@@ -34,7 +27,6 @@ setup(
     url='https://https://github.com/innogames/ltc',
     license='Copyright (c) InnoGames GmbH',
     version=get_version(),
-    #packages=find_packages(),
-    packages=list(get_packages()),
+    packages=find_packages(),
     include_package_data=True,
 )
