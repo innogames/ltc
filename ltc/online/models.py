@@ -8,7 +8,6 @@ import random
 import re
 from collections import OrderedDict
 import pandas as pd
-from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models.fields import related
 from ltc.base.models import Test, TestFile
@@ -25,7 +24,7 @@ class TestOnlineData(models.Model):
     )
     name = models.CharField(max_length=200, default='')
     start_line = models.IntegerField(default=0)
-    data = JSONField()
+    data = models.JSONField()
 
     @classmethod
     def update(cls, test: Test):

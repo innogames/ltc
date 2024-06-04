@@ -4,8 +4,9 @@
 *.xml
 *.hg
 *.log
+.venv
+ltc.egg-info
+build
 local_settings.py
 igrequirements.txt
-
 desktop.ini
-.venv

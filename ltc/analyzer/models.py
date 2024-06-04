@@ -5,7 +5,6 @@ from ltc.controller.graphite import graphiteclient
 import re
 
 from django.db import models
-from django.contrib.postgres.fields import JSONField
 from django.template import Template, Context
 
 class ReportTemplate(models.Model):
@@ -382,7 +381,7 @@ class TestData(models.Model):
         TestDataResolution, on_delete=models.CASCADE, default=1
     )
     source = models.CharField(max_length=100, default='default')
-    data = JSONField()
+    data = models.JSONField()
 
 
 class Action(models.Model):
@@ -416,7 +415,7 @@ class TestActionData(models.Model):
     action = models.ForeignKey(
         Action, on_delete=models.CASCADE, null=True, blank=True
     )
-    data = JSONField()
+    data = models.JSONField()
 
     class Meta:
         index_together = [
@@ -427,7 +426,7 @@ class TestActionData(models.Model):
 class TestActionAggregateData(models.Model):
     test = models.ForeignKey(to='base.Test', on_delete=models.CASCADE)
     action = models.ForeignKey(Action, on_delete=models.CASCADE)
-    data = JSONField()
+    data = models.JSONField()
 
     class Meta:
         index_together = [
@@ -447,7 +446,7 @@ class ServerMonitoringData(models.Model):
     )
     source = models.TextField(default='default')
     server = models.ForeignKey(Server, on_delete=models.CASCADE)
-    data = JSONField()
+    data = models.JSONField()
 
     class Meta:
         index_together = [
