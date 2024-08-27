@@ -21,7 +21,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField
 from django.db import models
-from django.db.models import Avg, F, FloatField, Func, Max, Min, Sum
+from django.db.models import Avg, F, FloatField, Func, Max, Min, Sum, ExpressionWrapper
 from django.db.models.expressions import F, RawSQL
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -382,9 +382,14 @@ class Test(models.Model):
 
         data = TestActionAggregateData.objects.filter(test=self). \
             annotate(name=F('action__name')). \
-            annotate(errors=Round(
-                RawSQL("((data->>%s)::numeric)", ('errors',)) * 100 /
-                RawSQL("((data->>%s)::numeric)", ('count',)))
+            annotate(
+                errors=ExpressionWrapper(
+                    Round(
+                        RawSQL("((data->>%s)::numeric)", ('errors',)) * 100 /
+                        RawSQL("((data->>%s)::numeric)", ('count',))
+                    ),
+                    output_field=FloatField()
+                )
         ).order_by('-errors').values('name', 'action_id', 'errors')[:n]
         return data
 
@@ -395,7 +400,10 @@ class Test(models.Model):
 
         data = TestActionAggregateData.objects.filter(
             test=self).annotate(name=F('action__name')).annotate(
-            mean=RawSQL("((data->>%s)::numeric)", ('mean',))
+            mean=ExpressionWrapper(
+                RawSQL("((data->>%s)::numeric)", ('mean',)),
+                output_field=FloatField()
+            )
         ).order_by('-mean').values('name', 'mean')[:n]
         data = json.dumps(list(data), cls=DjangoJSONEncoder)
         return data
@@ -822,17 +830,24 @@ class Test(models.Model):
             annotate(name=F('test__name')). \
             annotate(started_at=F('test__started_at')). \
             values('name', 'started_at'). \
-            annotate(average=Sum(
-                    RawSQL("((data->>%s)::numeric)", ('avg',)
-            ) * RawSQL("((data->>%s)::numeric)", ('count',))
-            ) / Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
-            annotate(median=Sum(
+            annotate(
+                average=ExpressionWrapper(
+                    Sum(
+                        RawSQL("((data->>%s)::numeric)", ('avg',)
+                    ) * RawSQL("((data->>%s)::numeric)", ('count',))
+                    ) / Sum(RawSQL("((data->>%s)::numeric)", ('count',))),
+                    output_field=FloatField()
+                )
+            ). \
+            annotate(
+                median=ExpressionWrapper(Sum(
                 RawSQL(
                     "((data->>%s)::numeric)", ('median',)
                 ) * RawSQL(
                     "((data->>%s)::numeric)", ('count',))
-            ) / Sum(RawSQL("((data->>%s)::numeric)", ('count',)))). \
-            order_by(order)[:n]
+            ) / Sum(RawSQL("((data->>%s)::numeric)", ('count',))),
+                output_field=FloatField())
+            ).order_by(order)[:n]
         return data
 
 
