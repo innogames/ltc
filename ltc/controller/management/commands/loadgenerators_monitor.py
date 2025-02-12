@@ -1,5 +1,6 @@
 import logging
 import threading
+from typing import Any
 
 from django.core.management.base import BaseCommand
 
@@ -9,7 +10,7 @@ from ltc.controller.models import LoadGenerator
 logger = logging.getLogger('django')
 
 
-def refresh(loadgenerator):
+def refresh(loadgenerator: LoadGenerator):
     """Update loadgenerator data
 
     Args:
@@ -24,14 +25,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         threads = []
 
-        hosts = Query({
+        hosts: list[dict[Any, Any]] | None = Query({
             'function': 'loadgenerator',
             'state': 'online',
             'servertype': 'vm',
         }, ['num_cpu', 'memory', 'hostname'])
 
         for host in hosts:
-            print(host)
             loadgenerator, _ = LoadGenerator.objects.update_or_create(
                 hostname=host['hostname'],
                 defaults={
