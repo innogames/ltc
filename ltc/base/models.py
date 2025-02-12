@@ -411,32 +411,37 @@ class Test(models.Model):
     def get_test_metric(self, metric):
 
         metrics = {
-            'mean':
-            {'query':
-                Sum(RawSQL("((data->>%s)::numeric)", ('mean',)) *
-                    RawSQL("((data->>%s)::numeric)", ('count',))) /
-                Sum(RawSQL("((data->>%s)::numeric)", ('count',))),
+            'mean': {
+                'query': ExpressionWrapper(Sum(
+                    RawSQL(
+                        "COALESCE((data->>%s)::numeric, 0) * COALESCE((data->>%s)::numeric, 1)",
+                        ('mean', 'count')
+                    )
+                ) / Sum(
+                    RawSQL("COALESCE((data->>%s)::numeric, 1)", ('count',))
+                ),  output_field=FloatField()),
                 'source_model': 'TestData'
             },
-            'median':
-            {'query':
-                Sum(RawSQL("((data->>%s)::numeric)", ('median',)) *
-                    RawSQL("((data->>%s)::numeric)", ('count',))) /
-                Sum(RawSQL("((data->>%s)::numeric)", ('count',))),
+            'median': {
+                'query': ExpressionWrapper(Sum(
+                    RawSQL(
+                        "COALESCE((data->>%s)::numeric, 0) * COALESCE((data->>%s)::numeric, 1)",
+                        ('median', 'count')
+                    )
+                ) / Sum(
+                    RawSQL("COALESCE((data->>%s)::numeric, 1)", ('count',))
+                ), output_field=FloatField()),
                 'source_model': 'TestData'
             },
-            'cpu_load':
-            {
-                'query': Avg(RawSQL(
-                    "((data->>%s)::float) + ((data->>%s)::float) + "
-                    "((data->>%s)::float)", (
-                        'CPU_user',
-                        'CPU_iowait',
-                        'CPU_system',
-                    ))),
+            'cpu_load': {
+                'query': ExpressionWrapper(Avg(
+                    RawSQL(
+                        "COALESCE((data->>%s)::float, 0) + COALESCE((data->>%s)::float, 0) + COALESCE((data->>%s)::float, 0)",
+                        ('CPU_user', 'CPU_iowait', 'CPU_system')
+                    )
+                ), output_field=FloatField()),
                 'source_model': 'ServerMonitoringData'
             }
-
         }
 
         metric_mapping = {
