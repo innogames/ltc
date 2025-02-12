@@ -268,15 +268,6 @@ class JmeterServer(models.Model):
             '-server',
             '-Xms{memory}m',
             '-Xmx{memory}m',
-            '-Xss228k',
-            '-XX:+DisableExplicitGC',
-            '-XX:+CMSClassUnloadingEnabled',
-            '-XX:+UseCMSInitiatingOccupancyOnly',
-            '-XX:CMSInitiatingOccupancyFraction=70',
-            '-XX:+ScavengeBeforeFullGC',
-            '-XX:+CMSScavengeBeforeRemark',
-            '-XX:+UseConcMarkSweepGC',
-            '-XX:+CMSParallelRemarkEnabled',
             '-Djava.net.preferIPv6Addresses=true',
             '-Djava.net.preferIPv4Stack=false'
         ]
@@ -359,7 +350,7 @@ class JmeterServer(models.Model):
                 f'-Jserver.rmi.ssl.disable=true '
                 f'"-Djava.rmi.server.hostname={self.loadgenerator.hostname}" '
                 f'-Dserver_port={self.port} -s -j jmeter-server.log '
-                f'{self.local_args} > /dev/null 2>&1 '
+                f'{self.local_args} > /dev/null 2>&1'
             )
         logger.info(f'Using command: {start_jmeter_server_cmd}')
         command = 'echo $$; exec ' + start_jmeter_server_cmd
