@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 560" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arr4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- Jenkins build -->
+  <rect x="30" y="60" width="330" height="380" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <rect x="30" y="60" width="330" height="52" rx="10" fill="#1a1a2e"/>
+  <text x="195" y="93" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">CI build (packaging/)</text>
+  <g font-size="12.5" fill="#334155">
+    <text x="54" y="148">1 · pytest — SQLite settings, no DB needed</text>
+    <text x="54" y="182">2 · npm ci &amp;&amp; npm run build — SPA to /static</text>
+    <text x="54" y="216">3 · pip install --target vendor/ — every</text>
+    <text x="74" y="234">Python dependency, cp311 / amd64</text>
+    <text x="54" y="268">4 · collectstatic — assets prebuilt</text>
+    <text x="54" y="302">5 · dpkg-deb</text>
+  </g>
+  <rect x="54" y="330" width="282" height="44" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="195" y="358" text-anchor="middle" font-size="12.5" font-family="ui-monospace, monospace" fill="#1a1a2e">ltc_&lt;version&gt;_amd64.deb</text>
+  <text x="54" y="410" font-size="11.5" fill="#64748b">self-contained: target needs only</text>
+  <text x="54" y="428" font-size="11.5" fill="#64748b">python3.11 + nginx</text>
+
+  <!-- deb-drop -->
+  <rect x="450" y="190" width="200" height="110" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="550" y="234" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">APT repository</text>
+  <text x="550" y="258" text-anchor="middle" font-size="12" fill="#64748b">package hosting</text>
+
+  <!-- Target -->
+  <rect x="740" y="40" width="410" height="480" rx="10" fill="#ffffff" stroke="#1976d2" stroke-width="1.5"/>
+  <rect x="740" y="40" width="410" height="52" rx="10" fill="#1976d2"/>
+  <text x="945" y="73" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Target server (Debian bookworm)</text>
+
+  <rect x="766" y="116" width="358" height="48" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="945" y="146" text-anchor="middle" font-size="13" fill="#1a1a2e">nginx — /static from disk, proxy to uWSGI</text>
+
+  <rect x="766" y="192" width="358" height="48" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="945" y="222" text-anchor="middle" font-size="13" fill="#1a1a2e">uWSGI · ltc.wsgi · www-data</text>
+
+  <rect x="766" y="268" width="358" height="130" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="786" y="296" font-size="13" font-weight="600" fill="#1a1a2e">/www/ltc</text>
+  <g font-size="11.5" font-family="ui-monospace, monospace" fill="#334155">
+    <text x="786" y="320">manage.py · ltc/ · vendor/ (all deps)</text>
+    <text x="786" y="340">_static/ · frontend/dist/index.html</text>
+    <text x="786" y="360">ltc/local_settings.py — machine-specific</text>
+  </g>
+  <text x="786" y="386" font-size="11.5" fill="#64748b">vendor/ prepended to sys.path by manage.py + wsgi.py</text>
+
+  <rect x="766" y="424" width="170" height="70" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="851" y="452" text-anchor="middle" font-size="12.5" fill="#1a1a2e">PostgreSQL</text>
+  <text x="851" y="472" text-anchor="middle" font-size="11" fill="#64748b">JSONB storage</text>
+  <rect x="954" y="424" width="170" height="70" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="1039" y="452" text-anchor="middle" font-size="12.5" fill="#1a1a2e">cron: watchdog,</text>
+  <text x="1039" y="472" text-anchor="middle" font-size="12.5" fill="#1a1a2e">inventory, jstat</text>
+
+  <!-- edges -->
+  <g stroke="#64748b" stroke-width="1.5" fill="none">
+    <path d="M 360 245 L 448 245" marker-end="url(#arr4)"/>
+    <path d="M 650 245 L 738 245" marker-end="url(#arr4)"/>
+    <path d="M 945 164 L 945 190" marker-end="url(#arr4)"/>
+    <path d="M 945 240 L 945 266" marker-end="url(#arr4)"/>
+  </g>
+  <g font-size="11.5" fill="#64748b">
+    <text x="370" y="232">upload</text>
+    <text x="660" y="232">apt install</text>
+  </g>
+  <text x="450" y="330" font-size="11.5" fill="#64748b">on install: migrate + service restart</text>
+</svg>

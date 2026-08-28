@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 640" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- pipeline stages -->
+  <g>
+    <rect x="30" y="80" width="200" height="230" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <rect x="30" y="80" width="200" height="46" rx="8" fill="#1a1a2e"/>
+    <text x="130" y="109" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">1 · Trigger</text>
+    <g font-size="12" fill="#334155">
+      <text x="46" y="156">A CI job calls</text>
+      <text x="46" y="176" font-family="ui-monospace, monospace" font-size="11">manage.py start_test</text>
+      <text x="46" y="200">with test plan, threads,</text>
+      <text x="46" y="218">duration and variables.</text>
+      <text x="46" y="246" fill="#64748b">Test row created,</text>
+      <text x="46" y="264" fill="#64748b">plan prepared.</text>
+    </g>
+
+    <rect x="270" y="80" width="200" height="230" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <rect x="270" y="80" width="200" height="46" rx="8" fill="#1a1a2e"/>
+    <text x="370" y="109" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">2 · Provision</text>
+    <g font-size="12" fill="#334155">
+      <text x="286" y="156">Sizes JMeter slaves from</text>
+      <text x="286" y="174">thread memory estimates,</text>
+      <text x="286" y="192">picks load generators by</text>
+      <text x="286" y="210">free memory, starts</text>
+      <text x="286" y="228" font-family="ui-monospace, monospace" font-size="11">jmeter-server</text>
+      <text x="286" y="248">instances over SSH.</text>
+    </g>
+
+    <rect x="510" y="80" width="200" height="230" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <rect x="510" y="80" width="200" height="46" rx="8" fill="#1a1a2e"/>
+    <text x="610" y="109" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">3 · Run</text>
+    <g font-size="12" fill="#334155">
+      <text x="526" y="156">Local JMeter master</text>
+      <text x="526" y="174">drives the distributed</text>
+      <text x="526" y="192">slaves; blocks until the</text>
+      <text x="526" y="210">test ends. Aborts on a</text>
+      <text x="526" y="228">sustained &gt;90 % error</text>
+      <text x="526" y="246">rate; a cron watchdog</text>
+      <text x="526" y="264">kills stale runs.</text>
+    </g>
+
+    <rect x="750" y="80" width="200" height="230" rx="8" fill="#ffffff" stroke="#1976d2"/>
+    <rect x="750" y="80" width="200" height="46" rx="8" fill="#1976d2"/>
+    <text x="850" y="109" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">4 · Live monitoring</text>
+    <g font-size="12" fill="#334155">
+      <text x="766" y="156">Online page polls the</text>
+      <text x="766" y="174">API every 5 s; the result</text>
+      <text x="766" y="192">CSV is tailed and</text>
+      <text x="766" y="210">aggregated server-side,</text>
+      <text x="766" y="228">throttled to one parse</text>
+      <text x="766" y="246">per 5 s window.</text>
+    </g>
+
+    <rect x="990" y="80" width="170" height="230" rx="8" fill="#ffffff" stroke="#2e7d32"/>
+    <rect x="990" y="80" width="170" height="46" rx="8" fill="#2e7d32"/>
+    <text x="1075" y="109" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">5 · Analyze</text>
+    <g font-size="12" fill="#334155">
+      <text x="1004" y="156">Result CSV parsed into</text>
+      <text x="1004" y="174">JSONB aggregates;</text>
+      <text x="1004" y="192">report in the Analyzer,</text>
+      <text x="1004" y="210">t-test comparison vs</text>
+      <text x="1004" y="228">previous runs, report</text>
+      <text x="1004" y="246">published to</text>
+      <text x="1004" y="264">Confluence.</text>
+    </g>
+  </g>
+  <g stroke="#64748b" stroke-width="1.5" fill="none">
+    <path d="M 230 195 L 268 195" marker-end="url(#arr2)"/>
+    <path d="M 470 195 L 508 195" marker-end="url(#arr2)"/>
+    <path d="M 710 195 L 748 195" marker-end="url(#arr2)"/>
+    <path d="M 950 195 L 988 195" marker-end="url(#arr2)"/>
+  </g>
+
+  <!-- status machine -->
+  <text x="30" y="420" font-size="14" font-weight="600" fill="#1a1a2e">Test status machine</text>
+  <g font-size="13" text-anchor="middle">
+    <rect x="30" y="446" width="150" height="46" rx="23" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="105" y="475" fill="#334155">C · created</text>
+    <rect x="240" y="446" width="150" height="46" rx="23" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="315" y="475" fill="#334155">S · scheduled</text>
+    <rect x="450" y="446" width="150" height="46" rx="23" fill="#ffffff" stroke="#1976d2"/>
+    <text x="525" y="475" fill="#1976d2">R · running</text>
+    <rect x="660" y="446" width="150" height="46" rx="23" fill="#ffffff" stroke="#ed6c02"/>
+    <text x="735" y="475" fill="#ed6c02">A · analyzing</text>
+    <rect x="870" y="446" width="150" height="46" rx="23" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="945" y="475" fill="#2e7d32">F · finished</text>
+    <rect x="660" y="546" width="150" height="46" rx="23" fill="#ffffff" stroke="#d32f2f"/>
+    <text x="735" y="575" fill="#d32f2f">FA · failed</text>
+  </g>
+  <g stroke="#64748b" stroke-width="1.5" fill="none">
+    <path d="M 180 469 L 238 469" marker-end="url(#arr2)"/>
+    <path d="M 390 469 L 448 469" marker-end="url(#arr2)"/>
+    <path d="M 600 469 L 658 469" marker-end="url(#arr2)"/>
+    <path d="M 810 469 L 868 469" marker-end="url(#arr2)"/>
+    <path d="M 560 492 C 600 530, 630 555, 658 566" marker-end="url(#arr2)"/>
+  </g>
+  <text x="560" y="548" font-size="11.5" fill="#64748b">abort / watchdog</text>
+</svg>
