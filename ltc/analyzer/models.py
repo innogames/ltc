@@ -418,8 +418,11 @@ class TestActionData(models.Model):
     data = models.JSONField()
 
     class Meta:
-        index_together = [
-            ('test', 'action', 'data_resolution'),
+        indexes = [
+            models.Index(
+                fields=['test', 'action', 'data_resolution'],
+                name='ltc_tad_test_act_res_idx',
+            ),
         ]
 
 
@@ -429,8 +432,11 @@ class TestActionAggregateData(models.Model):
     data = models.JSONField()
 
     class Meta:
-        index_together = [
-            ('test', 'action'),
+        indexes = [
+            models.Index(
+                fields=['test', 'action'],
+                name='ltc_taad_test_act_idx',
+            ),
         ]
 
 
@@ -449,6 +455,9 @@ class ServerMonitoringData(models.Model):
     data = models.JSONField()
 
     class Meta:
-        index_together = [
-            ('test', 'server', 'source', 'data_resolution'),
+        indexes = [
+            models.Index(
+                fields=['test', 'server', 'source', 'data_resolution'],
+                name='ltc_smd_test_srv_src_res_idx',
+            ),
         ]

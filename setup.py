@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 from os import environ
 from datetime import datetime
 
-VERSION = '2.0.0'
+VERSION = '3.0.0'
 
 
 def get_version():

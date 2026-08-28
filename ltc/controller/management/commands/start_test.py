@@ -6,7 +6,6 @@ import time
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from ltc.base.models import Test, TestFile, Project
-from ltc.controller.views import generate_data
 from argparse import ArgumentTypeError
 logger = logging.getLogger('django')
 

@@ -1,12 +1,11 @@
-Django~=4.2
-matplotlib
+Django~=5.2
+djangorestframework~=3.16
+django-cors-headers~=4.7
+drf-spectacular~=0.28
 numpy
 pandas
 paramiko
-psutil
 scipy
 psycopg2-binary
-djangorestframework
 git+https://github.com/innogames/serveradmin.git@main
 git+ssh://git@gitlab.innogames.de/sysadmins/igrestlogin.git
-netaddr

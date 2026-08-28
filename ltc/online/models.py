@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import datetime
 import json
 import logging
@@ -11,8 +9,7 @@ import pandas as pd
 from django.db import models
 from django.db.models.fields import related
 from ltc.base.models import Test, TestFile
-from pylab import *
-from pylab import np
+import numpy as np
 
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 logger = logging.getLogger('django')
@@ -111,7 +108,7 @@ class TestOnlineData(models.Model):
             update_df = pd.DataFrame()
             group_by_url = df.groupby('url')
             update_df = group_by_url.aggregate({
-                'response_time': np.mean
+                'response_time': 'mean'
             }).round(1)
             update_df['maximum'] = group_by_url.response_time.max().round(1)
             update_df['minimum'] = group_by_url.response_time.min().round(1)

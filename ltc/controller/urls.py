@@ -1,5 +1,0 @@
-from . import views
-
-urlpatterns = [
-
-]

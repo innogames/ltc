@@ -10,3 +10,5 @@ build
 local_settings.py
 igrequirements.txt
 desktop.ini
+# DevContainer base layer (fetched by innoclaude)
+.devcontainer/base/
