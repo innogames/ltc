@@ -32,3 +32,17 @@ ADR-style, newest last. Check here before re-litigating an architectural choice.
 12. **psycopg2 kept** for now; psycopg3 swap is orthogonal and deferred.
 13. **Out of scope, deliberately**: Controller UI (no backend views exist), CSV-upload feature
     (was unreachable/broken — re-specify before rebuilding), CI pipeline.
+
+## 2026-08: Vendorized Debian packaging
+
+14. **Python deps vendored in the deb** (`/www/ltc/vendor`, `pip install --target`), not taken
+    from Puppet-installed system packages — the system model cannot deliver Django 5.2. The
+    vendor dir is prepended to `sys.path` by `manage.py` and `ltc/wsgi.py`, so it shadows any
+    remaining system Django until Puppet drops those packages.
+15. **`Architecture: amd64`, `Depends: python3.11`** — honest about the cp311/amd64 binary
+    wheels (psycopg2, numpy, pandas, scipy, cryptography). Build interpreter must match the
+    bookworm target.
+16. **Assets built at package time**: SPA build + `collectstatic` happen in CI; `postinst`
+    only migrates and restarts uWSGI. The target never needs Node or writes to `/www/ltc`.
+17. **Build logic lives in the repo** (`packaging/*.sh`); Jenkins steps are one-liners —
+    portable to GitLab CI later.

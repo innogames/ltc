@@ -7,5 +7,6 @@ pandas
 paramiko
 scipy
 psycopg2-binary
-git+https://github.com/innogames/serveradmin.git@main
+# Only adminapi is used (Serveradmin inventory queries), not the whole app
+git+https://github.com/innogames/serveradmin.git@main#subdirectory=packages/adminapi
 git+ssh://git@gitlab.innogames.de/sysadmins/igrestlogin.git

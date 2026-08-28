@@ -62,6 +62,12 @@ make test
 Production build: `make frontend-build` (outputs `frontend/dist`, served by Django),
 then `manage.py collectstatic`.
 
+### Packaging
+
+Deployment is a self-contained Debian package (all Python deps vendored in
+`/www/ltc/vendor`, SPA and static files prebuilt): see [packaging/README.md](packaging/README.md).
+Build locally with `bash packaging/build-deb.sh`.
+
 AI-facing project documentation lives in `CLAUDE.md` and `.claude/docs/`.
 
 ### Running tests with Jenkins

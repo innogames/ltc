@@ -67,5 +67,16 @@ There is no task queue (deliberate — see decisions.md); long-running work live
 
 ## Testing
 
-`pytest` + `pytest-django` (`pytest.ini`), tests in `ltc/*/tests.py`. They need a reachable
-PostgreSQL (test DB is created automatically). `make test`.
+`pytest` + `pytest-django` (`pytest.ini`), tests in `ltc/*/tests.py`. Default settings are
+`ltc.test_settings` (SQLite — runs anywhere); use `pytest --ds=ltc.settings` against a real
+PostgreSQL. `make test`.
+
+## Deployment (Debian package, see packaging/README.md)
+
+Jenkins builds a **self-contained** `ltc_<version>_amd64.deb` via `packaging/build-deb.sh`:
+all Python deps vendored into `/www/ltc/vendor` (front of `sys.path` via `manage.py` /
+`ltc/wsgi.py` bootstrap), SPA + `collectstatic` prebuilt into `/www/ltc/frontend/dist` and
+`/www/ltc/_static`. Target (bookworm) runs uWSGI (`wsgi_module ltc.wsgi`) + nginx, managed
+by Puppet (`admin::loadtest::web`), which also templates `/www/ltc/ltc/local_settings.py`
+with secrets. `postinst` runs migrations and restarts the `ltc` service. Vendored wheels
+are cp311/amd64 — the build interpreter must match the target (`python3.11`).
