@@ -37,10 +37,32 @@ Provides online test monitoring, reads .csv results from files, and builds graph
 COMING SOON
 
 
-The application comes with:
-* [billboard.js] (https://naver.github.io/billboard.js/)
-* [jQuery](http://jquery.com/)
-* [Twitter Bootstrap](http://getbootstrap.com/)
+## Stack
+
+* Backend: Django 5.2 + Django REST Framework (PostgreSQL, JSONB metrics storage).
+  OpenAPI schema at `/api/v1/schema/` (Swagger UI at `/api/v1/schema/swagger/`).
+* Frontend: React + TypeScript + Material UI single-page app in `frontend/`
+  (Vite; charts via MUI X Charts, tables via MUI X DataGrid).
+
+### Development
+
+```bash
+# Backend (needs PostgreSQL; see ltc/local_settings.example.py for LTC_* env vars)
+make migrate
+make run                # Django on :8888
+
+# Frontend
+make frontend-install
+make frontend-dev       # Vite dev server on :5173, proxies API to :8888
+
+# Tests
+make test
+```
+
+Production build: `make frontend-build` (outputs `frontend/dist`, served by Django),
+then `manage.py collectstatic`.
+
+AI-facing project documentation lives in `CLAUDE.md` and `.claude/docs/`.
 
 ### Running tests with Jenkins
 Add in Jenkins job those commands, to prepare test plan and run the test:
