@@ -16,9 +16,11 @@
 #   PACKAGE_NAME  default: ltc
 #   APP_DIR       install prefix on the target (default: /www/ltc)
 #   SKIP_FRONTEND set to 1 to reuse an existing frontend/dist
-#   REQUIREMENTS_FILE  alternative requirements (LOCAL SMOKE BUILDS ONLY —
-#                      production packages must vendor the full set incl.
-#                      igrestlogin, or SSO login is unavailable)
+#   REQUIREMENTS_FILE  requirements set to vendor (default: requirements.txt,
+#                      public deps only). Internal production builds MUST pass
+#                      requirements-innogames.txt (adds the SSO backend) and
+#                      export PIP_INDEX_URL for the internal package index —
+#                      without it, SSO login is unavailable on the target.
 #
 # Output: ${BUILD_DIR}/${PACKAGE_NAME}_${VERSION}_amd64.deb
 set -euo pipefail

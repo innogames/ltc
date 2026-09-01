@@ -9,4 +9,4 @@ scipy
 psycopg2-binary
 # Only adminapi is used (Serveradmin inventory queries), not the whole app
 git+https://github.com/innogames/serveradmin.git@main#subdirectory=packages/adminapi
-git+ssh://git@gitlab.innogames.de/sysadmins/igrestlogin.git
+# SSO (igrestlogin) is optional and internal — see requirements-innogames.txt

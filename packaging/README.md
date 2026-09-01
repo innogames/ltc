@@ -31,17 +31,26 @@ On install, `postinst` only runs migrations and restarts the `ltc`
    `${PACKAGE_NAME}_${VERSION}_amd64.deb` (was `_all`).
 2. **Test** — replace the inline venv/pytest snippet with:
    ```bash
-   PYTHON=${python} bash packaging/test.sh
+   PYTHON=${python} REQUIREMENTS_FILE=requirements-innogames.txt \
+       bash packaging/test.sh
    ```
    (SQLite test settings: no PostgreSQL needed on the agent.)
 3. **Build** — replace the inline build snippet with:
    ```bash
    PYTHON=${python} VERSION=${VERSION} BUILD_DIR=${BUILD_DIR} \
+       REQUIREMENTS_FILE=requirements-innogames.txt \
        bash packaging/build-deb.sh
    ```
    Requirements on the agent: `python3.11` (must match the bookworm
    target — vendored wheels are cp311/amd64), Node >= 20 (`npm`),
-   `dpkg-deb`, SSH access to gitlab.innogames.de (as today).
+   `dpkg-deb`, and `PIP_INDEX_URL` exported for the internal package
+   index (credentials from the CI secret store), e.g.
+   ```bash
+   export PIP_INDEX_URL="https://<user>:${PIP_INDEX_URL_PASSWORD}@artifactory.../api/pypi/<repo>/simple"
+   ```
+   `requirements.txt` alone (the default) builds a package without the
+   internal SSO backend — fine for public/local builds; internal
+   deployments need `requirements-innogames.txt`.
 4. **Upload** — unchanged deb-drop curl; update the filename glob:
    ```bash
    curl -f -F "token=${dd_token}" -F "repos=${REPO}" -F "max_versions=3" \
