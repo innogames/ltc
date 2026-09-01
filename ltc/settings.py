@@ -227,3 +227,12 @@ try:
     from .local_settings import *  # NOQA
 except ImportError:
     pass
+
+# Legacy local_settings files appended apps that the tracked settings now
+# register themselves (e.g. igrestlogin) — duplicates are fatal to Django,
+# so de-duplicate while preserving order.
+_seen_apps = set()
+INSTALLED_APPS = [
+    app for app in INSTALLED_APPS
+    if not (app in _seen_apps or _seen_apps.add(app))
+]

@@ -115,10 +115,14 @@ EOF
 
 cat > "${STAGE}/DEBIAN/postinst" <<EOF
 #!/bin/bash -e
+# Stale bytecode from previous package layouts breaks imports and keeps
+# dpkg from removing obsolete directories — clear it before migrating.
+find ${APP_DIR} -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+
 # Static files are prebuilt and shipped; only migrations run on the target.
 python3.11 ${APP_DIR}/manage.py migrate --noinput
 
-# Drop root-owned bytecode caches that imports above may have created.
+# Drop root-owned bytecode caches that the migrate above just created.
 find ${APP_DIR}/vendor -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 
 service ltc start || service ltc restart
