@@ -2,8 +2,10 @@ Django~=5.2
 djangorestframework~=3.16
 django-cors-headers~=4.7
 drf-spectacular~=0.28
-numpy
-pandas
+# Data libs pinned to the tested majors — the JMeter CSV parsing path
+# is sensitive to pandas behavior changes; bump deliberately, with testing.
+numpy~=1.26
+pandas~=2.2
 paramiko
 scipy
 psycopg2-binary
