@@ -57,10 +57,15 @@ def test_report_data(test):
             d.server.server_name.replace('.', '_'), []
         ).append(d.data)
 
-    prev_tests = Test.objects.filter(
-        started_at__lte=test.started_at,
-        project=test.project,
-    ).order_by(F('started_at').desc(nulls_last=True))[:15]
+    # A test that never started has no started_at; fall back to id order.
+    prev_tests = Test.objects.filter(project=test.project)
+    if test.started_at is not None:
+        prev_tests = prev_tests.filter(started_at__lte=test.started_at)
+    else:
+        prev_tests = prev_tests.filter(id__lte=test.id)
+    prev_tests = prev_tests.order_by(
+        F('started_at').desc(nulls_last=True)
+    )[:15]
     compare_data = []
     for t in prev_tests:
         if not t.get_test_metric('mean'):

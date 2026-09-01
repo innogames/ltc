@@ -282,9 +282,12 @@ class Test(models.Model):
         Return previous for the current test
         '''
 
-        t = Test.objects.filter(
-            started_at__lte=self.started_at, project=self.project
-        ).order_by('-started_at')[:2]
+        t = Test.objects.filter(project=self.project)
+        if self.started_at is not None:
+            t = t.filter(started_at__lte=self.started_at)
+        else:
+            t = t.filter(id__lte=self.id)
+        t = t.order_by(F('started_at').desc(nulls_last=True))[:2]
         if len(t) > 1:
             return t[1]
         return self

@@ -138,3 +138,15 @@ class ReportApiTestCase(TestCase):
         payload = response.json()
         self.assertEqual(payload['action']['name'], 'act')
         self.assertEqual(len(payload['action_data']), 2)
+
+    def test_report_for_test_without_started_at(self):
+        # A created-but-never-started test has started_at=None; the report
+        # must not crash on the previous-tests lookup.
+        test = Test.objects.create(project=self.project, status=Test.CREATED)
+        response = self.client.get(f'/api/v1/tests/{test.id}/report/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['test_id'], test.id)
+
+    def test_prev_test_without_started_at(self):
+        test = Test.objects.create(project=self.project, status=Test.CREATED)
+        self.assertIsNotNone(test.prev_test())
