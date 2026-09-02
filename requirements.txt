@@ -1,12 +1,14 @@
-Django~=4.2
-matplotlib
-numpy
-pandas
+Django~=5.2
+djangorestframework~=3.16
+django-cors-headers~=4.7
+drf-spectacular~=0.28
+# Data libs pinned to the tested majors — the JMeter CSV parsing path
+# is sensitive to pandas behavior changes; bump deliberately, with testing.
+numpy~=1.26
+pandas~=2.2
 paramiko
-psutil
 scipy
 psycopg2-binary
-djangorestframework
-git+https://github.com/innogames/serveradmin.git@main
-git+ssh://git@gitlab.innogames.de/sysadmins/igrestlogin.git
-netaddr
+# Only adminapi is used (Serveradmin inventory queries), not the whole app
+git+https://github.com/innogames/serveradmin.git@main#subdirectory=packages/adminapi
+# SSO (igrestlogin) is optional and internal — see requirements-innogames.txt

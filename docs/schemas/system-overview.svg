@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 740" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- Engineers -->
+  <rect x="40" y="60" width="210" height="84" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="145" y="96" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">Engineers</text>
+  <text x="145" y="118" text-anchor="middle" font-size="12" fill="#64748b">browser</text>
+
+  <!-- SSO -->
+  <rect x="930" y="60" width="210" height="84" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1035" y="96" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">SSO / Identity</text>
+  <text x="1035" y="118" text-anchor="middle" font-size="12" fill="#64748b">session auth · pluggable</text>
+
+  <!-- Jenkins -->
+  <rect x="40" y="320" width="210" height="96" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="145" y="360" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">CI server</text>
+  <text x="145" y="382" text-anchor="middle" font-size="12" fill="#64748b">Jenkins, GitLab CI, …</text>
+
+  <!-- LTC core -->
+  <rect x="350" y="180" width="480" height="320" rx="10" fill="#1a1a2e"/>
+  <text x="590" y="222" text-anchor="middle" font-size="19" font-weight="700" fill="#ffffff">LTC — Load Testing Center</text>
+  <text x="590" y="246" text-anchor="middle" font-size="12.5" fill="#a5b4fc">Django 5.2 · REST Framework · React + Material UI</text>
+  <g font-size="13" fill="#e2e8f0" text-anchor="middle">
+    <rect x="382" y="272" width="130" height="44" rx="6" fill="#2b2b45"/><text x="447" y="299">Dashboard</text>
+    <rect x="524" y="272" width="130" height="44" rx="6" fill="#2b2b45"/><text x="589" y="299">Analyzer</text>
+    <rect x="666" y="272" width="130" height="44" rx="6" fill="#2b2b45"/><text x="731" y="299">Online</text>
+    <rect x="382" y="328" width="130" height="44" rx="6" fill="#2b2b45"/><text x="447" y="355">Controller</text>
+    <rect x="524" y="328" width="130" height="44" rx="6" fill="#2b2b45"/><text x="589" y="355">REST API</text>
+    <rect x="666" y="328" width="130" height="44" rx="6" fill="#2b2b45"/><text x="731" y="355">Admin</text>
+  </g>
+  <text x="590" y="412" text-anchor="middle" font-size="12" fill="#94a3b8">orchestrates distributed JMeter runs · monitors live tests</text>
+  <text x="590" y="432" text-anchor="middle" font-size="12" fill="#94a3b8">analyzes results · compares runs · publishes reports</text>
+
+  <!-- Load generators -->
+  <rect x="930" y="250" width="210" height="120" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1035" y="288" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">Load generators</text>
+  <text x="1035" y="310" text-anchor="middle" font-size="12" fill="#64748b">VMs running</text>
+  <text x="1035" y="328" text-anchor="middle" font-size="12" fill="#64748b">jmeter-server × N</text>
+
+  <!-- Serveradmin -->
+  <rect x="930" y="430" width="210" height="90" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1035" y="468" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">Inventory service</text>
+  <text x="1035" y="490" text-anchor="middle" font-size="12" fill="#64748b">load-generator discovery</text>
+
+  <!-- PostgreSQL -->
+  <rect x="350" y="600" width="220" height="90" rx="8" fill="#ffffff" stroke="#1976d2"/>
+  <text x="460" y="638" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">PostgreSQL</text>
+  <text x="460" y="660" text-anchor="middle" font-size="12" fill="#64748b">JSONB metric storage</text>
+
+  <!-- Graphite -->
+  <rect x="620" y="600" width="180" height="90" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="710" y="638" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">Graphite</text>
+  <text x="710" y="660" text-anchor="middle" font-size="12" fill="#64748b">server metrics</text>
+
+  <!-- Confluence -->
+  <rect x="850" y="600" width="180" height="90" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="940" y="638" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a2e">Confluence</text>
+  <text x="940" y="660" text-anchor="middle" font-size="12" fill="#64748b">published reports</text>
+
+  <!-- edges -->
+  <g stroke="#64748b" stroke-width="1.5" fill="none">
+    <path d="M 250 102 C 320 102, 360 150, 420 178" marker-end="url(#arr)"/>
+    <path d="M 930 102 C 860 102, 820 150, 762 178" marker-end="url(#arr)"/>
+    <path d="M 250 368 L 348 368" marker-end="url(#arr)"/>
+    <path d="M 830 310 L 928 310" marker-end="url(#arr)"/>
+    <path d="M 928 470 C 870 470, 850 460, 832 440" marker-end="url(#arr)"/>
+    <path d="M 460 500 L 460 598" marker-end="url(#arr)"/>
+    <path d="M 660 500 C 680 540, 695 565, 705 598" marker-end="url(#arr)"/>
+    <path d="M 790 500 C 850 540, 900 565, 930 598" marker-end="url(#arr)"/>
+  </g>
+  <g font-size="11.5" fill="#64748b">
+    <text x="262" y="140">React SPA + REST API</text>
+    <text x="800" y="140" text-anchor="end">session auth</text>
+    <text x="256" y="356">manage.py start_test</text>
+    <text x="838" y="298">SSH · rsync · JMeter</text>
+    <text x="920" y="500" text-anchor="end">inventory sync</text>
+    <text x="470" y="556">JSONB read/write</text>
+    <text x="712" y="540">fetch metrics</text>
+    <text x="880" y="540">publish reports</text>
+  </g>
+</svg>

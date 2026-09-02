@@ -5,8 +5,14 @@
 *.hg
 *.log
 .venv
+.test-venv
 ltc.egg-info
 build
+build-deb
+_static
 local_settings.py
 igrequirements.txt
 desktop.ini
+# DevContainer base layer (fetched by innoclaude)
+.devcontainer/base/
+.devcontainer

@@ -11,12 +11,11 @@ logger = logging.getLogger("django")
 class Command(BaseCommand):
     def handle(self, *args, **options):
         # Connect and gather JAVA metrics from jmeter remote instances
-        for jmeter_server in JmeterServer.objects.all():
+        for jmeter_server in JmeterServer.objects.exclude(test=None):
             process_data = {}
             # Estimate number of threads at this moment
-            if jmeter_server.test:
-                threads_number = jmeter_server.threads
-                process_data["threads_number"] = threads_number
+            threads_number = jmeter_server.threads
+            process_data["threads_number"] = threads_number
             logger.info("threads_number: {};".format(threads_number))
             ssh_key = SSHKey.objects.get(default=True).path
             ssh = paramiko.SSHClient()
@@ -44,6 +43,6 @@ class Command(BaseCommand):
             # EU: Eden space utilization (kB).
             # OU: Old space utilization (kB).
             JmeterInstanceStatistic(
-                project_id=jmeter_server.test.project, data=process_data
+                project=jmeter_server.test.project, data=process_data
             ).save()
             ssh.close()

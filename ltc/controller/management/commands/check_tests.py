@@ -1,15 +1,13 @@
-import os
 import logging
-import json
-from django.conf import settings
-from django.core.management.base import BaseCommand
-from ltc.base.models import Test, TestFile, Project
-from ltc.controller.views import generate_data
-from argparse import ArgumentTypeError
 from datetime import datetime, timedelta
+
+from django.core.management.base import BaseCommand
 from django.db.models import Q
 
+from ltc.base.models import Test
+
 logger = logging.getLogger('django')
+
 
 class Command(BaseCommand):
 
@@ -24,5 +22,8 @@ class Command(BaseCommand):
             Q(last_active__isnull=True)
         )
         for test in tests:
-            print(test.last_active)
+            logger.info(
+                'Terminating stale test %s (last active: %s)',
+                test.id, test.last_active
+            )
             test.terminate()

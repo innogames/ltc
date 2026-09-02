@@ -1,0 +1,54 @@
+/*
+ * InnoGames brand faces: SF Theramin Gothic (display) and Calibri (body).
+ *
+ * The font files are NOT in this repository — they are licensed/proprietary.
+ * Drop them into the Django static tree at `<STATIC_ROOT>/fonts/` on the
+ * deployment (see .claude/docs/frontend.md) and they are picked up here.
+ * Without them the fallback stacks render: Arial Black for display,
+ * Segoe UI / system sans for body. font-display:swap keeps text visible.
+ */
+
+@font-face {
+  font-family: 'SF Theramin Gothic';
+  src: url('/static/fonts/SF_Theramin_Gothic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Theramin Gothic';
+  src: url('/static/fonts/SF_Theramin_Gothic_Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Theramin Gothic Condensed';
+  src: url('/static/fonts/SF_Theramin_Gothic_Condensed.ttf')
+    format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Calibri';
+  src: url('/static/fonts/calibri.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Calibri';
+  src: url('/static/fonts/calibrib.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Calibri';
+  src: url('/static/fonts/calibril.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}

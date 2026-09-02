@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 760" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- SPA -->
+  <rect x="30" y="30" width="800" height="110" rx="10" fill="#1a1a2e"/>
+  <text x="50" y="66" font-size="15" font-weight="700" fill="#ffffff">React SPA (frontend/)</text>
+  <text x="50" y="90" font-size="12.5" fill="#a5b4fc">TypeScript · Material UI · MUI X Charts · TanStack Query</text>
+  <g font-size="12.5" fill="#e2e8f0" text-anchor="middle">
+    <rect x="480" y="52" width="100" height="40" rx="6" fill="#2b2b45"/><text x="530" y="77">Dashboard</text>
+    <rect x="592" y="52" width="100" height="40" rx="6" fill="#2b2b45"/><text x="642" y="77">Analyzer</text>
+    <rect x="704" y="52" width="100" height="40" rx="6" fill="#2b2b45"/><text x="754" y="77">Online</text>
+  </g>
+  <text x="50" y="118" font-size="11.5" fill="#94a3b8">polling: dashboard 10 s · online 5 s — no websockets</text>
+
+  <!-- API -->
+  <rect x="30" y="200" width="800" height="120" rx="10" fill="#ffffff" stroke="#1976d2" stroke-width="1.5"/>
+  <text x="50" y="234" font-size="15" font-weight="700" fill="#1a1a2e">REST API — /api/v1 (ltc.api, Django REST Framework)</text>
+  <g font-size="12" fill="#334155">
+    <text x="50" y="260">projects · tests (+ report / compare / actions / online) · loadgenerators · users/me · OpenAPI schema</text>
+    <text x="50" y="282">serializers decide severity server-side: success_level (98 / 95 %), errors_level (3 / 10 %), 200 ms slow band</text>
+    <text x="50" y="304" fill="#64748b">session auth + CSRF · pagination · drf-spectacular types consumed by the SPA</text>
+  </g>
+
+  <!-- services -->
+  <g>
+    <rect x="30" y="380" width="253" height="130" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="46" y="410" font-size="13.5" font-weight="600" fill="#1a1a2e">base.services</text>
+    <g font-size="11.5" fill="#334155">
+      <text x="46" y="434">dashboard stats: batched</text>
+      <text x="46" y="452">JSONB aggregation, prev-test</text>
+      <text x="46" y="470">deltas, success levels</text>
+    </g>
+    <rect x="303" y="380" width="253" height="130" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="319" y="410" font-size="13.5" font-weight="600" fill="#1a1a2e">analyzer.services</text>
+    <g font-size="11.5" fill="#334155">
+      <text x="319" y="434">report payloads, aggregate</text>
+      <text x="319" y="452">tables, Student's t-test</text>
+      <text x="319" y="470">highlights, action details</text>
+    </g>
+    <rect x="576" y="380" width="254" height="130" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="592" y="410" font-size="13.5" font-weight="600" fill="#1a1a2e">online.services</text>
+    <g font-size="11.5" fill="#334155">
+      <text x="592" y="434">live CSV tail parse,</text>
+      <text x="592" y="452">throttled to one refresh</text>
+      <text x="592" y="470">per 5 s window</text>
+    </g>
+  </g>
+
+  <!-- models -->
+  <rect x="30" y="570" width="800" height="100" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="50" y="602" font-size="15" font-weight="700" fill="#1a1a2e">Models</text>
+  <g font-size="12" fill="#334155">
+    <text x="50" y="626">Project → Test → TestFile · TestData · TestActionAggregateData · TestOnlineData · TestError</text>
+    <text x="50" y="648" fill="#64748b">metric tables share one pattern: a JSONB `data` column, queried via KeyTextTransform + Cast</text>
+  </g>
+
+  <!-- Postgres -->
+  <rect x="30" y="700" width="800" height="44" rx="8" fill="#1976d2"/>
+  <text x="430" y="728" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">PostgreSQL</text>
+
+  <!-- side rail -->
+  <g>
+    <rect x="890" y="200" width="260" height="150" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="906" y="230" font-size="13.5" font-weight="600" fill="#1a1a2e">Django admin</text>
+    <g font-size="11.5" fill="#334155">
+      <text x="906" y="254">operator UI: report templates,</text>
+      <text x="906" y="272">Graphite variables, SSH keys,</text>
+      <text x="906" y="290">load generators, configuration</text>
+    </g>
+    <rect x="890" y="380" width="260" height="130" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="906" y="410" font-size="13.5" font-weight="600" fill="#1a1a2e">Management commands</text>
+    <g font-size="11" fill="#334155" font-family="ui-monospace, monospace">
+      <text x="906" y="434">start_test · check_tests</text>
+      <text x="906" y="452">loadgenerators_monitor</text>
+      <text x="906" y="470">gather_jmeter_instances_info</text>
+      <text x="906" y="488">post_to_confluence</text>
+    </g>
+    <rect x="890" y="570" width="260" height="100" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="906" y="600" font-size="13.5" font-weight="600" fill="#1a1a2e">Confluence rendering</text>
+    <g font-size="11.5" fill="#334155">
+      <text x="906" y="624">server-side templates emit</text>
+      <text x="906" y="642">Confluence storage XHTML</text>
+    </g>
+  </g>
+
+  <!-- edges -->
+  <g stroke="#64748b" stroke-width="1.5" fill="none">
+    <path d="M 430 140 L 430 198" marker-end="url(#arr3)"/>
+    <path d="M 156 320 L 156 378" marker-end="url(#arr3)"/>
+    <path d="M 430 320 L 430 378" marker-end="url(#arr3)"/>
+    <path d="M 703 320 L 703 378" marker-end="url(#arr3)"/>
+    <path d="M 430 510 L 430 568" marker-end="url(#arr3)"/>
+    <path d="M 430 670 L 430 698" marker-end="url(#arr3)"/>
+    <path d="M 1020 510 L 1020 568" marker-end="url(#arr3)"/>
+    <path d="M 890 445 C 860 445, 850 445, 832 445" marker-end="url(#arr3)"/>
+  </g>
+  <text x="444" y="176" font-size="11.5" fill="#64748b">/api/v1 · session cookie + CSRF · generated TS types</text>
+  <text x="1032" y="545" font-size="11.5" fill="#64748b" text-anchor="middle">reports</text>
+</svg>

@@ -12,7 +12,7 @@ from django.db.models.fields import related
 import pandas as pd
 import paramiko
 from django.db import models
-from pylab import np
+import numpy as np
 
 # Create your models here.
 from ltc.base.models import TestData
@@ -88,12 +88,12 @@ class LoadGenerator(models.Model):
         stdin, stdout, stderr = ssh.exec_command('cat /proc/meminfo')
         memory_free = str(
             int(re.search(
-                'MemFree:\s+?(\d+)', str(stdout.readlines())
+                r'MemFree:\s+?(\d+)', str(stdout.readlines())
             ).group(1)) / 1024
         )
         stdin, stdout, stderr = ssh.exec_command('uptime')
         load_avg = re.search(
-            'load average:\s+([0-9.]+?),\s+([0-9.]+?),\s+([0-9.]+)',
+            r'load average:\s+([0-9.]+?),\s+([0-9.]+?),\s+([0-9.]+)',
             str(stdout.readlines())
         )
         ssh.close()
@@ -136,8 +136,8 @@ class LoadGenerator(models.Model):
         stdin, stdout, stderr = ssh.exec_command(cmd1)
         used_ports = []
         netstat_output = str(stdout.readlines())
-        ports = re.findall('\d+\.\d+\.\d+\.\d+\:(\d+)', netstat_output)
-        ports_ipv6 = re.findall('\:\:\:(\d+)', netstat_output)
+        ports = re.findall(r'\d+\.\d+\.\d+\.\d+:(\d+)', netstat_output)
+        ports_ipv6 = re.findall(r':::(\d+)', netstat_output)
         p.wait()
         for port in ports:
             used_ports.append(int(port))
@@ -254,7 +254,7 @@ class JmeterServer(models.Model):
     java_args = models.TextField(default='')
     local_args = models.TextField(default='')
 
-    def java_args(self, memory):
+    def build_java_args(self, memory):
         """Generate Java arg string for a new Jmeter server
 
         Args:
@@ -344,7 +344,7 @@ class JmeterServer(models.Model):
         )
         self.local_args = local_args
         start_jmeter_server_cmd = (
-                f'nohup java {self.java_args(self.test.jmeter_malloc)} '
+                f'nohup java {self.build_java_args(self.test.jmeter_malloc)} '
                 f'-Duser.dir={self.jmeter_path}/bin/ -jar '
                 f'"{self.jmeter_path}/bin/ApacheJMeter.jar" '
                 f'-Jserver.rmi.ssl.disable=true '

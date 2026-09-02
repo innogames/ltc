@@ -1,0 +1,5 @@
+# Internal deployment: everything public plus the InnoGames SSO backend.
+# django-igrestlogin resolves from the internal package index — export
+# PIP_INDEX_URL before installing (see packaging/README.md).
+-r requirements.txt
+django-igrestlogin

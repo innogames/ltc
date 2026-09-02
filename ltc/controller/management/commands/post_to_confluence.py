@@ -1,11 +1,9 @@
-import os
 import logging
-import json
-from django.conf import settings
+
 from django.core.management.base import BaseCommand
-from ltc.base.models import Test, TestFile, Project
-from ltc.controller.views import generate_data
-from argparse import ArgumentTypeError
+
+from ltc.base.models import Test, Project
+
 logger = logging.getLogger('django')
 
 class Command(BaseCommand):

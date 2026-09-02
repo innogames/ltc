@@ -13,16 +13,19 @@ import zipfile
 from collections import OrderedDict, defaultdict
 from os.path import dirname as up
 from subprocess import call
+from urllib.parse import quote
 from xml.etree.ElementTree import ElementTree
 
 import numpy as np
 import pandas as pd
 from django.apps import apps
 from django.conf import settings
-from django.contrib.postgres.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Avg, F, FloatField, Func, Max, Min, Sum, ExpressionWrapper
-from django.db.models.expressions import F, RawSQL
+from django.db.models.expressions import F
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Cast
 from django.template.loader import render_to_string
 from django.utils import timezone
 from ltc.analyzer.models import (
@@ -43,6 +46,11 @@ dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 class Round(Func):
     function = 'ROUND'
     template = '%(function)s(%(expressions)s, 1)'
+
+
+def json_num(key, field='data'):
+    """Numeric value of a JSONB key — portable ((field->>key)::numeric)."""
+    return Cast(KeyTextTransform(key, field), FloatField())
 
 class Project(models.Model):
     name = models.CharField(max_length=100)
@@ -70,8 +78,7 @@ class Project(models.Model):
         max_threads = JmeterServerData.objects.filter(
             project=self
         ).annotate(
-            threads=RawSQL("((data->>%s)::numeric)",
-            ('threads_number',))
+            threads=json_num('threads_number')
         ).aggregate(max_threads=Max(
                 F('threads'), output_field=FloatField()
             )
@@ -80,11 +87,11 @@ class Project(models.Model):
         data = JmeterServerData.objects.filter(
             project=self, data__contains=[{'threads_number': max_threads}]
         ).annotate(mem_per_thread=(
-                RawSQL("((data->>%s)::numeric)", ('S0U',)) +
-                RawSQL("((data->>%s)::numeric)", ('S1U',)) +
-                RawSQL("((data->>%s)::numeric)", ('EU',)) +
-                RawSQL("((data->>%s)::numeric)", ('OU',))
-            )/1024/RawSQL("((data->>%s)::numeric)", ('threads_number',))
+                json_num('S0U') +
+                json_num('S1U') +
+                json_num('EU') +
+                json_num('OU')
+            )/1024/json_num('threads_number')
         ).aggregate(thread_malloc=Avg(
                 F('thread_malloc'), output_field=FloatField()
             )
@@ -115,18 +122,18 @@ class Project(models.Model):
             else:
                 prev_test_id = test_id
             test_data = TestActionAggregateData.objects.filter(test_id=test_id). \
-                annotate(errors=RawSQL("((data->>%s)::numeric)", ('errors',))). \
-                annotate(count=RawSQL("((data->>%s)::numeric)", ('count',))). \
-                annotate(weight=RawSQL("((data->>%s)::numeric)", ('weight',))). \
+                annotate(errors=json_num('errors')). \
+                annotate(count=json_num('count')). \
+                annotate(weight=json_num('weight')). \
                 aggregate(count_sum=Sum(F('count'), output_field=FloatField()),
                         errors_sum=Sum(F('errors'), output_field=FloatField()),
                         overall_avg=Sum(F('weight'), output_field=FloatField()) / Sum(F('count'), output_field=FloatField()))
 
             prev_test_data = TestActionAggregateData.objects. \
                 filter(test_id=prev_test_id). \
-                annotate(errors=RawSQL("((data->>%s)::numeric)", ('errors',))). \
-                annotate(count=RawSQL("((data->>%s)::numeric)", ('count',))). \
-                annotate(weight=RawSQL("((data->>%s)::numeric)", ('weight',))). \
+                annotate(errors=json_num('errors')). \
+                annotate(count=json_num('count')). \
+                annotate(weight=json_num('weight')). \
                 aggregate(
                     count_sum=Sum(F('count'), output_field=FloatField()),
                     errors_sum=Sum(F('errors'), output_field=FloatField()),
@@ -266,7 +273,7 @@ class Test(models.Model):
     last_active = models.DateTimeField(null=True, db_index=True)
     is_locked = models.BooleanField(default=False)
     online_lines_analyzed = models.IntegerField(default=0)
-    vars = models.JSONField(default={})
+    vars = models.JSONField(default=dict)
 
     def __str__(self):
         return f'{self.project} - {self.id} {self.name}'
@@ -276,9 +283,12 @@ class Test(models.Model):
         Return previous for the current test
         '''
 
-        t = Test.objects.filter(
-            started_at__lte=self.started_at, project=self.project
-        ).order_by('-started_at')[:2]
+        t = Test.objects.filter(project=self.project)
+        if self.started_at is not None:
+            t = t.filter(started_at__lte=self.started_at)
+        else:
+            t = t.filter(id__lte=self.id)
+        t = t.order_by(F('started_at').desc(nulls_last=True))[:2]
         if len(t) > 1:
             return t[1]
         return self
@@ -334,9 +344,9 @@ class Test(models.Model):
                                 )
                             elif i > 1 and i < 6:  # take first 4 line of error
                                 error_text += line
-                    error_text = re.sub('\d', 'N', error_text)
-                    error_text = re.sub('(\r\n|\r|\n)', '_', error_text)
-                    error_text = re.sub('\s', '_', error_text)
+                    error_text = re.sub(r'\d', 'N', error_text)
+                    error_text = re.sub(r'(\r\n|\r|\n)', '_', error_text)
+                    error_text = re.sub(r'\s', '_', error_text)
                     if Action.objects.filter(
                         name=action_name, project=self.project
                     ).exists():
@@ -385,8 +395,8 @@ class Test(models.Model):
             annotate(
                 errors=ExpressionWrapper(
                     Round(
-                        RawSQL("((data->>%s)::numeric)", ('errors',)) * 100 /
-                        RawSQL("((data->>%s)::numeric)", ('count',))
+                        json_num('errors') * 100 /
+                        json_num('count')
                     ),
                     output_field=FloatField()
                 )
@@ -401,7 +411,7 @@ class Test(models.Model):
         data = TestActionAggregateData.objects.filter(
             test=self).annotate(name=F('action__name')).annotate(
             mean=ExpressionWrapper(
-                RawSQL("((data->>%s)::numeric)", ('mean',)),
+                json_num('mean'),
                 output_field=FloatField()
             )
         ).order_by('-mean').values('name', 'mean')[:n]
@@ -413,27 +423,25 @@ class Test(models.Model):
         metrics = {
             'mean':
             {'query':
-                Sum(RawSQL("((data->>%s)::numeric)", ('mean',)) *
-                    RawSQL("((data->>%s)::numeric)", ('count',))) /
-                Sum(RawSQL("((data->>%s)::numeric)", ('count',))),
+                Sum(json_num('mean') *
+                    json_num('count')) /
+                Sum(json_num('count')),
                 'source_model': 'TestData'
             },
             'median':
             {'query':
-                Sum(RawSQL("((data->>%s)::numeric)", ('median',)) *
-                    RawSQL("((data->>%s)::numeric)", ('count',))) /
-                Sum(RawSQL("((data->>%s)::numeric)", ('count',))),
+                Sum(json_num('median') *
+                    json_num('count')) /
+                Sum(json_num('count')),
                 'source_model': 'TestData'
             },
             'cpu_load':
             {
-                'query': Avg(RawSQL(
-                    "((data->>%s)::float) + ((data->>%s)::float) + "
-                    "((data->>%s)::float)", (
-                        'CPU_user',
-                        'CPU_iowait',
-                        'CPU_system',
-                    ))),
+                'query': Avg(
+                    json_num('CPU_user') +
+                    json_num('CPU_iowait') +
+                    json_num('CPU_system')
+                ),
                 'source_model': 'ServerMonitoringData'
             }
 
@@ -776,8 +784,20 @@ class Test(models.Model):
         self.status = Test.FAILED
         self.save()
 
-    def post_to_confluence(self, page_parent_id, page_parent, force=False):
+    PARENT_PAGE_META = (
+        'id', 'url', 'modified', 'created', 'version', 'contentStatus',
+    )
 
+    def post_to_confluence(
+        self, page_parent_id=None, page_parent=None, force=False
+    ):
+        """Publish this test's report page under the project's parent page.
+
+        `page_parent_id`/`page_parent` are passed by
+        `Project.generate_confluence_report()`, which already fetched the
+        parent page. Callers without one (the management command, the API)
+        omit them and the parent is looked up here.
+        """
         wiki_url = settings.WIKI_URL
         wiki_user = settings.WIKI_USER
         wiki_password = settings.WIKI_PASS
@@ -787,6 +807,14 @@ class Test(models.Model):
         cc.login()
         space = self.project.template.confluence_space
         target_page = self.project.template.confluence_page
+
+        if page_parent is None or page_parent_id is None:
+            parent = cc.get_page(space, target_page)
+            page_parent_id = parent['id']
+            page_parent = {
+                key: value for key, value in parent.items()
+                if key not in self.PARENT_PAGE_META
+            }
 
         page_title = target_page + ' - ' + str(self.id)
         test_report_page_exists = True
@@ -810,6 +838,9 @@ class Test(models.Model):
                 logger.error(e)
 
         cc.logout()
+        return page_test_report.get('url') or (
+            f'{wiki_url}/display/{space}/{quote(page_title)}'
+        )
 
     def get_compare_tests_aggregate_data(
         self, project, n, order='-test__started_at',
@@ -833,19 +864,15 @@ class Test(models.Model):
             annotate(
                 average=ExpressionWrapper(
                     Sum(
-                        RawSQL("((data->>%s)::numeric)", ('avg',)
-                    ) * RawSQL("((data->>%s)::numeric)", ('count',))
-                    ) / Sum(RawSQL("((data->>%s)::numeric)", ('count',))),
+                        json_num('avg') * json_num('count')
+                    ) / Sum(json_num('count')),
                     output_field=FloatField()
                 )
             ). \
             annotate(
                 median=ExpressionWrapper(Sum(
-                RawSQL(
-                    "((data->>%s)::numeric)", ('median',)
-                ) * RawSQL(
-                    "((data->>%s)::numeric)", ('count',))
-            ) / Sum(RawSQL("((data->>%s)::numeric)", ('count',))),
+                json_num('median') * json_num('count')
+            ) / Sum(json_num('count')),
                 output_field=FloatField())
             ).order_by(order)[:n]
         return data
@@ -969,13 +996,16 @@ class TestFile(models.Model):
         df = pd.DataFrame()
         if os.stat(self.path).st_size > 1000007777:
             logger.info("Executing a parse for a huge file")
-            chunks = pd.read_table(
+            chunks = pd.read_csv(
                 self.path, sep=',', index_col=0, chunksize=3000000
             )
+            filtered_chunks = []
             for chunk in chunks:
                 chunk.columns = csv_file_fields
-                filtered = chunk[~chunk['url'].str.contains('exclude_', na=False)]
-                df = df.append(filtered)
+                filtered_chunks.append(
+                    chunk[~chunk['url'].str.contains('exclude_', na=False)]
+                )
+            df = pd.concat(filtered_chunks) if filtered_chunks else df
         else:
             df = pd.read_csv(
                 self.path, index_col=0, low_memory=False

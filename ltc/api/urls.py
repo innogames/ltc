@@ -1,25 +1,23 @@
 from django.urls import path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.routers import DefaultRouter
 
-import ltc.api.views as views
+from ltc.api import views
+
+router = DefaultRouter()
+router.register('projects', views.ProjectViewSet, basename='project')
+router.register('tests', views.TestViewSet, basename='test')
+router.register(
+    'loadgenerators', views.LoadGeneratorViewSet, basename='loadgenerator'
+)
 
 urlpatterns = [
-    path('', views.api_root, name='api_root'),
     path('health_check', views.api_health_check, name='api_health_check'),
+    path('users/me/', views.me, name='api.me'),
+    path('schema/', SpectacularAPIView.as_view(), name='api.schema'),
     path(
-        'test/', views.ListCreateTestView.as_view(),
-        name='api.test-list'
+        'schema/swagger/',
+        SpectacularSwaggerView.as_view(url_name='api.schema'),
+        name='api.swagger',
     ),
-    path(
-        'online/', views.ListCreateTestView.as_view(),
-        name='api.test-list'
-    ),
-    path(
-        'test/<int:pk>',
-        views.RetrieveTestView.as_view(),
-        name='api.test-detail',
-    ),
-    path(
-        'loadgenerator/', views.ListLoadgeneratorView.as_view(),
-        name='api.loadgenerator-list'
-    ),
-]
+] + router.urls
