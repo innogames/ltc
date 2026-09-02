@@ -52,6 +52,9 @@ class TestSerializer(serializers.ModelSerializer):
         row = stats.get(obj.id)
         if row is None:
             return None
+        sparks = self.context.get('sparklines')
+        if sparks is None:
+            sparks = base_services.sparklines([obj])
         prev_mean = row['prev_test_data'].get('mean')
         mean = row['test_data'].get('mean')
         mean_diff_percent = None
@@ -66,6 +69,7 @@ class TestSerializer(serializers.ModelSerializer):
             'prev_test_id': row['prev_test_id'],
             'prev_test_mean': prev_mean,
             'mean_diff_percent': mean_diff_percent,
+            'spark': sparks.get(obj.id, []),
         }
 
     def create(self, validated_data):
@@ -103,15 +107,61 @@ class JmeterServerSerializer(serializers.ModelSerializer):
         )
 
 
+def _to_number(value):
+    """These columns are CharFields holding numbers (or '', or junk)."""
+    if value is None or value == '':
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number != number:  # NaN
+        return None
+    return int(number) if number.is_integer() else round(number, 2)
+
+
 class LoadGeneratorSerializer(serializers.ModelSerializer):
     jmeter_servers = JmeterServerSerializer(read_only=True, many=True)
+    # Stored as strings; the UI needs real numbers to draw gauges.
+    num_cpu = serializers.SerializerMethodField()
+    memory = serializers.SerializerMethodField()
+    memory_free = serializers.SerializerMethodField()
+    la_1 = serializers.SerializerMethodField()
+    la_5 = serializers.SerializerMethodField()
+    la_15 = serializers.SerializerMethodField()
+    jmeter = serializers.SerializerMethodField()
 
     class Meta:
         model = LoadGenerator
         fields = (
             'id', 'hostname', 'num_cpu', 'memory', 'memory_free',
-            'la_1', 'la_5', 'la_15', 'active', 'jmeter_servers',
+            'la_1', 'la_5', 'la_15', 'active', 'jmeter', 'jmeter_servers',
         )
+
+    def get_num_cpu(self, obj) -> float | None:
+        return _to_number(obj.num_cpu)
+
+    def get_memory(self, obj) -> float | None:
+        return _to_number(obj.memory)
+
+    def get_memory_free(self, obj) -> float | None:
+        return _to_number(obj.memory_free)
+
+    def get_la_1(self, obj) -> float | None:
+        return _to_number(obj.la_1)
+
+    def get_la_5(self, obj) -> float | None:
+        return _to_number(obj.la_5)
+
+    def get_la_15(self, obj) -> float | None:
+        return _to_number(obj.la_15)
+
+    def get_jmeter(self, obj) -> int:
+        # Annotated on the queryset; falls back to the prefetched list.
+        annotated = getattr(obj, 'jmeter_count', None)
+        if annotated is not None:
+            return annotated
+        return obj.jmeter_servers.count()
 
 
 class UserSerializer(serializers.Serializer):

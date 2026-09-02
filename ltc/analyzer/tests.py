@@ -150,3 +150,108 @@ class ReportApiTestCase(TestCase):
     def test_prev_test_without_started_at(self):
         test = Test.objects.create(project=self.project, status=Test.CREATED)
         self.assertIsNotNone(test.prev_test())
+
+
+class MonitoringTestCase(TestCase):
+    """Monitoring must degrade to [] — this data is usually absent."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('smoke', password='smoke')
+        (cls.project, cls.test_a, cls.test_b, cls.action) = (
+            make_project_with_two_tests()
+        )
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def test_empty_monitoring_is_ok(self):
+        response = self.client.get(
+            f'/api/v1/tests/{self.test_b.id}/monitoring/'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+    def test_seeded_monitoring_shape(self):
+        from ltc.analyzer.models import (
+            Server, ServerMonitoringData, TestDataResolution,
+        )
+        server = Server.objects.create(
+            server_name='app1.example.com', description=''
+        )
+        resolution = TestDataResolution.objects.create(
+            frequency='1Min', per_sec_divider=60
+        )
+        for i in range(3):
+            ServerMonitoringData.objects.create(
+                test=self.test_b,
+                server=server,
+                data_resolution=resolution,
+                data={
+                    'timestamp': f'2026-01-01T00:0{i}:00.000',
+                    'CPU_user': 10 + i,
+                    'CPU_system': 5,
+                    'CPU_iowait': 1,
+                    'Memory_used': 500,
+                    'Memory_free': 300,
+                    'Memory_buff': 100,
+                    'Memory_cached': 100,
+                    'System_la1': 1.5 + i,
+                },
+            )
+        payload = self.client.get(
+            f'/api/v1/tests/{self.test_b.id}/monitoring/'
+        ).json()
+        self.assertEqual(len(payload), 1)
+        host = payload[0]
+        self.assertEqual(host['host'], 'app1.example.com')
+        # CPU busy = user + system + iowait
+        self.assertEqual(host['cpu'], [16.0, 17.0, 18.0])
+        # 500 / (500+300+100+100) = 50 %
+        self.assertEqual(host['mem'], [50.0, 50.0, 50.0])
+        self.assertEqual(host['la'], '3.50')
+
+
+class ReportSeriesTestCase(TestCase):
+    """rps/errors are derived server-side so clients do no unit math."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('smoke', password='smoke')
+        (cls.project, cls.test_a, cls.test_b, cls.action) = (
+            make_project_with_two_tests()
+        )
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def test_rps_and_errors(self):
+        from ltc.analyzer.models import TestActionData, TestDataResolution
+        resolution = TestDataResolution.objects.get(frequency='1Min')
+        point = self.test_b.testdata_set.first()
+        timestamp = point.data['timestamp']
+        TestActionData.objects.create(
+            test=self.test_b,
+            action=self.action,
+            data_resolution=resolution,
+            data={'timestamp': timestamp, 'errors': 7, 'count': 600},
+        )
+        payload = self.client.get(
+            f'/api/v1/tests/{self.test_b.id}/report/'
+        ).json()
+        series = payload['test_data']
+        self.assertTrue(series)
+        first = series[0]
+        # count 600 over a 60 s bucket
+        self.assertEqual(first['rps'], 10.0)
+        self.assertEqual(first['errors'], 7)
+        self.assertIn('mean', first)
+        self.assertIn('median', first)
+
+    def test_errors_default_to_zero(self):
+        payload = self.client.get(
+            f'/api/v1/tests/{self.test_a.id}/report/'
+        ).json()
+        for point in payload['test_data']:
+            self.assertEqual(point['errors'], 0)
+            self.assertIsInstance(point['rps'], float)

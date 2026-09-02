@@ -13,6 +13,7 @@ import zipfile
 from collections import OrderedDict, defaultdict
 from os.path import dirname as up
 from subprocess import call
+from urllib.parse import quote
 from xml.etree.ElementTree import ElementTree
 
 import numpy as np
@@ -783,8 +784,20 @@ class Test(models.Model):
         self.status = Test.FAILED
         self.save()
 
-    def post_to_confluence(self, page_parent_id, page_parent, force=False):
+    PARENT_PAGE_META = (
+        'id', 'url', 'modified', 'created', 'version', 'contentStatus',
+    )
 
+    def post_to_confluence(
+        self, page_parent_id=None, page_parent=None, force=False
+    ):
+        """Publish this test's report page under the project's parent page.
+
+        `page_parent_id`/`page_parent` are passed by
+        `Project.generate_confluence_report()`, which already fetched the
+        parent page. Callers without one (the management command, the API)
+        omit them and the parent is looked up here.
+        """
         wiki_url = settings.WIKI_URL
         wiki_user = settings.WIKI_USER
         wiki_password = settings.WIKI_PASS
@@ -794,6 +807,14 @@ class Test(models.Model):
         cc.login()
         space = self.project.template.confluence_space
         target_page = self.project.template.confluence_page
+
+        if page_parent is None or page_parent_id is None:
+            parent = cc.get_page(space, target_page)
+            page_parent_id = parent['id']
+            page_parent = {
+                key: value for key, value in parent.items()
+                if key not in self.PARENT_PAGE_META
+            }
 
         page_title = target_page + ' - ' + str(self.id)
         test_report_page_exists = True
@@ -817,6 +838,9 @@ class Test(models.Model):
                 logger.error(e)
 
         cc.logout()
+        return page_test_report.get('url') or (
+            f'{wiki_url}/display/{space}/{quote(page_title)}'
+        )
 
     def get_compare_tests_aggregate_data(
         self, project, n, order='-test__started_at',

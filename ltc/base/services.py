@@ -82,6 +82,64 @@ def previous_test_ids(tests):
     return prev
 
 
+SPARK_POINTS = 12
+
+
+def sparklines(tests):
+    """
+    {test_id: [mean, ...]} — the recent per-test mean response times of the
+    same project, oldest→newest, ending at that test (dashboard sparkline).
+
+    Batched: two queries total regardless of how many tests are on the page.
+    """
+    tests = [t for t in tests if t is not None and t.project_id]
+    if not tests:
+        return {}
+    project_ids = {t.project_id for t in tests}
+
+    # Every test of those projects, newest first, so we can take a window
+    # ending at each test we were asked about.
+    ordered = list(
+        Test.objects.filter(project_id__in=project_ids)
+        .order_by('project_id', F('started_at').desc(nulls_last=True), '-id')
+        .values_list('id', 'project_id')
+    )
+    by_project = {}
+    for test_id, project_id in ordered:
+        by_project.setdefault(project_id, []).append(test_id)
+
+    # One aggregate query for every test id we might need a mean for.
+    needed = set()
+    for test in tests:
+        window = by_project.get(test.project_id, [])
+        try:
+            index = window.index(test.id)
+        except ValueError:
+            continue
+        needed.update(window[index:index + SPARK_POINTS])
+    means = {
+        test_id: row['mean']
+        for test_id, row in aggregate_test_stats(needed).items()
+    }
+
+    result = {}
+    for test in tests:
+        window = by_project.get(test.project_id, [])
+        try:
+            index = window.index(test.id)
+        except ValueError:
+            result[test.id] = []
+            continue
+        # oldest → newest, so reverse the newest-first window
+        series = [
+            round(means[test_id], 1)
+            for test_id in reversed(window[index:index + SPARK_POINTS])
+            if means.get(test_id) is not None
+        ]
+        result[test.id] = series
+    return result
+
+
 def dashboard_test_stats(tests):
     """
     Per-test dashboard stats incl. comparison with the previous test of the

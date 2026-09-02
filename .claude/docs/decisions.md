@@ -46,3 +46,28 @@ ADR-style, newest last. Check here before re-litigating an architectural choice.
     only migrates and restarts uWSGI. The target never needs Node or writes to `/www/ltc`.
 17. **Build logic lives in the repo** (`packaging/*.sh`); Jenkins steps are one-liners —
     portable to GitLab CI later.
+
+## 2026-09: Redesign + the empty-data fix
+
+18. **The "all graphs and tables are empty" bug was one line**: `TestViewSet` ordered by
+    plain `-started_at`, and **PostgreSQL sorts NULLs FIRST on DESC**, so page 1 of
+    `/api/v1/tests/` was never-started tests with no metrics — the dashboard table and the
+    analyzer's test dropdown were full of dataless ghost rows. Fixed with
+    `F('started_at').desc(nulls_last=True)` (the pattern the models already used) plus a
+    `?started=true` filter. It passed CI because **SQLite orders NULLs the opposite way**;
+    the regression test now asserts explicit ordering rather than DB-specific null placement.
+19. **The Claude Design prototype is the UI source of truth** (project "Load testing center
+    redesign"). Its `ltc-data.js` mock is written against the `/api/v1/` payloads, so it also
+    defines the API contract — which is why the redesign and the data fixes shipped together.
+20. **MUI kept and reskinned**, not replaced: the theme carries the design tokens twice
+    (MUI palette + `--s-*` CSS variables) so ported prototype markup keeps exact values.
+21. **Charts are inline SVG, not MUI X Charts**: the prototype's own drawing (sparklines,
+    donut, dual-axis timeseries with threshold band, boxplots) *is* the design, and hand
+    paths reproduce it exactly with no chart-library layout fighting.
+22. **Brand fonts referenced, never committed** — proprietary faces load from
+    `/static/fonts/` when present, with Arial Black / Segoe UI fallbacks otherwise.
+23. **`rps` and per-bucket `errors` are derived server-side** (from the resolution's
+    `per_sec_divider` and the per-action data) so every client agrees on units.
+24. **`post_to_confluence()` params made optional**: the management command had always
+    called it with zero args against a signature requiring two — a latent `TypeError`. The
+    parent page is now looked up when not supplied.

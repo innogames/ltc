@@ -49,7 +49,7 @@ def test_report_data(test):
         d_['errors_level'] = _errors_level(d_)
         test_action_aggregate_data.append(d_)
 
-    test_data = [d.data for d in test.testdata_set.all()]
+    test_data = _timeseries(test)
 
     server_monitoring_data = {}
     for d in test.servermonitoringdata_set.select_related('server').all():
@@ -86,6 +86,48 @@ def test_report_data(test):
     response['compare_data'] = compare_data
     response['slow_action_threshold_ms'] = SLOW_ACTION_THRESHOLD_MS
     return response
+
+
+def _timeseries(test):
+    """
+    The response-times-over-time series: the stored per-bucket
+    `{timestamp, mean, median, count}` plus derived `rps` (count over the
+    resolution's per_sec_divider) and `errors` (per-bucket error count
+    summed across actions), so clients do no unit math.
+    """
+    rows = list(
+        test.testdata_set.select_related('data_resolution').all()
+    )
+    if not rows:
+        return []
+
+    resolution_ids = {row.data_resolution_id for row in rows}
+    errors_by_bucket = {}
+    action_rows = TestActionData.objects.filter(
+        test=test, data_resolution_id__in=resolution_ids
+    ).values_list('data', flat=True)
+    for data in action_rows:
+        if not isinstance(data, dict):
+            continue
+        key = data.get('timestamp')
+        try:
+            errors = float(data.get('errors') or 0)
+        except (TypeError, ValueError):
+            errors = 0
+        errors_by_bucket[key] = errors_by_bucket.get(key, 0) + errors
+
+    points = []
+    for row in rows:
+        data = dict(row.data or {})
+        divider = getattr(row.data_resolution, 'per_sec_divider', 60) or 60
+        try:
+            count = float(data.get('count') or 0)
+        except (TypeError, ValueError):
+            count = 0
+        data['rps'] = round(count / divider, 2)
+        data['errors'] = round(errors_by_bucket.get(data.get('timestamp'), 0))
+        points.append(data)
+    return points
 
 
 def _errors_level(data):

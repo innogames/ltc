@@ -1,6 +1,6 @@
-// Mirrors the DRF serializers in ltc/api/serializers.py.
-// Optionally regenerate the raw OpenAPI types with `npm run generate-api`
-// (requires the Django dev server on :8888) and reconcile changes here.
+// Mirrors the DRF serializers in ltc/api/serializers.py and the contract
+// documented by the design prototype's ltc-data.js. Optionally regenerate
+// the raw OpenAPI types with `npm run generate-api` and reconcile here.
 
 export type TestStatus = 'C' | 'R' | 'A' | 'S' | 'F' | 'FA';
 
@@ -22,6 +22,8 @@ export interface TestStats {
   prev_test_id: number | null;
   prev_test_mean: number | null;
   mean_diff_percent: number | null;
+  /** Recent per-test means for this project, oldest → newest (sparkline). */
+  spark: number[];
 }
 
 export interface Test {
@@ -43,12 +45,19 @@ export interface Paginated<T> {
   results: T[];
 }
 
-// Per-action aggregate row; stat columns are dynamic JSON keys
-// (mean, 50%, 90%, max, min, count, errors, std, weight, ...).
+/**
+ * Per-action aggregate row. Stat columns are DYNAMIC JSONB keys coming from
+ * pandas `describe()` plus extras: mean, 50%, 75%, 90%, 99%, min, max,
+ * count, errors, std, weight. The aggregate table derives its columns from
+ * the keys of the first row, so never hardcode the list.
+ */
 export interface AggregateRow {
   action: string;
   action_id: number;
   errors_level: ErrorsLevel;
+  mean: number;
+  count: number;
+  errors: number;
   [key: string]: string | number | null;
 }
 
@@ -57,7 +66,9 @@ export interface TimeseriesPoint {
   mean: number;
   median: number;
   count: number;
-  [key: string]: string | number;
+  /** Requests per second, derived server-side from count / resolution. */
+  rps: number;
+  errors: number;
 }
 
 export interface CompareDataPoint {
@@ -78,19 +89,22 @@ export interface TestReport {
   slow_action_threshold_ms: number;
 }
 
+export type HighlightType =
+  | 'new_actions'
+  | 'absent_actions'
+  | 'higher_response_times'
+  | 'lower_response_times'
+  | 'lower_count';
+
+/** Raw highlight as the API emits it (nested current/other action data). */
 export interface HighlightAction {
+  type: HighlightType;
   action: {
-    current_test?: { name: string; data: Record<string, number> };
-    other_test?: { name: string; data: Record<string, number> };
     name?: string;
     action_id?: number;
+    current_test?: { name: string; data: Record<string, number> };
+    other_test?: { name: string; data: Record<string, number> };
   };
-  type:
-    | 'new_actions'
-    | 'absent_actions'
-    | 'higher_response_times'
-    | 'lower_response_times'
-    | 'lower_count';
 }
 
 export interface CompareTableRow {
@@ -143,6 +157,14 @@ export interface ActionDetails {
   test_errors: { text: string; code: string; count: number }[];
 }
 
+/** Per-host monitoring series for the Analyzer's Monitoring tab. */
+export interface MonitoringHost {
+  host: string;
+  cpu: number[];
+  mem: number[];
+  la: string;
+}
+
 export interface OnlineData {
   id: number;
   name: 'response_codes' | 'aggregate_table' | 'data_over_time';
@@ -171,13 +193,15 @@ export interface JmeterServer {
 export interface LoadGenerator {
   id: number;
   hostname: string;
-  num_cpu: string;
-  memory: string;
-  memory_free: string;
-  la_1: string;
-  la_5: string;
-  la_15: string;
+  num_cpu: number | null;
+  memory: number | null;
+  memory_free: number | null;
+  la_1: number | null;
+  la_5: number | null;
+  la_15: number | null;
   active: boolean;
+  /** Number of jmeter-server processes currently running on this host. */
+  jmeter: number;
   jmeter_servers: JmeterServer[];
 }
 
